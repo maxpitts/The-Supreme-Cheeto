@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>The Supreme Cheeto</title>
+<meta name="description" content="A 1997-style desktop that tracks the national debt, Truth Social, approval ratings and the price of eggs. Real data. Unserious presentation.">
+<link rel="canonical" href="https://supreme-cheeto.netlify.app/">
+<meta name="theme-color" content="#008080">
+<meta name="robots" content="index,follow">
+
+<!-- link previews -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="The Supreme Cheeto">
+<meta property="og:url" content="https://supreme-cheeto.netlify.app/">
+<meta property="og:title" content="The Supreme Cheeto">
+<meta property="og:description" content="A 1997-style Windows desktop tracking the national debt, Truth Social, approval ratings and the price of eggs. Real sourced data, unserious presentation.">
+<meta property="og:image" content="https://supreme-cheeto.netlify.app/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="THE SUPREME CHEETO in chrome-orange 90s lettering above a Windows 95 debt clock.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="The Supreme Cheeto">
+<meta name="twitter:description" content="A 1997-style Windows desktop tracking the national debt, Truth Social, approval ratings and the price of eggs. Real sourced data, unserious presentation.">
+<meta name="twitter:image" content="https://supreme-cheeto.netlify.app/og.png">
+
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='16' fill='%23008080'/%3E%3Ctext x='50' y='52' font-size='62' text-anchor='middle' dominant-baseline='central'%3E%F0%9F%8D%8A%3C/text%3E%3C/svg%3E">
+<style>
+/* ============ DATA STAMP: see DATA object in JS ============ */
+:root{
+  --gray:#c0c0c0; --gray-d:#808080; --gray-l:#dfdfdf;
+  --navy:#000080; --teal:#008080;
+  --orange:#ff7a00; --orange-d:#a33f00; --orange-l:#ffb03a;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:#008080;
+  background-image:
+    repeating-linear-gradient(45deg, rgba(255,255,255,.035) 0 8px, transparent 8px 16px),
+    radial-gradient(circle at 20% 10%, #0aa 0%, #066 60%, #044 100%);
+  font-family:"MS Sans Serif","Tahoma",Verdana,Geneva,sans-serif;
+  font-size:13px; color:#000;
+  padding:8px 8px 52px; min-height:100vh;
+}
+img{max-width:100%}
+[hidden]{display:none!important}
+
+/* ---------- Win95 chrome ---------- */
+.win{
+  background:var(--gray);
+  border:2px solid;
+  border-color:var(--gray-l) #000 #000 var(--gray-l);
+  box-shadow:inset 1px 1px 0 #fff, inset -1px -1px 0 var(--gray-d), 3px 3px 0 rgba(0,0,0,.35);
+  position:relative;
+}
+.stack{display:flex;flex-direction:column;gap:12px}
+.tb{
+  display:flex;align-items:center;gap:6px;
+  background:linear-gradient(90deg,var(--orange-d),var(--orange));
+  color:#fff;font-weight:bold;padding:3px 4px;margin:2px;
+  cursor:grab; user-select:none; letter-spacing:.2px;
+  touch-action:none;            /* let touch drags move the window, not scroll the page */
+}
+.win.dragging{box-shadow:inset 1px 1px 0 #fff, inset -1px -1px 0 var(--gray-d), 10px 12px 0 rgba(0,0,0,.4)}
+.win.dragging .tb{cursor:grabbing}
+.tb.navy{background:linear-gradient(90deg,#000080,#1084d0)}
+.tb:active{cursor:grabbing}
+.tb .ico{width:14px;height:14px;flex:0 0 14px;display:block}
+.tb .t{flex:1;font-size:12px;text-shadow:1px 1px 0 rgba(0,0,0,.4);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tb .btns{display:flex;gap:2px}
+.tb button{
+  width:17px;height:15px;padding:0;line-height:1;
+  font-family:inherit;font-size:10px;font-weight:bold;
+  background:var(--gray);border:1px solid;
+  border-color:#fff var(--gray-d) var(--gray-d) #fff;
+  color:#000;cursor:pointer;
+}
+.tb button:active{border-color:var(--gray-d) #fff #fff var(--gray-d)}
+.body{padding:10px;margin:0 2px 2px}
+.sunken{
+  background:#fff;border:2px solid;
+  border-color:var(--gray-d) #fff #fff var(--gray-d);
+  padding:8px;
+}
+.win.min .body{display:none}
+
+fieldset{border:2px groove var(--gray-l);margin:0 0 10px;padding:8px}
+legend{font-weight:bold;padding:0 4px;font-size:11px}
+
+/* ---------- header ---------- */
+header{text-align:center;margin:0 auto 14px;max-width:1100px}
+.logo{
+  font-family:"Impact","Haettenschweiler","Arial Black",sans-serif;
+  font-size:clamp(38px,9vw,86px); line-height:.95; letter-spacing:1px;
+  background:linear-gradient(#fff2c4 0%,#ffd166 18%,#ff8c1a 48%,#e05a00 72%,#ffb03a 100%);
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+  -webkit-text-stroke:2px #4a1d00;
+  filter:drop-shadow(3px 3px 0 rgba(0,0,0,.55));
+  margin:0; text-transform:uppercase;
+}
+.tagline{color:#ffe9a8;font-weight:bold;text-shadow:1px 1px 0 #000;margin:6px 0 2px;font-size:14px}
+.subtag{color:#cfeaea;font-size:11px;text-shadow:1px 1px 0 #000}
+.blink{animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.rainbow-hr{height:6px;border:0;margin:10px 0;
+  background:linear-gradient(90deg,#f00,#f80,#ff0,#0f0,#0ff,#00f,#80f,#f0f,#f00);
+  background-size:200% 100%;animation:slide 6s linear infinite}
+@keyframes slide{to{background-position:200% 0}}
+
+/* ---------- ticker ---------- */
+.ticker{
+  background:#000;color:#0f0;font-family:"Courier New",monospace;font-size:12px;
+  border:2px solid;border-color:var(--gray-d) #fff #fff var(--gray-d);
+  overflow:hidden;white-space:nowrap;padding:4px 0;margin:0 auto 12px;max-width:1100px;
+}
+.ticker span{display:inline-block;padding-left:100%;animation:mq 42s linear infinite}
+@keyframes mq{to{transform:translateX(-100%)}}
+
+/* ---------- stale banner ---------- */
+.stale{max-width:1100px;margin:0 auto 12px;padding:8px 10px;font-size:12px;line-height:1.5;
+  background:#ffc;color:#000;border:2px solid;border-color:#fff #808080 #808080 #fff;
+  box-shadow:inset -1px -1px 0 #000, inset 1px 1px 0 #fff}
+.stale b{color:#a00}
+
+/* ---------- reduced motion ---------- */
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+  .ticker span{padding-left:0}
+  .blink{opacity:1}
+}
+
+/* ---------- focus ---------- */
+a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible{
+  outline:2px dotted #000;outline-offset:2px}
+
+/* ---------- layout ---------- */
+.desk{max-width:1100px;margin:0 auto;
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));
+  gap:12px;align-items:start;grid-auto-flow:dense}
+.span2{grid-column:span 2}
+.spanall{grid-column:1/-1}
+@media(max-width:760px){.span2,.spanall{grid-column:auto}}
+
+/* ---------- readouts ---------- */
+.odo{
+  font-family:"Courier New",monospace;font-weight:bold;
+  background:#000;color:#0f0;text-align:center;
+  padding:10px 6px;font-size:clamp(17px,4.4vw,32px);letter-spacing:1px;
+  border:2px solid;border-color:var(--gray-d) #fff #fff var(--gray-d);
+  text-shadow:0 0 8px rgba(0,255,0,.6); overflow-x:auto;
+}
+.odo.amber{color:#ffb000;text-shadow:0 0 8px rgba(255,176,0,.6)}
+.kv{display:flex;justify-content:space-between;gap:10px;padding:3px 0;border-bottom:1px dotted #999;font-size:12px}
+.kv:last-child{border-bottom:0}
+.kv b{font-family:"Courier New",monospace}
+.up{color:#c00;font-weight:bold}
+.down{color:#060;font-weight:bold}
+.note{font-size:10px;color:#404040;margin-top:8px;line-height:1.45}
+.note a{color:var(--navy)}
+
+/* ---------- bars ---------- */
+.bar{height:22px;background:#fff;border:2px solid;border-color:var(--gray-d) #fff #fff var(--gray-d);position:relative;overflow:hidden}
+.bar i{display:block;height:100%;background:repeating-linear-gradient(90deg,var(--navy) 0 12px,transparent 12px 15px)}
+.bar.red i{background:repeating-linear-gradient(90deg,#c00 0 12px,transparent 12px 15px)}
+.bar em{position:absolute;inset:0;display:grid;place-items:center;font-style:normal;font-weight:bold;font-size:11px}
+.bar em span{background:rgba(255,255,255,.92);padding:1px 6px;border:1px solid rgba(0,0,0,.35)}
+
+/* ---------- gauge ---------- */
+.gauge{position:relative;height:130px;display:grid;place-items:end center;margin-bottom:6px}
+.gauge svg{width:100%;max-width:280px;height:auto}
+.gauge .val{font-family:"Courier New",monospace;font-weight:bold;font-size:26px}
+
+/* ---------- truth feed ---------- */
+.post{border-bottom:1px solid #ccc;padding:8px 0}
+.post:last-child{border-bottom:0}
+.post .meta{font-size:10px;color:#555;margin-bottom:3px;font-family:"Courier New",monospace}
+.post .txt{font-size:12.5px;line-height:1.5;white-space:pre-wrap}
+.post .img-only{color:#777;font-style:italic}
+.caps{background:#ffe;border:1px dashed #a80;padding:6px;margin-top:8px;font-size:11px}
+
+/* ---------- buttons ---------- */
+button.b95{
+  font-family:inherit;font-size:12px;padding:4px 12px;background:var(--gray);
+  border:2px solid;border-color:#fff var(--gray-d) var(--gray-d) #fff;cursor:pointer;
+  box-shadow:inset -1px -1px 0 #000, inset 1px 1px 0 var(--gray-l);
+}
+button.b95:active{border-color:var(--gray-d) #fff #fff var(--gray-d);box-shadow:none}
+input.i95,textarea.i95{
+  font-family:inherit;font-size:12px;padding:4px;width:100%;background:#fff;
+  border:2px solid;border-color:var(--gray-d) #fff #fff var(--gray-d);
+}
+
+/* ---------- construction ---------- */
+.constr{display:flex;align-items:center;gap:10px;justify-content:center;
+  background:repeating-linear-gradient(45deg,#ffcc00 0 14px,#111 14px 28px);
+  padding:8px;border:2px solid #000}
+.constr b{background:#000;color:#ffcc00;padding:4px 8px;font-size:12px;letter-spacing:1px}
+.hardhat{animation:bob .9s ease-in-out infinite alternate;font-size:22px}
+@keyframes bob{to{transform:translateY(-6px)}}
+
+/* ---------- counter ---------- */
+.counter{display:inline-flex;gap:2px;background:#000;padding:4px;border:2px inset var(--gray)}
+.counter i{background:#111;color:#0f0;font-family:"Courier New",monospace;font-weight:bold;
+  font-size:18px;padding:2px 5px;font-style:normal;border:1px solid #333}
+
+/* ---------- badges ---------- */
+.badges{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.badge{font-size:9px;font-family:"Courier New",monospace;color:#fff;background:#222;
+  border:1px outset #888;padding:4px 6px;line-height:1.2;text-align:center}
+.badge.b2{background:linear-gradient(#00f,#008)}
+.badge.b3{background:linear-gradient(#c00,#600)}
+.badge.b4{background:linear-gradient(#080,#040)}
+
+/* ---------- taskbar ---------- */
+.taskbar{
+  position:fixed;left:0;right:0;bottom:0;height:36px;z-index:9000;
+  background:var(--gray);border-top:2px solid #fff;
+  display:flex;align-items:center;gap:6px;padding:0 6px;
+  box-shadow:0 -2px 0 var(--gray-d);
+}
+.start{display:flex;align-items:center;gap:5px;font-weight:bold;font-size:12px;
+  padding:3px 8px;background:var(--gray);border:2px solid;
+  border-color:#fff var(--gray-d) var(--gray-d) #fff;cursor:pointer}
+.start:active{border-color:var(--gray-d) #fff #fff var(--gray-d)}
+.flag{display:inline-block;width:14px;height:14px;
+  background:conic-gradient(from 180deg at 50% 50%,#ff3b30 0 25%,#34c759 0 50%,#007aff 0 75%,#ffcc00 0);}
+.tasks{flex:1;display:flex;gap:4px;overflow:hidden}
+.tasks button{font-family:inherit;font-size:11px;padding:3px 8px;max-width:150px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  background:var(--gray);border:2px solid;border-color:#fff var(--gray-d) var(--gray-d) #fff;cursor:pointer}
+.tray{display:flex;align-items:center;gap:6px;font-size:11px;padding:3px 8px;
+  border:2px solid;border-color:var(--gray-d) #fff #fff var(--gray-d);font-family:"Courier New",monospace}
+
+/* ---------- start menu ---------- */
+.startmenu{position:fixed;left:6px;bottom:38px;width:250px;z-index:9001;
+  background:var(--gray);border:2px solid;border-color:#fff var(--gray-d) var(--gray-d) #fff;
+  box-shadow:3px 3px 0 rgba(0,0,0,.4);display:flex}
+.startmenu .rail{width:26px;background:linear-gradient(#a33f00,#ff7a00);
+  writing-mode:vertical-rl;transform:rotate(180deg);color:#fff;font-weight:bold;
+  text-align:right;padding:8px 4px;font-size:14px;letter-spacing:1px}
+.startmenu ul{list-style:none;margin:0;padding:4px;flex:1}
+.startmenu li{padding:6px 8px;cursor:pointer;font-size:12px}
+.startmenu li:hover{background:var(--navy);color:#fff}
+.startmenu hr{border:0;border-top:1px solid var(--gray-d);border-bottom:1px solid #fff;margin:4px 2px}
+
+/* ---------- modal ---------- */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:9500;display:grid;place-items:center;padding:16px}
+.modal .win{max-width:400px;width:100%;margin:0}
+.modal .row{display:flex;gap:12px;align-items:flex-start}
+.modal .glyph{font-size:32px;line-height:1}
+
+footer{max-width:1100px;margin:18px auto 0;color:#dff;font-size:11px;text-align:center;line-height:1.7}
+footer a{color:#ffe9a8}
+.srcs{background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.25);padding:10px;text-align:left;margin-top:10px}
+.srcs a{color:#9fe6ff}
+</style>
+</head>
+<body>
+
+<header>
+  <h1 class="logo">The Supreme Cheeto</h1>
+  <div class="tagline">★ THE OFFICIAL 47 TRACKER ★ <span class="blink" style="color:#ff0">NEW!</span> <span class="blink" style="color:#0f0">UPDATED DAILY!</span></div>
+  <div class="subtag">Best viewed in Netscape Navigator 4.0 at 800&times;600 &middot; Real numbers, public sources, unserious presentation</div>
+  <hr class="rainbow-hr">
+</header>
+
+<div class="ticker"><span id="tickerText">LOADING TELETYPE&hellip;</span></div>
+
+<div class="stale" id="staleWarn" hidden>
+  <b>⚠ STALE DATA WARNING</b> — this snapshot is <b id="staleDays"></b> days old. The daily refresh has not run.
+  The debt clock is still ticking off an old seed, so treat every figure below as of <b data-f="buildStamp"></b>.
+</div>
+
+<main class="desk" id="desk">
+
+  <!-- ================= DEBT ================= -->
+  <section class="win spanall" data-name="DEBT.EXE">
+    <div class="tb"><span class="ico">💸</span><span class="t">C:\GOV\NATIONAL_DEBT.EXE — [running]</span>
+      <span class="btns"><button data-min>_</button><button data-max>□</button><button data-close>×</button></span></div>
+    <div class="body">
+      <div class="odo" id="debtClock">$00,000,000,000,000.00</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:10px">
+        <fieldset><legend>Per citizen</legend><div class="kv"><span>Your share</span><b id="perCitizen">—</b></div></fieldset>
+        <fieldset><legend>Added since Jan 20 2025</legend><div class="kv"><span>Inauguration &rarr; now</span><b id="debtSince">—</b></div></fieldset>
+        <fieldset><legend>Burn rate</legend><div class="kv"><span>Per second</span><b id="perSec">—</b></div></fieldset>
+        <fieldset><legend>Since you loaded this page</legend><div class="kv"><span>New debt</span><b id="sessionDebt">$0</b></div></fieldset>
+      </div>
+      <p class="note">Seeded from the U.S. Treasury "Debt to the Penny" API (<span data-f="debtDate"></span>), then extrapolated at the trailing 12&#8209;month average rate. <b>The ticking is an estimate; only the seed is exact</b> — real borrowing is lumpy, so the live number drifts from the true figure between refreshes. Per-citizen uses a ~342.5M U.S. population estimate.</p>
+    </div>
+  </section>
+
+  <!-- ================= TRUTH SOCIAL ================= -->
+  <section class="win span2" data-name="TRUTH.EXE">
+    <div class="tb navy"><span class="ico">📣</span><span class="t">TRUTH_SOCIAL_FEED.EXE — @realDonaldTrump</span>
+      <span class="btns"><button data-min>_</button><button data-max>□</button><button data-close>×</button></span></div>
+    <div class="body">
+      <div class="sunken" style="max-height:420px;overflow-y:auto" id="feed"></div>
+      <div class="caps">
+        <b>📊 SHOUT ANALYSIS</b> (last <span data-f="postCount"></span> posts with text)<br>
+        ALL-CAPS WORDS: <b id="capsPct">—</b> &nbsp;·&nbsp; EXCLAMATION POINTS: <b id="bangs">—</b> &nbsp;·&nbsp; AVG !!! PER POST: <b id="bangsAvg">—</b>
+      </div>
+      <p class="note">Verbatim post text mirrored from <a href="https://trumpstruth.org/" target="_blank" rel="noopener">trumpstruth.org</a>, a public archive. Snapshot: <span data-f="feedStamp"></span>. Nothing here is written or paraphrased by this site &mdash; image-only posts are labeled as such.</p>
+    </div>
+  </section>
+
+  <div class="stack">
+  <!-- ================= APPROVAL ================= -->
+  <section class="win" data-name="POLLS.EXE">
+    <div class="tb"><span class="ico">🗳️</span><span class="t">APPROVAL_RATING.EXE</span>
+      <span class="btns"><button data-min>_</button><button data-max>□</button><button data-close>×</button></span></div>
+    <div class="body">
+      <fieldset><legend>APPROVE</legend>
+        <div class="bar"><i id="barApp"></i><em id="lblApp"></em></div></fieldset>
+      <fieldset><legend>DISAPPROVE</legend>
+        <div class="bar red"><i id="barDis"></i><em id="lblDis"></em></div></fieldset>
+      <div class="odo amber" style="font-size:20px" id="netApp">NET —</div>
+      <p class="note">Quality- and recency-weighted polling average from <a href="https://fiftyplusone.news/polls/approval/president" target="_blank" rel="noopener">FiftyPlusOne</a>, as of <span data-f="pollDate"></span>.</p>
+    </div>
+  </section>
+
+  <!-- ================= CHEETO METER ================= -->
+  <section class="win" data-name="CHEETOMETER.EXE">
+    <div class="tb"><span class="ico">🧀</span><span class="t">THE_CHEETO&#8209;METER.EXE</span>
+      <span class="btns"><button data-min>_</button><button data-max>□</button><button data-close>×</button></span></div>
+    <div class="body">
+      <div class="gauge">
+        <svg viewBox="0 0 200 110" aria-hidden="true">
+          <defs><linearGradient id="gg" x1="0" x2="1"><stop offset="0" stop-color="#0a0"/><stop offset=".5" stop-color="#ffcc00"/><stop offset="1" stop-color="#c00"/></linearGradient></defs>
+          <path d="M15 100 A85 85 0 0 1 185 100" fill="none" stroke="url(#gg)" stroke-width="20"/>
+          <line id="needle" x1="100" y1="100" x2="100" y2="28" stroke="#000" stroke-width="4" stroke-linecap="round"/>
+          <circle cx="100" cy="100" r="8" fill="#000"/>
+        </svg>
+      </div>
+      <div class="odo amber" id="cheetoVal">—</div>
+      <div style="text-align:center;font-weight:bold;margin-top:6px" id="cheetoLabel">CALIBRATING&hellip;</div>
+      <p class="note">A joke composite, computed honestly: equal-weight average of disapproval, gas price vs. a year ago, CPI vs. the Fed's 2% target, effective tariff rate, and debt growth — each scaled 0&ndash;100. It is a vibe, not an economic indicator.</p>
+    </div>
+  </section>
+  </div>
+
+  <!-- ================= ECONOMY ================= -->
+  <section class="win" data-name="ECON.EXE">
+    <div class="tb"><span class="ico">🥚</span><span class="t">KITCHEN_TABLE_ECONOMY.EXE</span>
+      <span class="btns"><button data-min>_</button><button data-max>□</button><button data-close>×</button></span></div>
+    <div class="body">
+      <div class="sunken" id="econ"></div>
+      <p class="note">Gas: AAA daily national average. Eggs: BLS average price, Grade A large. CPI: BLS year-over-year. Tariff: Penn Wharton effective rate. SPY: last close.</p>
+    </div>
+  </section>
+
+  <!-- ================= COUNTDOWN ================= -->
+  <section class="win" data-name="COUNTDOWN.EXE">
+    <div class="tb"><span class="ico">⏳</span><span class="t">TERM_COUNTDOWN.EXE</span>
+      <span class="btns"><button data-min>_</button><button data-max>□</button><button data-close>×</button></span></div>
+    <div class="body">
+      <div class="odo" id="cd" style="font-size:19px">—</div>
+      <fieldset style="margin-top:10px"><legend>Term progress</legend>
+        <div class="bar"><i id="barTerm"></i><em id="lblTerm"></em></div></fieldset>
+      <div class="kv"><span>Days served</span><b id="served">—</b></div>
+      <div class="kv"><span>Days remaining</span><b id="remain">—</b></div>
+      <p class="note">Second term: January 20, 2025 &rarr; January 20, 2029, per the 20th Amendment.</p>
+    </div>
+  </section>
+
+  <!-- ================= GOLF ================= -->
+  <section class="win" data-name="GOLF.EXE">
+    <div class="tb"><span class="ico">⛳</span><span class="t">GOLF_TRACKER.EXE</span>
+      <span class="btns"><button data-min>_</button><button data-max>□</button><button data-close>×</button></span></div>
+    <div class="body">
+      <div class="odo amber" id="golfDays">—</div>
+      <div style="text-align:center;font-size:11px;margin:4px 0 10px">DAYS AT A GOLF COURSE THIS TERM</div>
+      <fieldset><legend>Share of presidency spent golfing</legend>
+        <div class="bar"><i id="barGolf"></i><em id="lblGolf"></em></div></fieldset>
+      <div class="kv"><span>Last confirmed round</span><b data-f="golfLast"></b></div>
+      <div class="kv"><span>Est. Florida travel cost, this term</span><b data-f="golfCost"></b></div>
+      <p class="note">Counts from <a href="https://donaldtrump.golf/" target="_blank" rel="noopener">donaldtrump.golf</a> as of <span data-f="golfStamp"></span>. Cost figure is that tracker's own estimate (trips &times; a 2019 GAO per-trip audit), not an official number.</p>
+    </div>
+  </section>
+
+  <!-- ================= EXEC ORDERS ================= -->
+  <section class="win" data-name="EO.EXE">
+    <div class="tb"><span class="ico">✒️</span><span class="t">EXECUTIVE_ORDERS.EXE</span>
+      <span class="btns"><button data-min>_</button><button data-max>□</button><button data-close>×</button></span></div>
+    <div class="body">
+      <div class="odo" id="eoCount" style="font-size:30px">—</div>
+      <div style="text-align:center;font-size:11px;margin:4px 0 10px">EXECUTIVE ORDERS SIGNED, TERM 2</div>
+      <div class="kv"><span>Orders per week (avg)</span><b id="eoRate">—</b></div>
+      <div class="kv"><span>Latest</span><b data-f="latestEO"></b></div>
+      <div class="kv" style="font-size:11px;color:#333"><span data-f="latestTitle" style="font-style:italic"></span></div>
+      <div class="kv" style="margin-top:8px"><span>Memoranda <span style="color:#888;font-size:10px">(Mar 2026)</span></span><b data-f="memos"></b></div>
+      <div class="kv"><span>Proclamations <span style="color:#888;font-size:10px">(Mar 2026)</span></span><b data-f="procs"></b></div>
+      <p class="note">Order count derived from Federal Register numbering — the second term runs EO&nbsp;14147 (Jan&nbsp;20,&nbsp;2025) through EO&nbsp;<span data-f="latestNum"></span>, signed <span data-f="eoDate"></span>. Memoranda and proclamations are Ballotpedia's tally and are several months behind; they're labeled as such rather than dressed up as current.</p>
+    </div>
+  </section>
+
+  <!-- ================= NICKNAME MACHINE ================= -->
+  <section class="win" data-name="NICKNAME.EXE">
+    <div class="tb navy"><span class="ico">🎰</span><span class="t">NICKNAME_MACHINE.EXE — novelty toy</span>
+      <span class="btns"><button data-min>_</button><button data-max>□</button><button data-close>×</button></span></div>
+    <div class="body">
+      <p style="margin:0 0 8px;font-size:12px">Type your name. The machine assigns you a nickname. <b>This is a random generator</b> — it is not a quote and nobody actually said it.</p>
+      <input class="i95" id="nickIn" placeholder="Your name here..." maxlength="24">
+      <div style="text-align:center;margin:10px 0">
+        <button class="b95" id="nickGo">🎲 ASSIGN ME A NICKNAME</button>
+      </div>
+      <div class="sunken" id="nickOut" style="text-align:center;font-weight:bold;font-size:16px;min-height:44px;display:grid;place-items:center">???</div>
+    </div>
+  </section>
+
+  <!-- ================= GUESTBOOK ================= -->
+  <section class="win" data-name="GUESTBOOK.EXE">
+    <div class="tb navy"><span class="ico">📖</span><span class="t">GUESTBOOK.TXT</span>
+      <span class="btns"><button data-min>_</button><button data-max>□</button><button data-close>×</button></span></div>
+    <div class="body">
+      <input class="i95" id="gName" placeholder="Handle" maxlength="20" style="margin-bottom:6px">
+      <textarea class="i95" id="gMsg" rows="2" placeholder="Sign the guestbook..." maxlength="140"></textarea>
+      <div style="text-align:center;margin:8px 0"><button class="b95" id="gSign">✍️ SIGN GUESTBOOK</button></div>
+      <div class="sunken" id="gList" style="max-height:150px;overflow-y:auto;font-size:11px"></div>
+      <p class="note">Saved in your own browser only. Nobody else sees it. Very 1997 of us.</p>
+    </div>
+  </section>
+
+  <!-- ================= WEBRING / JUNK DRAWER ================= -->
+  <section class="win span2" data-name="WEBRING.EXE">
+    <div class="tb"><span class="ico">🌐</span><span class="t">SITE_INFO.HTM</span>
+      <span class="btns"><button data-min>_</button><button data-max>□</button><button data-close>×</button></span></div>
+    <div class="body">
+      <div class="constr"><span class="hardhat">👷</span><b>UNDER CONSTRUCTION</b><span class="hardhat">🚧</span></div>
+      <div style="text-align:center;margin:14px 0">
+        <div style="font-size:11px;margin-bottom:6px">YOU ARE VISITOR NUMBER</div>
+        <div class="counter" id="visitor"></div>
+      </div>
+      <div class="badges">
+        <div class="badge">MADE WITH<br>NOTEPAD</div>
+        <div class="badge b2">NETSCAPE<br>NOW!</div>
+        <div class="badge b3">NO JAVA<br>REQUIRED</div>
+        <div class="badge b4">Y2K<br>COMPLIANT</div>
+        <div class="badge">800×600<br>OPTIMIZED</div>
+        <div class="badge b2">SOURCES<br>CITED</div>
+      </div>
+      <p class="note" style="text-align:center;margin-top:14px">
+        <b>Disclaimer:</b> This is a satirical dashboard. Every number on it comes from a linked public source and is reproduced without editorializing;
+        the jokes are in the framing, not the data. Not affiliated with anyone. No quotes are invented.<br><br>
+        <b>Tip:</b> drag a window by its title bar. Double-click the title bar to snap it back. Closed something? It's still on the taskbar.
+      </p>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <hr class="rainbow-hr">
+  <div>🍊 <b>THE SUPREME CHEETO</b> 🍊 &nbsp;·&nbsp; data snapshot: <b data-f="buildStamp"></b> &nbsp;·&nbsp; refreshed daily</div>
+  <div class="srcs">
+    <b>SOURCES:</b>
+    <a href="https://fiscaldata.treasury.gov/datasets/debt-to-the-penny/debt-to-the-penny" target="_blank" rel="noopener">U.S. Treasury — Debt to the Penny</a> ·
+    <a href="https://trumpstruth.org/" target="_blank" rel="noopener">Trump's Truth archive</a> ·
+    <a href="https://fiftyplusone.news/polls/approval/president" target="_blank" rel="noopener">FiftyPlusOne approval average</a> ·
+    <a href="https://gasprices.aaa.com/" target="_blank" rel="noopener">AAA Fuel Prices</a> ·
+    <a href="https://www.bls.gov/news.release/cpi.nr0.htm" target="_blank" rel="noopener">BLS Consumer Price Index</a> ·
+    <a href="https://keepingupwithinflation.com/tracker/eggs/" target="_blank" rel="noopener">BLS egg price tracker</a> ·
+    <a href="https://budgetmodel.wharton.upenn.edu/p/2026-08-10-effective-tariff-rates-and-revenues-updated-august-10-2026/" target="_blank" rel="noopener">Penn Wharton effective tariff rate</a> ·
+    <a href="https://ballotpedia.org/Donald_Trump%27s_executive_orders_and_actions,_2025-2026" target="_blank" rel="noopener">Ballotpedia executive orders</a> ·
+    <a href="https://donaldtrump.golf/" target="_blank" rel="noopener">donaldtrump.golf</a> ·
+    <a href="https://stockanalysis.com/etf/spy/" target="_blank" rel="noopener">SPY quote</a>
+  </div>
+</footer>
+
+<!-- ================= TASKBAR ================= -->
+<div class="taskbar">
+  <div class="start" id="startBtn"><span class="flag"></span> Start</div>
+  <div class="tasks" id="tasks"></div>
+  <div class="tray"><span id="trayClock">--:--</span></div>
+</div>
+
+<div class="startmenu" id="startMenu" hidden>
+  <div class="rail">Cheeto 95</div>
+  <ul>
+    <li data-act="top">📂 Back to top</li>
+    <li data-act="restore">🪟 Restore all windows</li>
+    <li data-act="theme">🎨 Toggle teal / hazard wallpaper</li>
+    <hr>
+    <li data-act="about">❓ About this site</li>
+    <li data-act="shutdown">⏻ Shut Down...</li>
+  </ul>
+</div>
+
+<div class="modal" id="modal" hidden>
+  <div class="win">
+    <div class="tb navy"><span class="t" id="modalTitle">Error</span>
+      <span class="btns"><button id="modalX">×</button></span></div>
+    <div class="body">
+      <div class="row"><div class="glyph" id="modalGlyph">⛔</div><div id="modalBody" style="font-size:12px;line-height:1.5"></div></div>
+      <div style="text-align:center;margin-top:14px"><button class="b95" id="modalOk" style="min-width:90px">OK</button></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =======================================================================
+   DATA BLOCK — this is the only part the daily refresh rewrites.
+   Every value carries the date it was pulled and the source it came from.
+   ======================================================================= */
+const DATA = {
+  buildStamp: "August 31, 2026",
+  buildISO:   "2026-08-31",   // if this goes stale, the page says so out loud
+  staleAfterDays: 4,
+
+  debt: {
+    amount: 40077529831942.94,      // Treasury "Debt to the Penny"
+    asOf:   "2026-08-27",
+    label:  "August 27, 2026",
+    perSecond: 89380,               // trailing 12-mo avg: (Aug-27-26 minus Aug-29-25) / 363d / 86400
+    inaugurationDebt: 36206593315575.15, // 2025-01-17, last reading before inauguration
+    population: 342500000
+  },
+
+  poll: { approve: 36.2, disapprove: 59.5, date: "August 30, 2026" },
+
+  econ: {
+    gas:      { v: 4.081, prev: 3.1885, label: "Gas, regular (nat'l avg)", fmt: "$", suffix: "/gal", cmp: "vs. year ago", mode:"pct" },
+    eggs:     { v: 2.189, prev: null,   label: "Eggs, Grade A large",      fmt: "$", suffix: "/doz", cmp: "BLS, July 2026" },
+    cpi:      { v: 3.4,   prev: 2.0,    label: "CPI inflation, YoY",       fmt: "",  suffix: "%",    cmp: "vs. 2% Fed target", mode:"pts" },
+    tariff:   { v: 7.1,   prev: 2.3,    label: "Effective tariff rate",    fmt: "",  suffix: "%",    cmp: "vs. Jan 2025", mode:"pts" },
+    spy:      { v: 766.05, prev: null,  label: "S&P 500 (SPY)",            fmt: "$", suffix: "",     cmp: "last close, -0.43%" }
+  },
+
+  golf:  { days: 129, pct: 21.9, last: "Saturday, August 22, 2026", cost: "$78.2M (est.)", stamp: "August 31, 2026" },
+
+  // EO count from Federal Register numbering: second term runs EO 14147 (Jan 20, 2025)
+  // through the latest signed order. Memos/proclamations are Ballotpedia's and lag badly.
+  eo: {
+    orders: 275, firstEO: 14147, latestEO: 14421,
+    latestTitle: "Declaring a National Emergency To Secure the United States Bulk-Power System",
+    date: "August 26, 2026", asOfISO: "2026-08-26",
+    memos: 59, procs: 135, memoDate: "March 26, 2026"
+  },
+
+  feedStamp: "August 30, 2026, 10:19 PM ET",
+  posts: [
+    { t: "Aug 30, 2026 · 10:19 PM", txt: null, note: "image-only post" },
+    { t: "Aug 30, 2026 · 10:19 PM", txt: null, note: "image-only post" },
+    { t: "Aug 30, 2026 · 10:18 PM", txt: "Kharg Island being blown to smithereens!!! President DJT" },
+    { t: "Aug 30, 2026 · 9:18 PM",  txt: "Being interviewed by Trey Gowdy, NOW!" },
+    { t: "Aug 30, 2026 · 8:26 PM",  txt: "For many years, the USA has been losing more than 60 Billion Dollars a year with Canada. Why??? Our long ago stolen businesses are now coming back to America in order to avoid paying tariffs. They are lining up, just like the rest of the World!!! President DJT" },
+    { t: "Aug 30, 2026 · 8:18 PM",  txt: "Governor Kathy Hochul just released 7000 hard core criminals onto the streets on New York. What is wrong with her? She is grossly incompetent and must be voted out of office! President DJT" },
+    { t: "Aug 30, 2026 · 7:56 PM",  txt: "A wonderful new book by Ted Cruz, about a Great Supreme Court Justice, Clarence Thomas, is just out!" , trunc:true },
+    { t: "Aug 30, 2026 · 7:03 PM",  txt: "Kennedy Center is an old and decrepit building...", trunc:true },
+    { t: "Aug 30, 2026 · 6:48 PM",  txt: "Look what VANDALS did to the grass connecting...", trunc:true },
+    { t: "Aug 30, 2026 · 5:36 PM",  txt: null, note: "link post — article about Google Maps renaming Lake Ontario" }
+  ]
+};
+
+/* ---------- helpers ---------- */
+const $  = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const money = (n, d=2) => "$" + n.toLocaleString("en-US",{minimumFractionDigits:d,maximumFractionDigits:d});
+const esc = s => s.replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+/* ---------- fill simple [data-f] slots ---------- */
+const SLOTS = {
+  debtDate: DATA.debt.label,
+  buildStamp: DATA.buildStamp,
+  pollDate: DATA.poll.date,
+  feedStamp: DATA.feedStamp,
+  postCount: DATA.posts.filter(p=>p.txt).length,
+  golfLast: DATA.golf.last,
+  golfCost: DATA.golf.cost,
+  golfStamp: DATA.golf.stamp,
+  memos: DATA.eo.memos,
+  procs: DATA.eo.procs,
+  eoDate: DATA.eo.date,
+  latestEO: "EO " + DATA.eo.latestEO,
+  latestNum: DATA.eo.latestEO,
+  latestTitle: "“" + DATA.eo.latestTitle + "”"
+};
+$$("[data-f]").forEach(el => el.textContent = SLOTS[el.dataset.f] ?? "—");
+
+/* decorative window icons shouldn't be announced */
+$$(".tb .ico").forEach(el => el.setAttribute("aria-hidden","true"));
+
+/* ---------- staleness guard ---------- */
+(function(){
+  const age = Math.floor((Date.now() - Date.parse(DATA.buildISO + "T12:00:00Z")) / 864e5);
+  if (age > DATA.staleAfterDays){
+    $("#staleDays").textContent = age;
+    $("#staleWarn").hidden = false;
+  }
+})();
+
+/* ================= DEBT CLOCK ================= */
+const seedMs = Date.parse(DATA.debt.asOf + "T00:00:00Z");
+const loadDebt = () => DATA.debt.amount + ((Date.now() - seedMs)/1000) * DATA.debt.perSecond;
+const debtAtLoad = loadDebt();
+function tickDebt(){
+  const now = loadDebt();
+  $("#debtClock").textContent = money(now);
+  $("#perCitizen").textContent = money(now/DATA.debt.population, 0);
+  $("#debtSince").textContent  = money((now - DATA.debt.inaugurationDebt)/1e12, 3).replace("$","$") + "T";
+  $("#perSec").textContent     = money(DATA.debt.perSecond, 0);
+  $("#sessionDebt").textContent= money(now - debtAtLoad, 0);
+}
+$("#perSec").textContent = money(DATA.debt.perSecond,0);
+tickDebt(); setInterval(tickDebt, 100);
+
+/* Opportunistic live re-seed of the debt clock.
+   The Treasury's fiscaldata API is public; if the browser is allowed to reach it we
+   upgrade the baked-in seed to today's actual figure. If it's blocked (CSP on the
+   artifact host, offline, CORS, API down) nothing happens and the snapshot stands.
+   Deliberately silent — a failed enhancement must never break the page. */
+(async function reseedDebt(){
+  const url = "https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/accounting/od/debt_to_penny"
+            + "?sort=-record_date&page%5Bsize%5D=1&fields=record_date,tot_pub_debt_out_amt";
+  try{
+    const ctl = new AbortController();
+    const bail = setTimeout(() => ctl.abort(), 8000);
+    const res  = await fetch(url, {signal: ctl.signal});
+    clearTimeout(bail);
+    if(!res.ok) return;
+    const row = (await res.json())?.data?.[0];
+    const amt = parseFloat(row?.tot_pub_debt_out_amt);
+    const day = row?.record_date;
+    if(!isFinite(amt) || amt <= 0 || !/^\d{4}-\d{2}-\d{2}$/.test(day)) return;
+    if(Date.parse(day) <= Date.parse(DATA.debt.asOf)) return;   // not newer than what we have
+
+    DATA.debt.amount = amt;
+    DATA.debt.asOf   = day;
+    const pretty = new Date(day + "T12:00:00Z")
+      .toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric",timeZone:"UTC"});
+    $$('[data-f="debtDate"]').forEach(el => el.textContent = pretty);
+    $("#staleWarn").hidden = true;          // we just proved the debt figure is current
+    const mark = document.createElement("div");
+    mark.className = "note";
+    mark.style.cssText = "margin-top:6px;color:#060;font-weight:bold";
+    mark.textContent = "● LIVE — re-seeded from the Treasury API just now (" + pretty + ")";
+    $("#debtClock").after(mark);
+  }catch(e){ /* snapshot stands */ }
+})();
+
+/* ================= TRUTH FEED ================= */
+(function(){
+  const withText = DATA.posts.filter(p => p.txt);
+  $("#feed").innerHTML = DATA.posts.map(p => {
+    const body = p.txt
+      ? `<div class="txt">${esc(p.txt)}${p.trunc ? '<span style="color:#777"> […]</span>' : ""}</div>`
+      : `<div class="txt img-only">[ ${esc(p.note || "no text")} ]</div>`;
+    return `<div class="post"><div class="meta">${esc(p.t)}</div>${body}</div>`;
+  }).join("");
+
+  const all = withText.map(p=>p.txt).join(" ");
+  const words = all.split(/\s+/).filter(w => /[A-Za-z]{2,}/.test(w));
+  const caps  = words.filter(w => w.replace(/[^A-Za-z]/g,"").length >= 2 && w === w.toUpperCase());
+  const bangs = (all.match(/!/g) || []).length;
+  $("#capsPct").textContent  = words.length ? ((caps.length/words.length)*100).toFixed(1) + "%" : "—";
+  $("#bangs").textContent    = bangs;
+  $("#bangsAvg").textContent = (bangs / withText.length).toFixed(1);
+})();
+
+/* ================= APPROVAL ================= */
+(function(){
+  const {approve:a, disapprove:d} = DATA.poll;
+  $("#barApp").style.width = a + "%";  $("#lblApp").innerHTML = `<span>${a.toFixed(1)}%</span>`;
+  $("#barDis").style.width = d + "%";  $("#lblDis").innerHTML = `<span>${d.toFixed(1)}%</span>`;
+  const net = a - d;
+  $("#netApp").textContent = "NET " + (net>0?"+":"") + net.toFixed(1) + " PTS";
+})();
+
+/* ================= ECONOMY ================= */
+(function(){
+  const rows = Object.values(DATA.econ).map(m => {
+    const val = (m.fmt||"") + m.v.toLocaleString("en-US",{minimumFractionDigits:m.v<10?3:2,maximumFractionDigits:m.v<10?3:2}) + (m.suffix||"");
+    let delta = `<span style="color:#666;font-size:10px">${esc(m.cmp)}</span>`;
+    if (m.prev != null){
+      const raw = m.mode === "pts" ? (m.v - m.prev) : ((m.v - m.prev)/m.prev)*100;
+      const unit = m.mode === "pts" ? " pts" : "%";
+      delta = `<span class="${raw>=0?'up':'down'}">${raw>=0?"▲":"▼"} ${Math.abs(raw).toFixed(1)}${unit}</span> <span style="color:#666;font-size:10px">${esc(m.cmp)}</span>`;
+    }
+    return `<div class="kv"><span>${esc(m.label)}</span><span><b>${val}</b> &nbsp;${delta}</span></div>`;
+  }).join("");
+  $("#econ").innerHTML = rows;
+})();
+
+/* ================= CHEETO-METER ================= */
+(function(){
+  const clamp = (x)=>Math.max(0,Math.min(100,x));
+  const parts = [
+    clamp((DATA.poll.disapprove - 35) / 30 * 100),                        // 35%→0, 65%→100
+    clamp(((DATA.econ.gas.v / DATA.econ.gas.prev) - 1) / 0.40 * 100),     // flat→0, +40% YoY→100
+    clamp((DATA.econ.cpi.v - 2) / 4 * 100),                               // 2%→0, 6%→100
+    clamp(DATA.econ.tariff.v / 15 * 100),                                 // 0%→0, 15%→100
+    clamp((DATA.debt.perSecond * 31557600 / 1e12) / 4 * 100)              // $0→0, $4T/yr→100
+  ];
+  const score = parts.reduce((a,b)=>a+b,0) / parts.length;
+  $("#cheetoVal").textContent = score.toFixed(1) + " / 100";
+  const deg = -90 + (score/100)*180;
+  $("#needle").setAttribute("transform", `rotate(${deg} 100 100)`);
+  const labels = [[20,"MILD SALSA 🟢"],[40,"MEDIUM 🟡"],[60,"FLAMIN' HOT 🟠"],[80,"XXTRA FLAMIN' 🔴"],[101,"MELTING THE BAG 🔥"]];
+  $("#cheetoLabel").textContent = labels.find(l => score < l[0])[1];
+})();
+
+/* ================= COUNTDOWN ================= */
+(function(){
+  const start = Date.parse("2025-01-20T17:00:00Z"), end = Date.parse("2029-01-20T17:00:00Z");
+  function tick(){
+    const now = Date.now();
+    const ms  = Math.max(0, end - now);
+    const d = Math.floor(ms/864e5), h = Math.floor(ms/36e5)%24, m = Math.floor(ms/6e4)%60, s = Math.floor(ms/1e3)%60;
+    $("#cd").textContent = `${d}d ${String(h).padStart(2,"0")}h ${String(m).padStart(2,"0")}m ${String(s).padStart(2,"0")}s`;
+    const served = Math.floor((now-start)/864e5);
+    const pct = ((now-start)/(end-start))*100;
+    $("#served").textContent = served.toLocaleString() + " days";
+    $("#remain").textContent = d.toLocaleString() + " days";
+    $("#barTerm").style.width = pct.toFixed(1) + "%";
+    $("#lblTerm").innerHTML = `<span>${pct.toFixed(1)}% COMPLETE</span>`;
+
+    // golf + EO rate depend on days served
+    $("#barGolf").style.width = DATA.golf.pct + "%";
+    $("#lblGolf").innerHTML = `<span>${DATA.golf.pct}% OF DAYS IN OFFICE</span>`;
+    const eoWeeks = (Date.parse(DATA.eo.asOfISO) - start)/6048e5;
+    $("#eoRate").textContent = (DATA.eo.orders / eoWeeks).toFixed(1);
+  }
+  tick(); setInterval(tick, 1000);
+  $("#golfDays").textContent = DATA.golf.days;
+  $("#eoCount").textContent  = DATA.eo.orders;
+})();
+
+/* ================= TICKER ================= */
+(function(){
+  const items = [
+    `NATIONAL DEBT ${money(DATA.debt.amount,0)} AND CLIMBING`,
+    `APPROVAL ${DATA.poll.approve}% / DISAPPROVAL ${DATA.poll.disapprove}%`,
+    `GAS $${DATA.econ.gas.v.toFixed(3)}/GAL — UP ${(((DATA.econ.gas.v/DATA.econ.gas.prev)-1)*100).toFixed(0)}% YEAR OVER YEAR`,
+    `EGGS $${DATA.econ.eggs.v.toFixed(2)}/DOZEN`,
+    `CPI ${DATA.econ.cpi.v}% YoY`,
+    `EFFECTIVE TARIFF RATE ${DATA.econ.tariff.v}% (WAS ${DATA.econ.tariff.prev}% IN JAN 2025)`,
+    `${DATA.golf.days} DAYS AT A GOLF COURSE THIS TERM`,
+    `${DATA.eo.orders} EXECUTIVE ORDERS SIGNED`,
+    `THIS SITE IS BEST VIEWED AT 800x600`
+  ];
+  $("#tickerText").textContent = "★ " + items.join("  ★  ") + "  ★  ";
+})();
+
+/* ================= NICKNAME MACHINE ================= */
+(function(){
+  const A = ["Sleepy","Cryin'","Low-Energy","Crooked","Lyin'","Slippin'","Wacky","Sloppy","Nervous","Birdbrain","Tiny","Mini","Mr. Magoo","Rambling","Cheatin'","Publicity-Seeking","Wild Bill","Fake News","Rocket Man","Dopey"];
+  const B = ["","","","Ol' ","Big ","Little ","The Great "];
+  const C = ["!","!!","!!!"," — SAD!"," — TOTAL LOSER!"," (a nice person, but!)"," — NOT A GOOD PERSON!"," — I HARDLY KNOW HIM!"];
+  const go = () => {
+    const raw = ($("#nickIn").value || "").trim();
+    if(!raw){ $("#nickOut").textContent = "…type a name first, folks"; return; }
+    const name = raw.slice(0,24);
+    const pick = a => a[Math.floor(Math.random()*a.length)];
+    $("#nickOut").innerHTML = `<div>"${esc(pick(B) + pick(A) + " " + name)}${esc(pick(C))}"<br>
+      <span style="font-size:9px;font-weight:normal;color:#666">RANDOMLY GENERATED · NOT A REAL QUOTE</span></div>`;
+  };
+  $("#nickGo").addEventListener("click", go);
+  $("#nickIn").addEventListener("keydown", e => { if(e.key==="Enter") go(); });
+})();
+
+/* ================= GUESTBOOK (local only) ================= */
+(function(){
+  const KEY = "cheeto_guestbook_v1";
+  const read = () => { try { return JSON.parse(localStorage.getItem(KEY) || "[]"); } catch { return []; } };
+  const write = v => { try { localStorage.setItem(KEY, JSON.stringify(v.slice(0,50))); } catch {} };
+  function render(){
+    const e = read();
+    $("#gList").innerHTML = e.length
+      ? e.map(x => `<div style="border-bottom:1px dotted #bbb;padding:4px 0"><b>${esc(x.n)}</b> <span style="color:#888;font-size:9px">${esc(x.d)}</span><br>${esc(x.m)}</div>`).join("")
+      : `<div style="color:#888">No signatures yet. Be the first! 📝</div>`;
+  }
+  $("#gSign").addEventListener("click", () => {
+    const n = ($("#gName").value||"").trim().slice(0,20) || "Anonymous Coward";
+    const m = ($("#gMsg").value||"").trim().slice(0,140);
+    if(!m) return;
+    const e = read(); e.unshift({n, m, d:new Date().toLocaleDateString()}); write(e);
+    $("#gMsg").value = ""; render();
+  });
+  render();
+})();
+
+/* ================= VISITOR COUNTER ================= */
+(function(){
+  const KEY = "cheeto_visits_v1";
+  let n = 0;
+  try { n = parseInt(localStorage.getItem(KEY) || "0", 10) + 1; localStorage.setItem(KEY, n); } catch { n = 1; }
+  const total = 1997000 + n * 7;
+  $("#visitor").innerHTML = String(total).padStart(8,"0").split("").map(d => `<i>${d}</i>`).join("");
+})();
+
+/* ================= WINDOW CHROME ================= */
+(function(){
+  const wins = $$(".win[data-name]");
+  const tasks = $("#tasks");
+  let z = 10;
+
+  wins.forEach((w, i) => {
+    const name = w.dataset.name;
+    const tb = w.querySelector(".tb");
+
+    // taskbar button
+    const btn = document.createElement("button");
+    btn.textContent = name;
+    btn.addEventListener("click", () => {
+      w.hidden = false; w.classList.remove("min");
+      w.style.zIndex = ++z;
+      w.scrollIntoView({behavior:"smooth", block:"center"});
+    });
+    tasks.appendChild(btn);
+
+    tb.querySelector("[data-min]").addEventListener("click", e => { e.stopPropagation(); w.classList.toggle("min"); });
+    tb.querySelector("[data-max]").addEventListener("click", e => {
+      e.stopPropagation();
+      w.classList.remove("min");
+      w._snapBack();                 // clear any drag offset AND its bookkeeping
+      w.style.zIndex = ++z;
+    });
+    tb.querySelector("[data-close]").addEventListener("click", e => {
+      e.stopPropagation();
+      showModal("Access Denied", "⛔",
+        `<b>${esc(name)}</b> cannot be terminated.<br><br>This process is running with elevated privileges.<br>
+         <span style="color:#666;font-size:11px">(It's on the taskbar if you want it back.)</span>`);
+      w.hidden = true;
+    });
+
+    // Drag by transform so the grid layout survives underneath.
+    // Pointer events + setPointerCapture: works for mouse, touch and pen, and keeps
+    // delivering moves even when the pointer leaves the window or the embedding frame.
+    let sx=0, sy=0, dx=0, dy=0, pid=null;
+
+    const snapBack = () => { w.style.transform=""; dx=0; dy=0; };
+    w._snapBack = snapBack;          // so "maximize" and "restore all" reset offsets too
+
+    tb.addEventListener("pointerdown", e => {
+      if(e.target.closest("button")) return;      // let the _ □ × controls through
+      if(e.button !== 0 && e.pointerType === "mouse") return;
+      pid = e.pointerId; sx = e.clientX; sy = e.clientY;
+      w.style.zIndex = ++z;
+      w.classList.add("dragging");
+      try { tb.setPointerCapture(pid); } catch {}
+      e.preventDefault();
+    });
+
+    tb.addEventListener("pointermove", e => {
+      if(e.pointerId !== pid) return;
+      w.style.transform = `translate(${dx + (e.clientX-sx)}px, ${dy + (e.clientY-sy)}px)`;
+    });
+
+    const finish = e => {
+      if(e.pointerId !== pid) return;
+      dx += e.clientX - sx; dy += e.clientY - sy;
+      pid = null;
+      w.classList.remove("dragging");
+      try { tb.releasePointerCapture(e.pointerId); } catch {}
+    };
+    tb.addEventListener("pointerup", finish);
+    tb.addEventListener("pointercancel", finish);
+
+    tb.addEventListener("dblclick", snapBack);
+
+    // keyboard: focus a title bar and nudge with arrows; Esc snaps back
+    tb.tabIndex = 0;
+    tb.setAttribute("role","button");
+    tb.setAttribute("aria-label", `${name} window — drag to move, arrow keys to nudge`);
+    tb.addEventListener("keydown", e => {
+      const step = e.shiftKey ? 40 : 10;
+      const nudge = {ArrowLeft:[-step,0],ArrowRight:[step,0],ArrowUp:[0,-step],ArrowDown:[0,step]}[e.key];
+      if(nudge){ dx+=nudge[0]; dy+=nudge[1]; w.style.transform=`translate(${dx}px, ${dy}px)`; w.style.zIndex=++z; e.preventDefault(); }
+      if(e.key === "Escape") snapBack();
+    });
+  });
+})();
+
+/* ================= MODAL ================= */
+function showModal(title, glyph, html){
+  $("#modalTitle").textContent = title;
+  $("#modalGlyph").textContent = glyph;
+  $("#modalBody").innerHTML = html;
+  $("#modal").hidden = false;
+}
+$("#modalOk").addEventListener("click", () => $("#modal").hidden = true);
+$("#modalX").addEventListener("click",  () => $("#modal").hidden = true);
+$("#modal").addEventListener("click", e => { if(e.target.id === "modal") $("#modal").hidden = true; });
+
+/* ================= START MENU + CLOCK ================= */
+(function(){
+  const menu = $("#startMenu");
+  $("#startBtn").addEventListener("click", e => { e.stopPropagation(); menu.hidden = !menu.hidden; });
+  document.addEventListener("click", () => menu.hidden = true);
+  menu.addEventListener("click", e => {
+    const act = e.target.dataset.act; if(!act) return;
+    menu.hidden = true;
+    if(act==="top") window.scrollTo({top:0,behavior:"smooth"});
+    if(act==="restore") $$(".win[data-name]").forEach(w => { w.hidden=false; w.classList.remove("min"); w._snapBack && w._snapBack(); });
+    if(act==="theme") document.body.classList.toggle("hazard");
+    if(act==="about") showModal("About","🍊",
+      `<b>THE SUPREME CHEETO v1.0</b><br>A satirical dashboard.<br><br>
+       Every figure is pulled from a linked public source and shown without alteration.
+       The Truth Social posts are verbatim from a public archive — nothing is invented.
+       The jokes live in the framing.<br><br>
+       <span style="color:#666;font-size:11px">Data snapshot: ${esc(DATA.buildStamp)}</span>`);
+    if(act==="shutdown") showModal("Shut Down","⏻",
+      `It is now safe to turn off your computer.<br><br>
+       <span style="color:#666;font-size:11px">(It is not. This is a webpage.)</span>`);
+  });
+  const clock = () => {
+    const d = new Date();
+    $("#trayClock").textContent = d.toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"});
+  };
+  clock(); setInterval(clock, 10000);
+})();
+
+/* hazard wallpaper toggle */
+const style = document.createElement("style");
+style.textContent = `body.hazard{background-image:repeating-linear-gradient(45deg,rgba(255,204,0,.22) 0 22px, rgba(0,0,0,.28) 22px 44px)!important;background-color:#3a2a00!important}`;
+document.head.appendChild(style);
+</script>
+</body>
+</html>
