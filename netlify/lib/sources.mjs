@@ -121,28 +121,50 @@ async function posts() {
     });
     return { list, via: "truthsocial-api" };
   } catch (apiErr) {
-    // Fallback: parse the public mirror. Anchors to /statuses/<id> are the one
-    // structural thing on that page stable enough to key off.
+    // Fallback: parse the public mirror. The probe showed each post carries a
+    // data-status-url="https://trumpstruth.org/statuses/<id>" attribute — that's
+    // the one structurally stable hook on the page, so split on it rather than
+    // guessing at class names.
     const html = await grab("https://trumpstruth.org/");
-    const chunks = html.split(/<article|<div[^>]+class="[^"]*status/i).slice(1);
+    const marker = /data-status-url="https:\/\/trumpstruth\.org\/statuses\/(\d+)"/g;
+    const hits = [...html.matchAll(marker)];
     const list = [];
-    for (const chunk of chunks) {
-      const idm = chunk.match(/statuses\/(\d+)/);
-      if (!idm) continue;
-      const datem = chunk.match(/([A-Z][a-z]+ \d{1,2}, \d{4},? \d{1,2}:\d{2} [AP]M)/);
-      const body = stripTags(chunk).replace(/@realDonaldTrump/g, "").trim();
-      const cleaned = body
-        .replace(/^.*?\d{1,2}:\d{2} [AP]M/s, "")
-        .replace(/Original Post.*$/s, "")
-        .trim();
+    for (let i = 0; i < hits.length && list.length < 20; i++) {
+      const id = hits[i][1];
+      if (list.some((p) => p.id === id)) continue;           // the id appears more than once per post
+      const from = hits[i].index;
+      const to = i + 1 < hits.length ? hits[i + 1].index : Math.min(html.length, from + 12000);
+      const chunk = html.slice(from, to);
+
+      // timestamp, e.g. "August 30, 2026, 10:19 PM"
+      const dm = chunk.match(/([A-Z][a-z]+ \d{1,2}, \d{4},?\s+\d{1,2}:\d{2}\s*[AP]M)/);
+
+      // body: prefer an explicit status-content block, else the longest text node
+      let text = null;
+      const cm = chunk.match(/class="[^"]*status-content[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
+      if (cm) text = stripTags(cm[1]);
+      if (!text || text.length < 3) {
+        const candidates = stripTags(chunk)
+          .split("\n")
+          .map((x) => x.trim())
+          .filter((x) => x.length > 12 && !/^https?:/i.test(x) && !/^\d{1,2}:\d{2}/.test(x)
+                         && !/^(Original Post|@realDonaldTrump|Truth Social)/i.test(x));
+        text = candidates.sort((a, b) => b.length - a.length)[0] || null;
+      }
+      if (text) {
+        text = text.replace(/\s*Original Post\s*$/i, "").replace(/@realDonaldTrump/g, "").trim();
+        if (dm) text = text.replace(dm[1], "").trim();
+      }
+      // reject anything that still looks like markup rather than prose
+      if (text && /[<>]|data-[a-z-]+=|https?:\/\/\S+"/.test(text)) text = null;
+
       list.push({
-        id: idm[1],
-        at: datem ? datem[1] : null,
-        text: cleaned.length > 2 ? cleaned.slice(0, 1200) : null,
-        note: cleaned.length > 2 ? null : "no text captured",
-        url: `https://trumpstruth.org/statuses/${idm[1]}`,
+        id,
+        at: dm ? new Date(dm[1] + " UTC").toISOString() : null,
+        text: text && text.length > 2 ? text.slice(0, 1500) : null,
+        note: text && text.length > 2 ? null : "no text captured",
+        url: `https://trumpstruth.org/statuses/${id}`,
       });
-      if (list.length >= 20) break;
     }
     if (!list.length) throw new Error(`api: ${apiErr.message}; mirror: no posts parsed`);
     return { list, via: "trumpstruth-mirror" };
@@ -152,12 +174,30 @@ async function posts() {
 /* ---------------------------------------------------------------- POLLS */
 async function approval() {
   const html = await grab("https://fiftyplusone.news/polls/approval/president");
-  const text = stripTags(html);
-  const app = text.match(/Approve[^0-9]{0,40}(\d{1,2}(\.\d)?)/i);
-  const dis = text.match(/Disapprove[^0-9]{0,40}(\d{1,2}(\.\d)?)/i);
-  const a = app && num(app[1]);
-  const d = dis && num(dis[1]);
-  if (!a || !d || a > 100 || d > 100) throw new Error("could not parse approval");
+  const text = stripTags(html).replace(/\s+/g, " ");
+
+  // Require a decimal percentage near the label. The previous loose pattern
+  // matched the first stray integer on the page and returned 23/23.
+  const pick = (label) => {
+    const re = new RegExp(label + "[^0-9%]{0,80}?(\\d{1,2}(?:\\.\\d)?)\\s*%", "i");
+    const m = text.match(re);
+    return m ? parseFloat(m[1]) : null;
+  };
+  let a = pick("Approve");
+  let d = pick("Disapprove");
+
+  // Fallback: the two largest distinct percentages on the page, in order.
+  if (a == null || d == null || a === d) {
+    const pcts = [...text.matchAll(/(\d{1,2}(?:\.\d)?)\s*%/g)]
+      .map((m) => parseFloat(m[1]))
+      .filter((v) => v >= 15 && v <= 85);
+    const uniq = [...new Set(pcts)];
+    if (uniq.length >= 2) { a = a ?? uniq[0]; d = d ?? uniq[1]; }
+  }
+
+  if (a == null || d == null) throw new Error("could not parse approval");
+  if (a === d) throw new Error(`approve and disapprove both ${a} — pattern is matching the wrong number`);
+  if (a + d < 70 || a + d > 130) throw new Error(`approve+disapprove = ${a + d}, implausible`);
   return { approve: a, disapprove: d };
 }
 
@@ -289,10 +329,17 @@ const CHECKS = [
     name: "truthsocial/posts", fn: posts,
     sane: (v) => {
       if (!v.list?.length) return false;
-      const newest = v.list.map((p) => Date.parse(p.at)).filter(isFinite).sort((a, b) => b - a)[0];
-      return !!newest && Date.now() - newest < 30 * 864e5;   // anything older than a month = dead source
+      // The FIRST post must itself carry a usable date and real text. Checking
+      // "any post has a date" let a run through where post[0] was raw markup.
+      const first = v.list[0];
+      const t = Date.parse(first?.at);
+      if (!isFinite(t) || Date.now() - t > 30 * 864e5) return false;
+      const withText = v.list.filter((p) => p.text && p.text.length > 5);
+      if (withText.length < 2) return false;
+      // reject anything that still smells like unparsed HTML
+      return !v.list.some((p) => p.text && /[<>]|data-[a-z-]+=/.test(p.text));
     },
-    why: "expect >=1 post and the newest within 30 days (a stale mirror looks 'fine' otherwise)",
+    why: "post[0] must have a real date, >=2 posts must have prose text, and no text may contain markup",
     show: (v) => ({ count: v.list?.length, via: v.via, newest: v.list?.[0]?.at,
                     sample: (v.list?.[0]?.text || v.list?.[0]?.note || "").slice(0, 90) }),
   },
