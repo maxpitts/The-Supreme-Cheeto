@@ -1272,19 +1272,37 @@ function splash() {
     el.id = "splash";
     el.innerHTML = `
       <div class="sp-box">
-        <img src="/logo.svg" alt="" width="120" height="120">
+        <div class="sp-logo"><img src="/logo.svg" alt="" width="150" height="150"></div>
         <div class="sp-txt"><b>The Supreme Cheeto</b><span>95</span></div>
         <div class="sp-bar"><i></i></div>
-        <div class="sp-note">Starting The Supreme Cheeto&hellip;</div>
+        <div class="sp-note" id="spNote">Starting The Supreme Cheeto&hellip;</div>
       </div>`;
     document.body.appendChild(el);
+
+    // the loading lines are the joke; they scroll while the bar fills
+    const notes = [
+      "Starting The Supreme Cheeto\u2026",
+      "Loading cheese dust drivers\u2026",
+      "Counting the national debt\u2026",
+      "Asking the pollsters nicely\u2026",
+      "Warming up the CHEETO-METER\u2026",
+      "Almost there\u2026",
+    ];
+    let n = 0;
+    const noteEl = el.querySelector("#spNote");
+    const cycle = setInterval(() => {
+      n = (n + 1) % notes.length;
+      if (noteEl) noteEl.textContent = notes[n];
+    }, 420);
+
     const done = () => {
+      clearInterval(cycle);
       el.style.transition = "opacity .4s";
       el.style.opacity = "0";
       setTimeout(() => { el.remove(); resolve(); }, 420);
     };
     el.addEventListener("click", done);
-    setTimeout(done, 2300);
+    setTimeout(done, 2700);
   });
 }
 

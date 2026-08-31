@@ -23,6 +23,30 @@
       <stop offset="1" stop-color="#ffd98a" stop-opacity="0"/>
     </radialGradient>
   </defs>
+  <style>
+    .body-wrap { animation: bob 4.2s ease-in-out infinite; transform-box: fill-box; transform-origin: 50% 100%; }
+    .hair { animation: sway 5.1s ease-in-out infinite; transform-box: fill-box; transform-origin: 50% 100%; }
+    .eye  { animation: blink 5.6s infinite; transform-box: fill-box; transform-origin: 50% 50%; }
+    .eyeR { animation-delay: .06s; }
+    @keyframes bob {
+      0%, 100% { transform: translateY(0)    rotate(0deg); }
+      50%      { transform: translateY(-6px) rotate(-1.1deg); }
+    }
+    @keyframes sway {
+      0%, 100% { transform: rotate(0deg)    translateX(0); }
+      35%      { transform: rotate(-2.6deg) translateX(-2px); }
+      70%      { transform: rotate(1.8deg)  translateX(2px); }
+    }
+    @keyframes blink {
+      0%, 92%, 100% { transform: scaleY(1); }
+      95%           { transform: scaleY(.08); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .body-wrap, .hair, .eye { animation: none; }
+    }
+  </style>
+  <g class="body-wrap">
+
 
   <!-- ============ SUIT / SHOULDERS ============ -->
   <path d="M104 400 C104 352 138 330 168 322 L200 352 L232 322 C262 330 296 352 296 400 Z"
@@ -58,21 +82,24 @@
   </g>
   <ellipse cx="168" cy="200" rx="26" ry="18" fill="url(#dust)" transform="rotate(-22 168 200)"/>
 
+  <g class="face">
   <!-- ============ FACE ============ -->
   <!-- squint brows -->
   <path d="M150 214 C162 204 182 202 194 208" fill="none" stroke="#7a3200" stroke-width="9" stroke-linecap="round"/>
   <path d="M254 208 C244 200 226 200 214 206" fill="none" stroke="#7a3200" stroke-width="9" stroke-linecap="round"/>
   <!-- eyes -->
-  <ellipse cx="171" cy="233" rx="17" ry="15" fill="#fffdf6" stroke="#7a3200" stroke-width="6"/>
-  <ellipse cx="233" cy="231" rx="17" ry="15" fill="#fffdf6" stroke="#7a3200" stroke-width="6"/>
+  <g class="eye eyeL"><ellipse cx="171" cy="233" rx="17" ry="15" fill="#fffdf6" stroke="#7a3200" stroke-width="6"/>
+  <g class="eye eyeR"><ellipse cx="233" cy="231" rx="17" ry="15" fill="#fffdf6" stroke="#7a3200" stroke-width="6"/>
   <circle cx="175" cy="235" r="6.5" fill="#1a1207"/>
   <circle cx="229" cy="233" r="6.5" fill="#1a1207"/>
-  <circle cx="177.5" cy="232" r="2.2" fill="#fff"/>
-  <circle cx="231.5" cy="230" r="2.2" fill="#fff"/>
+  <circle cx="177.5" cy="232" r="2.2" fill="#fff"/></g>
+  <circle cx="231.5" cy="230" r="2.2" fill="#fff"/></g>
   <!-- pursed mouth -->
   <ellipse cx="201" cy="279" rx="18" ry="12" fill="#8f3a08" stroke="#5e2400" stroke-width="6"/>
   <ellipse cx="201" cy="275" rx="11" ry="6" fill="#c25a1c" opacity=".75"/>
 
+  </g>
+  <g class="hair">
   <!-- ============ COMBOVER ============ -->
   <!-- one solid mass capping the crown, swept right and overhanging the temple -->
   <path d="M124 198
@@ -92,4 +119,6 @@
   <!-- forward flick over the left brow -->
   <path d="M124 198 C114 176 120 152 138 140 C128 162 128 182 140 204 Z"
         fill="#fbe79a" stroke="#8a6a12" stroke-width="7" stroke-linejoin="round"/>
+  </g>
+  </g>
 </svg>

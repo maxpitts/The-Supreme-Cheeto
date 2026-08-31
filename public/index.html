@@ -66,7 +66,9 @@ button{font-family:inherit}
   align-items:center;justify-content:center;gap:6px;
   pointer-events:none;user-select:none;opacity:.5;
 }
-#wallpaper img{width:min(20vw,190px);height:auto;filter:drop-shadow(5px 5px 0 rgba(0,0,0,.4))}
+#wallpaper img{width:min(20vw,190px);height:auto;filter:drop-shadow(5px 5px 0 rgba(0,0,0,.4));
+  animation:wp-float 9s ease-in-out infinite}
+@keyframes wp-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
 #wallpaper .wm{
   font-family:Impact,Haettenschweiler,"Arial Black",sans-serif;
   font-size:min(7vw,74px);line-height:.95;text-transform:uppercase;letter-spacing:1px;
@@ -313,6 +315,9 @@ body.mobile #startBtn{padding:5px 8px}
 /* ============================== SPLASH ============================== */
 #splash{position:fixed;inset:0;z-index:9999;background:linear-gradient(160deg,#0b7d7d,#044,#022);
   display:grid;place-items:center}
+.sp-logo{animation:sp-pop .62s cubic-bezier(.34,1.56,.64,1) both}
+@keyframes sp-pop{from{transform:scale(.4) rotate(-14deg);opacity:0}
+                  to{transform:scale(1) rotate(0);opacity:1}}
 .sp-box{background:var(--gray);padding:26px 34px;text-align:center;
   border:2px solid;border-color:#fff #000 #000 #fff;
   box-shadow:inset 1px 1px 0 #fff,inset -1px -1px 0 var(--gray-d),8px 8px 0 rgba(0,0,0,.45);
@@ -324,9 +329,9 @@ body.mobile #startBtn{padding:5px 8px}
 .sp-bar{margin:14px auto 6px;width:210px;height:15px;background:#fff;overflow:hidden;
   border:2px solid;border-color:var(--gray-d) #fff #fff var(--gray-d)}
 .sp-bar i{display:block;height:100%;width:0;background:repeating-linear-gradient(90deg,var(--navy) 0 9px,transparent 9px 12px);
-  animation:sp-fill 2.1s linear forwards}
+  animation:sp-fill 2.5s linear forwards}
 @keyframes sp-fill{to{width:100%}}
-.sp-note{font-size:11px;color:#444}
+.sp-note{font-size:11px;color:#444;min-height:15px;font-family:"Courier New",monospace}
 
 /* ============================== CHEETIP ============================== */
 #cheetip{position:fixed;right:14px;bottom:calc(var(--taskh) + 12px);z-index:8500;
