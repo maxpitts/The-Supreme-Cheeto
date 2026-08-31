@@ -24,6 +24,30 @@ const TS_ACCOUNT = "107780257626128497";
 
 const nowISO = () => new Date().toISOString();
 
+/* The mirror prints wall-clock times with no zone. Parsing them as UTC shifted
+   every post 4-5 hours, which quietly corrupted the "time since last post"
+   counter. Treat them as America/New_York, then sanity-check: if that lands in
+   the future the assumption was wrong, so fall back to the naive reading. */
+function tzOffsetMinutes(date, tz) {
+  const dtf = new Intl.DateTimeFormat("en-US", {
+    timeZone: tz, hour12: false,
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", second: "2-digit",
+  });
+  const p = Object.fromEntries(dtf.formatToParts(date).map((x) => [x.type, x.value]));
+  const asUTC = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour % 24, +p.minute, +p.second);
+  return (asUTC - date.getTime()) / 60000;
+}
+
+function parseEasternWallClock(str) {
+  const naive = Date.parse(str + " UTC");
+  if (!isFinite(naive)) return null;
+  const offMin = tzOffsetMinutes(new Date(naive), "America/New_York");  // -240 or -300
+  const real = naive - offMin * 60000;
+  if (real > Date.now() + 5 * 60000) return new Date(naive).toISOString();  // ET was wrong
+  return new Date(real).toISOString();
+}
+
 async function grab(url, { json = false, timeout = 12000, headers = {} } = {}) {
   const ctl = new AbortController();
   const t = setTimeout(() => ctl.abort(), timeout);
@@ -141,7 +165,7 @@ async function posts() {
 
       // body: prefer an explicit status-content block, else the longest text node
       let text = null;
-      const cm = chunk.match(/class="[^"]*status-content[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
+      const cm = chunk.match(/class="[^"]*status[-_]{1,2}content[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
       if (cm) text = stripTags(cm[1]);
       if (!text || text.length < 3) {
         const candidates = stripTags(chunk)
@@ -160,7 +184,7 @@ async function posts() {
 
       list.push({
         id,
-        at: dm ? new Date(dm[1] + " UTC").toISOString() : null,
+        at: dm ? parseEasternWallClock(dm[1]) : null,
         text: text && text.length > 2 ? text.slice(0, 1500) : null,
         note: text && text.length > 2 ? null : "no text captured",
         url: `https://trumpstruth.org/statuses/${id}`,

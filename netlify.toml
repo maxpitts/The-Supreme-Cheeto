@@ -6,12 +6,8 @@
   directory = "netlify/functions"
   node_bundler = "esbuild"
 
-# The page polls this; keep it uncached at the edge so the 15-minute refresh
-# actually shows up. The function sets its own short cache-control.
-[[headers]]
-  for = "/.netlify/functions/data"
-  [headers.values]
-    Cache-Control = "public, max-age=60, stale-while-revalidate=600"
+# The function sets its own Cache-Control; a rule here would override it and
+# reintroduce the stale-data bug. Left intentionally unset.
 
 [[headers]]
   for = "/*"

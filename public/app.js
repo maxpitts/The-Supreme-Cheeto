@@ -305,6 +305,7 @@ const WM = {
       { sep: true },
       { label: "Install to home screen", icon: "&#128229;", id: "installItem", act: () => promptInstall() },
       { label: "Refresh data now", icon: "&#128260;", act: () => loadLive(true) },
+      { label: "Show Cheetip", icon: "&#129472;", act: () => Cheetip.show() },
       { label: "Reset window layout", icon: "&#129704;", act: () => { localStorage.removeItem(this.KEY); location.reload(); } },
       { sep: true },
       { label: "Shut Down…", icon: "&#9211;", act: () => showModal("Shut Down", "&#9211;",
@@ -641,6 +642,7 @@ function flashNewPost(p) {
   const w = WM.byId("w-truth");
   if (w) { WM.open("w-truth"); }
   document.title = "🔴 NEW POST — The Supreme Cheeto";
+  Cheetip.say("It looks like a new post just landed. I thought you should know immediately.", 9000);
   setTimeout(() => (document.title = "The Supreme Cheeto"), 30000);
 }
 
@@ -850,6 +852,7 @@ function boot() {
     el.style.transition = "opacity .35s"; el.style.opacity = "0";
     setTimeout(() => el.remove(), 380);
     try { sessionStorage.setItem("cheeto_booted", "1"); } catch {}
+    splash().then(() => Cheetip.init());
   };
   el.addEventListener("click", finish);
   document.addEventListener("keydown", finish, { once: true });
@@ -863,6 +866,426 @@ function boot() {
     setTimeout(step, BOOT_LINES[i - 1] === "" ? 60 : 115);
   };
   step();
+}
+
+
+/* =====================================================================
+   CARD GAMES — Klondike Solitaire and Blackjack
+   Shared deck helpers, then the two games. Click-to-select rather than
+   drag-and-drop throughout: it's the same interaction on desktop and touch,
+   and it can't strand a card mid-drag on a phone.
+   ===================================================================== */
+const SUITS = [
+  { s: "♠", red: false }, { s: "♥", red: true },
+  { s: "♦", red: true },  { s: "♣", red: false },
+];
+const RANKS = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
+
+function freshDeck() {
+  const d = [];
+  SUITS.forEach((su, si) => RANKS.forEach((r, ri) =>
+    d.push({ r, ri, s: su.s, si, red: su.red, up: false })));
+  return d;
+}
+function shuffle(d) {
+  for (let i = d.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [d[i], d[j]] = [d[j], d[i]];
+  }
+  return d;
+}
+function cardHTML(c, extra = "") {
+  if (!c) return `<div class="card empty ${extra}"></div>`;
+  if (!c.up) return `<div class="card back ${extra}"></div>`;
+  return `<div class="card ${c.red ? "red" : ""} ${extra}">
+    <span class="cr">${c.r}</span><span class="cs">${c.s}</span></div>`;
+}
+
+/* ===================================================================== */
+/*  KLONDIKE SOLITAIRE                                                    */
+/* ===================================================================== */
+function initSolitaire() {
+  const root = $("#solRoot");
+  if (!root) return;
+  let stock, waste, found, tab, sel, moves, won;
+
+  function deal() {
+    const d = shuffle(freshDeck());
+    tab = Array.from({ length: 7 }, (_, i) => {
+      const pile = d.splice(0, i + 1);
+      pile[pile.length - 1].up = true;
+      return pile;
+    });
+    stock = d; waste = []; found = [[], [], [], []];
+    sel = null; moves = 0; won = false;
+    draw();
+  }
+
+  const topOf = (p) => p[p.length - 1] || null;
+  const canStack = (c, onto) =>
+    onto ? (c.red !== onto.red && c.ri === onto.ri - 1) : c.ri === 12;   // empty takes a King
+  const canFound = (c, f) => {
+    const t = topOf(f);
+    return t ? (t.si === c.si && c.ri === t.ri + 1) : c.ri === 0;        // empty takes an Ace
+  };
+
+  function autoToFoundation(c, from) {
+    for (let i = 0; i < 4; i++) {
+      if (canFound(c, found[i])) {
+        found[i].push(from.pop());
+        flipIfNeeded(from);
+        moves++;
+        checkWin();
+        return true;
+      }
+    }
+    return false;
+  }
+  function flipIfNeeded(pile) {
+    const t = topOf(pile);
+    if (t && !t.up) t.up = true;
+  }
+  function checkWin() {
+    if (found.every((f) => f.length === 13)) {
+      won = true;
+      showModal("You win", "🏆", `Solitaire solved in ${moves} moves.<br><br>
+        <span style="color:#555;font-size:11px">The cards do not cascade. I'm sorry.</span>`);
+    }
+  }
+
+  function clickStock() {
+    if (stock.length) {
+      const c = stock.pop(); c.up = true; waste.push(c);
+    } else {
+      stock = waste.reverse().map((c) => (c.up = false, c));
+      waste = [];
+    }
+    sel = null; moves++; draw();
+  }
+
+  /* selection model: pick a source (pile + index), then a destination */
+  function onCard(where, pileIdx, cardIdx) {
+    const pile = where === "t" ? tab[pileIdx] : where === "w" ? waste : found[pileIdx];
+    const card = pile[cardIdx];
+    if (!card || !card.up) return;
+
+    if (!sel) {
+      // second click on the same card sends it to a foundation if it can go
+      sel = { where, pileIdx, cardIdx };
+      draw();
+      return;
+    }
+    if (sel.where === where && sel.pileIdx === pileIdx && sel.cardIdx === cardIdx) {
+      const src = where === "t" ? tab[pileIdx] : waste;
+      if (cardIdx === src.length - 1) autoToFoundation(card, src);
+      sel = null; draw();
+      return;
+    }
+    tryMove(sel, { where, pileIdx });
+    sel = null; draw();
+  }
+
+  function onEmpty(where, pileIdx) {
+    if (!sel) return;
+    tryMove(sel, { where, pileIdx });
+    sel = null; draw();
+  }
+
+  function tryMove(from, to) {
+    const srcPile = from.where === "t" ? tab[from.pileIdx]
+                  : from.where === "w" ? waste : found[from.pileIdx];
+    const moving = srcPile.slice(from.cardIdx);
+    if (!moving.length) return;
+
+    if (to.where === "f") {
+      if (moving.length !== 1) return;
+      if (!canFound(moving[0], found[to.pileIdx])) return;
+      found[to.pileIdx].push(srcPile.pop());
+    } else if (to.where === "t") {
+      const dest = tab[to.pileIdx];
+      if (!canStack(moving[0], topOf(dest))) return;
+      srcPile.splice(from.cardIdx, moving.length);
+      dest.push(...moving);
+    } else return;
+
+    flipIfNeeded(srcPile);
+    moves++;
+    checkWin();
+  }
+
+  function draw() {
+    const isSel = (w, p, c) => sel && sel.where === w && sel.pileIdx === p && sel.cardIdx === c;
+
+    let h = `<div class="sol-top">
+      <div class="sol-stock" id="solStock">${stock.length
+        ? '<div class="card back"></div>'
+        : '<div class="card empty recycle">↻</div>'}</div>
+      <div class="sol-waste">${waste.length
+        ? cardHTML(topOf(waste), isSel("w", 0, waste.length - 1) ? "sel" : "")
+        : '<div class="card empty"></div>'}</div>
+      <div class="sol-spacer"></div>`;
+    found.forEach((f, i) => {
+      h += `<div class="sol-found" data-f="${i}">${f.length
+        ? cardHTML(topOf(f)) : '<div class="card empty"><span class="fs">' + SUITS[i].s + "</span></div>"}</div>`;
+    });
+    h += `</div><div class="sol-tab">`;
+    tab.forEach((p, i) => {
+      h += `<div class="sol-col" data-t="${i}">`;
+      if (!p.length) h += `<div class="card empty"></div>`;
+      p.forEach((c, ci) => {
+        h += `<div class="sol-slot" data-t="${i}" data-c="${ci}">${cardHTML(c, isSel("t", i, ci) ? "sel" : "")}</div>`;
+      });
+      h += `</div>`;
+    });
+    h += `</div><div class="sol-bar">Moves: <b>${moves}</b>
+      <button class="b95" id="solNew" style="float:right;padding:2px 9px">New game</button></div>`;
+    root.innerHTML = h;
+
+    $("#solStock").addEventListener("click", clickStock);
+    $("#solNew").addEventListener("click", deal);
+    $$(".sol-waste", root).forEach((el) =>
+      el.addEventListener("click", () => waste.length && onCard("w", 0, waste.length - 1)));
+    $$("[data-f]", root).forEach((el) =>
+      el.addEventListener("click", () => onEmpty("f", +el.dataset.f)));
+    $$(".sol-slot", root).forEach((el) =>
+      el.addEventListener("click", (e) => { e.stopPropagation(); onCard("t", +el.dataset.t, +el.dataset.c); }));
+    $$(".sol-col", root).forEach((el) =>
+      el.addEventListener("click", () => onEmpty("t", +el.dataset.t)));
+  }
+
+  deal();
+}
+
+/* ===================================================================== */
+/*  BLACKJACK                                                             */
+/* ===================================================================== */
+function initBlackjack() {
+  const root = $("#bjRoot");
+  if (!root) return;
+  let deck, player, dealer, state, msg, bet, chips;
+
+  const CHIPS_KEY = "cheeto_bj_chips";
+  try { chips = parseInt(localStorage.getItem(CHIPS_KEY) || "500", 10); } catch { chips = 500; }
+  if (!isFinite(chips) || chips < 0) chips = 500;
+  bet = 25;
+
+  const saveChips = () => { try { localStorage.setItem(CHIPS_KEY, String(chips)); } catch {} };
+
+  function value(hand) {
+    let total = 0, aces = 0;
+    hand.forEach((c) => {
+      if (c.ri === 0) { aces++; total += 11; }
+      else total += Math.min(10, c.ri + 1);
+    });
+    while (total > 21 && aces) { total -= 10; aces--; }
+    return total;
+  }
+  const isBJ = (h) => h.length === 2 && value(h) === 21;
+
+  function drawCard(up = true) {
+    if (deck.length < 15) deck = shuffle(freshDeck());
+    const c = deck.pop(); c.up = up; return c;
+  }
+
+  function newRound() {
+    if (chips < bet) { msg = "Not enough chips. Reset to play again."; state = "over"; return render(); }
+    if (!deck || deck.length < 15) deck = shuffle(freshDeck());
+    chips -= bet; saveChips();
+    player = [drawCard(), drawCard()];
+    dealer = [drawCard(), drawCard(false)];
+    state = "play"; msg = "";
+    if (isBJ(player)) {
+      dealer[1].up = true;
+      if (isBJ(dealer)) { chips += bet; msg = "Push — you both have blackjack."; }
+      else { chips += Math.floor(bet * 2.5); msg = "Blackjack! Pays 3:2."; }
+      saveChips(); state = "over";
+    }
+    render();
+  }
+
+  function hit() {
+    if (state !== "play") return;
+    player.push(drawCard());
+    if (value(player) > 21) { msg = `Bust with ${value(player)}.`; state = "over"; dealer[1].up = true; }
+    render();
+  }
+
+  function stand() {
+    if (state !== "play") return;
+    dealer[1].up = true;
+    while (value(dealer) < 17) dealer.push(drawCard());
+    const p = value(player), d = value(dealer);
+    if (d > 21) { chips += bet * 2; msg = `Dealer busts with ${d}. You win.`; }
+    else if (d > p) { msg = `Dealer ${d}, you ${p}. Dealer wins.`; }
+    else if (p > d) { chips += bet * 2; msg = `You ${p}, dealer ${d}. You win.`; }
+    else { chips += bet; msg = `Push at ${p}.`; }
+    saveChips(); state = "over"; render();
+  }
+
+  function doubleDown() {
+    if (state !== "play" || player.length !== 2 || chips < bet) return;
+    chips -= bet; bet *= 2; saveChips();
+    player.push(drawCard());
+    if (value(player) > 21) { msg = `Bust with ${value(player)}.`; state = "over"; dealer[1].up = true; render(); }
+    else stand();
+    bet = Math.floor(bet / 2);
+  }
+
+  function render() {
+    const dShown = dealer ? (state === "play" ? value([dealer[0]]) + " + ?" : value(dealer)) : "—";
+    root.innerHTML = `
+      <div class="bj-row"><span>Dealer</span><b>${dShown}</b></div>
+      <div class="hand">${(dealer || []).map((c) => cardHTML(c)).join("") || '<div class="card empty"></div>'}</div>
+      <div class="bj-row"><span>You</span><b>${player ? value(player) : "—"}</b></div>
+      <div class="hand">${(player || []).map((c) => cardHTML(c)).join("") || '<div class="card empty"></div>'}</div>
+      <div class="bj-msg">${esc(msg || (state === "play" ? "Hit or stand." : "Place a bet and deal."))}</div>
+      <div class="bj-bar">
+        <span>Chips <b id="bjChips">${chips}</b></span>
+        <span>Bet <button class="b95 tiny" id="bjMinus">−</button>
+          <b id="bjBet">${bet}</b>
+          <button class="b95 tiny" id="bjPlus">+</button></span>
+      </div>
+      <div class="bj-actions">
+        ${state === "play"
+          ? `<button class="b95" id="bjHit">Hit</button>
+             <button class="b95" id="bjStand">Stand</button>
+             <button class="b95" id="bjDouble"${player.length !== 2 || chips < bet ? " disabled" : ""}>Double</button>`
+          : `<button class="b95" id="bjDeal">Deal</button>
+             <button class="b95" id="bjReset" style="float:right">Reset chips</button>`}
+      </div>
+      <p class="note">Dealer stands on 17. Blackjack pays 3:2. Chips are fake, stored only in your browser,
+      and worth exactly nothing.</p>`;
+
+    const on = (id, fn) => { const el = $("#" + id); if (el) el.addEventListener("click", fn); };
+    on("bjHit", hit); on("bjStand", stand); on("bjDouble", doubleDown); on("bjDeal", newRound);
+    on("bjPlus", () => { bet = Math.min(500, bet + 25); render(); });
+    on("bjMinus", () => { bet = Math.max(25, bet - 25); render(); });
+    on("bjReset", () => { chips = 500; bet = 25; saveChips(); msg = "Chips reset to 500."; render(); });
+  }
+
+  state = "over"; msg = ""; render();
+}
+
+/* =====================================================================
+   CHEETIP — the assistant. Clippy's whole personality was interrupting you
+   with advice you didn't ask for, so this one does that too, but it only
+   ever says things that are true about the data on screen.
+   ===================================================================== */
+const Cheetip = {
+  el: null, bubble: null, hidden: false, timer: null, lastSaid: "",
+
+  KEY: "cheeto_tip_hidden",
+
+  init() {
+    try { this.hidden = localStorage.getItem(this.KEY) === "1"; } catch {}
+    this.el = $("#cheetip");
+    this.bubble = $("#cheetipSay");
+    if (!this.el) return;
+    this.el.hidden = this.hidden;
+
+    $("#cheetipClose").addEventListener("click", (e) => { e.stopPropagation(); this.dismiss(); });
+    $("#cheetipChar").addEventListener("click", () => this.say(this.pick(), 9000));
+
+    if (!this.hidden) {
+      setTimeout(() => this.say("It looks like you're trying to follow the news. Would you like help with that?", 8000), 2600);
+      this.schedule();
+    }
+  },
+
+  dismiss() {
+    this.hidden = true;
+    this.el.hidden = true;
+    clearTimeout(this.timer);
+    try { localStorage.setItem(this.KEY, "1"); } catch {}
+  },
+
+  show() {
+    this.hidden = false;
+    this.el.hidden = false;
+    try { localStorage.removeItem(this.KEY); } catch {}
+    this.say("I'm back. You can't get rid of me that easily.", 6000);
+    this.schedule();
+  },
+
+  schedule() {
+    clearTimeout(this.timer);
+    if (this.hidden) return;
+    // long, irregular gaps — the joke dies if it nags
+    this.timer = setTimeout(() => { this.say(this.pick(), 9000); this.schedule(); },
+      75000 + Math.random() * 120000);
+  },
+
+  say(text, ms = 7000) {
+    if (this.hidden || !this.bubble) return;
+    this.lastSaid = text;
+    this.bubble.innerHTML = esc(text);
+    this.bubble.hidden = false;
+    this.el.classList.add("talking");
+    clearTimeout(this._hide);
+    this._hide = setTimeout(() => {
+      this.bubble.hidden = true;
+      this.el.classList.remove("talking");
+    }, ms);
+  },
+
+  /* every line is derived from data actually on the page */
+  pick() {
+    const lines = [];
+    const debt = liveDebt();
+    lines.push(`The national debt has gone up about ${money(D.debt.perSecond * 60, 0)} since I started this sentence.`);
+    lines.push(`Your personal share of the debt is ${money(debt / POPULATION, 0)}. No, you can't pay it off.`);
+
+    if (D.approval?.approve != null) {
+      const net = D.approval.approve - D.approval.disapprove;
+      lines.push(`Approval is ${D.approval.approve}%, disapproval ${D.approval.disapprove}%. Net ${net > 0 ? "+" : ""}${net.toFixed(1)}.`);
+    }
+    if (D.gas?.v && D.gas?.prev) {
+      const pc = ((D.gas.v / D.gas.prev - 1) * 100).toFixed(0);
+      lines.push(`Gas is $${D.gas.v.toFixed(3)}. That's ${pc}% ${pc >= 0 ? "more" : "less"} than a year ago.`);
+    }
+    if (D.golf?.days) lines.push(`${D.golf.days} days at a golf course this term. It looks like you're trying to lower your handicap.`);
+    if (D.eo?.orders) lines.push(`${D.eo.orders} executive orders signed. That's a lot of pens.`);
+    if (D.eggs?.v) lines.push(`Eggs are $${D.eggs.v.toFixed(2)} a dozen. I remain a snack food, so I'm fine.`);
+
+    const times = (D.posts?.list || []).map(postTime).filter(Boolean);
+    if (times.length) {
+      const since = Date.now() - Math.max(...times);
+      lines.push(since < 36e5
+        ? `A post landed ${ago(since)} ago. It looks like you're trying to have a quiet day.`
+        : `${ago(since)} since the last post. Suspiciously calm.`);
+    }
+    if (D.cheeto != null) lines.push(`Cheeto-meter reads ${D.cheeto.toFixed(1)} out of 100. I don't make the rules, I just have a gauge.`);
+
+    lines.push("It looks like you're trying to doomscroll. Would you like me to open Solitaire instead?");
+    lines.push("Did you know? Every number on this page links to where it came from. Wild concept.");
+
+    // don't repeat the last thing said
+    const fresh = lines.filter((l) => l !== this.lastSaid);
+    return fresh[Math.floor(Math.random() * fresh.length)] || lines[0];
+  },
+};
+
+/* ---------- Win95-style splash after the BIOS text ---------- */
+function splash() {
+  return new Promise((resolve) => {
+    const el = document.createElement("div");
+    el.id = "splash";
+    el.innerHTML = `
+      <div class="sp-box">
+        <img src="/logo.svg" alt="" width="120" height="120">
+        <div class="sp-txt"><b>The Supreme Cheeto</b><span>95</span></div>
+        <div class="sp-bar"><i></i></div>
+        <div class="sp-note">Starting The Supreme Cheeto&hellip;</div>
+      </div>`;
+    document.body.appendChild(el);
+    const done = () => {
+      el.style.transition = "opacity .4s";
+      el.style.opacity = "0";
+      setTimeout(() => { el.remove(); resolve(); }, 420);
+    };
+    el.addEventListener("click", done);
+    setTimeout(done, 2300);
+  });
 }
 
 /* =====================================================================
@@ -935,6 +1358,8 @@ function start() {
   initChrome();
   initBall();
   initMines();
+  initSolitaire();
+  initBlackjack();
   renderAll();
 
   setInterval(tickDebt, 100);
@@ -954,3 +1379,4 @@ let booted = false;
 try { booted = sessionStorage.getItem("cheeto_booted") === "1"; } catch {}
 if (booted) { $("#boot")?.remove(); } else { boot(); }
 start();
+if (booted) setTimeout(() => Cheetip.init(), 500);

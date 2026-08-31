@@ -15,9 +15,11 @@ export default async () => {
       );
     }
     return Response.json(state, {
-      // Short cache: the data changes every 15 min, and stale-while-revalidate
-      // keeps the page instant without ever serving something very old.
-      headers: { "cache-control": "public, max-age=60, stale-while-revalidate=600" },
+      // Was max-age=60 + stale-while-revalidate=600, which let the CDN serve
+      // data up to TEN MINUTES old on a site whose whole promise is 15-minute
+      // freshness — and made a manual refresh look like it did nothing.
+      // A blob read is cheap; correctness beats the cache here.
+      headers: { "cache-control": "public, max-age=20, must-revalidate" },
     });
   } catch (err) {
     return Response.json({ error: String(err?.message || err) }, { status: 500 });

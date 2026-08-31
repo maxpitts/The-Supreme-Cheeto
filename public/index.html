@@ -270,6 +270,86 @@ body.mobile #tray{padding:4px 6px}
 body.mobile #startBtn span:last-child{display:none}
 body.mobile #startBtn{padding:5px 8px}
 
+
+/* ============================== CARDS ============================== */
+.card{width:42px;height:58px;background:#fff;border:1px solid #555;border-radius:3px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  font-family:"Times New Roman",Georgia,serif;font-weight:bold;line-height:1;
+  box-shadow:1px 1px 0 rgba(0,0,0,.3);user-select:none;flex:0 0 auto}
+.card .cr{font-size:15px}.card .cs{font-size:17px}
+.card.red{color:#c00}
+.card.back{background:repeating-linear-gradient(45deg,#1a3a8f 0 4px,#2a52be 4px 8px);border-color:#0c1f4d}
+.card.empty{background:rgba(0,0,0,.10);border:1px dashed #7a7a7a;box-shadow:none;color:#666}
+.card.empty .fs{font-size:19px;opacity:.55}
+.card.empty.recycle{font-size:20px;color:#333}
+.card.sel{outline:3px solid #ffb000;outline-offset:1px;transform:translateY(-4px)}
+.hand{display:flex;gap:5px;margin:4px 0 9px;min-height:60px;flex-wrap:wrap}
+
+/* ---------- solitaire ---------- */
+.sol-top{display:flex;gap:5px;align-items:flex-start;margin-bottom:9px}
+.sol-spacer{flex:1 1 auto;min-width:6px}
+.sol-stock,.sol-waste,.sol-found{flex:0 0 auto;cursor:pointer}
+.sol-tab{display:flex;gap:5px;align-items:flex-start}
+.sol-col{flex:1 1 0;min-width:42px;min-height:80px;position:relative;cursor:pointer}
+/* face-down cards pack tight; face-up ones fan out far enough to read the rank */
+.sol-slot{margin-top:-46px;cursor:pointer}
+.sol-slot:has(.card:not(.back):not(.empty)){margin-top:-33px}
+.sol-slot:first-child{margin-top:0}
+.sol-bar{margin-top:10px;padding-top:7px;border-top:1px solid var(--gray-d);font-size:11px;overflow:hidden}
+
+/* ---------- blackjack ---------- */
+.bj-row{display:flex;justify-content:space-between;font-size:11px;font-weight:bold;
+  text-transform:uppercase;letter-spacing:.5px;color:#333;margin-top:4px}
+.bj-msg{background:#000;color:#0f0;font-family:"Courier New",monospace;font-size:12px;
+  padding:7px;text-align:center;min-height:30px;
+  border:2px solid;border-color:var(--gray-d) #fff #fff var(--gray-d)}
+.bj-bar{display:flex;justify-content:space-between;align-items:center;margin:9px 0;font-size:12px}
+.bj-bar b{font-family:"Courier New",monospace}
+.b95.tiny{padding:1px 7px;font-size:12px}
+.bj-actions{display:flex;gap:6px;flex-wrap:wrap}
+.bj-actions button{flex:1 1 auto}
+.bj-actions button[disabled]{opacity:.5;cursor:not-allowed}
+
+/* ============================== SPLASH ============================== */
+#splash{position:fixed;inset:0;z-index:9999;background:linear-gradient(160deg,#0b7d7d,#044,#022);
+  display:grid;place-items:center}
+.sp-box{background:var(--gray);padding:26px 34px;text-align:center;
+  border:2px solid;border-color:#fff #000 #000 #fff;
+  box-shadow:inset 1px 1px 0 #fff,inset -1px -1px 0 var(--gray-d),8px 8px 0 rgba(0,0,0,.45);
+  animation:sp-in .5s ease-out}
+@keyframes sp-in{from{transform:scale(.9);opacity:0}to{transform:scale(1);opacity:1}}
+.sp-txt{font-family:Impact,"Arial Black",sans-serif;font-size:26px;margin-top:8px;
+  display:flex;align-items:baseline;justify-content:center;gap:7px;color:#1a1a1a}
+.sp-txt span{font-size:15px;color:var(--orange-d)}
+.sp-bar{margin:14px auto 6px;width:210px;height:15px;background:#fff;overflow:hidden;
+  border:2px solid;border-color:var(--gray-d) #fff #fff var(--gray-d)}
+.sp-bar i{display:block;height:100%;width:0;background:repeating-linear-gradient(90deg,var(--navy) 0 9px,transparent 9px 12px);
+  animation:sp-fill 2.1s linear forwards}
+@keyframes sp-fill{to{width:100%}}
+.sp-note{font-size:11px;color:#444}
+
+/* ============================== CHEETIP ============================== */
+#cheetip{position:fixed;right:14px;bottom:calc(var(--taskh) + 12px);z-index:8500;
+  display:flex;flex-direction:column;align-items:flex-end;gap:7px;pointer-events:none}
+.tip-bubble{pointer-events:auto;max-width:260px;background:#ffffe1;color:#000;font-size:12px;
+  line-height:1.45;padding:9px 11px;border:1px solid #000;position:relative;
+  box-shadow:3px 3px 0 rgba(0,0,0,.35);animation:tip-in .22s ease-out}
+.tip-bubble::after{content:"";position:absolute;right:26px;bottom:-9px;width:0;height:0;
+  border:9px solid transparent;border-top-color:#ffffe1;border-bottom:0}
+@keyframes tip-in{from{transform:translateY(6px) scale(.96);opacity:0}to{transform:none;opacity:1}}
+.tip-char{pointer-events:auto;position:relative;cursor:pointer;
+  filter:drop-shadow(3px 3px 0 rgba(0,0,0,.4));animation:tip-idle 3.6s ease-in-out infinite}
+#cheetip.talking .tip-char{animation:tip-talk .5s ease-in-out 3}
+@keyframes tip-idle{0%,88%,100%{transform:translateY(0) rotate(0)}92%{transform:translateY(-5px) rotate(-4deg)}96%{transform:translateY(-2px) rotate(3deg)}}
+@keyframes tip-talk{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+.tip-char button{position:absolute;top:-5px;right:-5px;width:19px;height:19px;padding:0;
+  font-size:12px;font-weight:bold;line-height:15px;cursor:pointer;background:var(--gray);
+  border:2px solid;border-color:#fff var(--gray-d) var(--gray-d) #fff}
+body.mobile #cheetip{right:8px;bottom:calc(var(--taskh) + 8px)}
+body.mobile .tip-char img{width:48px;height:48px}
+body.mobile .tip-bubble{max-width:200px;font-size:11px}
+@media (prefers-reduced-motion: reduce){.tip-char{animation:none}}
+
 @media (prefers-reduced-motion: reduce){
   *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;
     transition-duration:.001ms!important}
@@ -467,6 +547,27 @@ body.mobile #startBtn{padding:5px 8px}
     <div class="grip"></div>
   </section>
 
+
+  <!-- ---------------- SOLITAIRE ---------------- -->
+  <section class="win" id="w-sol" data-title="SOLITAIRE" data-icon="&#127183;"
+           data-x="150" data-y="60" data-w="560" data-h="470">
+    <div class="tb"><span class="ico">&#127183;</span><span class="t">Solitaire</span>
+      <span class="btns"><button data-min>_</button><button data-max>&#9633;</button><button data-close>&times;</button></span></div>
+    <div class="body"><div id="solRoot"></div>
+      <p class="note">Click a card to pick it up, click where it goes. Click a card twice to send it to a foundation. Stock recycles when empty.</p>
+    </div>
+    <div class="grip"></div>
+  </section>
+
+  <!-- ---------------- BLACKJACK ---------------- -->
+  <section class="win" id="w-bj" data-title="BLACKJACK" data-icon="&#127183;"
+           data-x="520" data-y="120" data-w="380" data-h="430">
+    <div class="tb navy"><span class="ico">&#9827;</span><span class="t">Blackjack</span>
+      <span class="btns"><button data-min>_</button><button data-max>&#9633;</button><button data-close>&times;</button></span></div>
+    <div class="body"><div id="bjRoot"></div></div>
+    <div class="grip"></div>
+  </section>
+
   <!-- ---------------- ABOUT ---------------- -->
   <section class="win" id="w-about" data-title="ABOUT.HTM" data-icon="&#8505;"
            data-x="500" data-y="120" data-w="470" data-h="400">
@@ -493,6 +594,14 @@ body.mobile #startBtn{padding:5px 8px}
 <div id="startMenu" hidden>
   <div class="rail">Cheeto 95</div>
   <ul id="startList"></ul>
+</div>
+
+<div id="cheetip" hidden>
+  <div id="cheetipSay" class="tip-bubble" hidden></div>
+  <div class="tip-char" id="cheetipChar" title="Click me for a tip">
+    <img src="/logo.svg" alt="Cheetip" width="62" height="62">
+    <button id="cheetipClose" title="Hide Cheetip">&times;</button>
+  </div>
 </div>
 
 <div class="modal" id="modal" hidden>
