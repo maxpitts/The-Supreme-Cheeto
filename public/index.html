@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>The Supreme Cheeto</title>
+<meta name="description" content="A 1997-style Windows desktop that tracks the national debt, Truth Social, approval ratings and the price of eggs. Real sourced data, unserious presentation.">
+<link rel="canonical" href="https://supremecheeto.club/">
+<meta name="theme-color" content="#008080">
+<meta name="robots" content="index,follow">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="The Supreme Cheeto">
+<meta property="og:url" content="https://supremecheeto.club/">
+<meta property="og:title" content="The Supreme Cheeto">
+<meta property="og:description" content="A 1997-style Windows desktop tracking the national debt, Truth Social, approval ratings and the price of eggs. Real sourced data, unserious presentation.">
+<meta property="og:image" content="https://supremecheeto.club/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="The Supreme Cheeto">
+<meta name="twitter:description" content="A 1997-style Windows desktop tracking the national debt, Truth Social, approval ratings and the price of eggs.">
+<meta name="twitter:image" content="https://supremecheeto.club/og.png">
+<link rel="icon" href="/logo.svg">
+<link rel="apple-touch-icon" href="/logo.svg">
+
+<style>
+:root{
+  --gray:#c0c0c0; --gray-d:#808080; --gray-l:#dfdfdf; --ink:#0a0a0a;
+  --navy:#000080; --teal:#008080;
+  --orange:#ff7a00; --orange-d:#a33f00;
+  --tbh:22px;               /* title bar height */
+  --taskh:40px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;height:100%}
+body{
+  font-family:"MS Sans Serif",Tahoma,Verdana,Geneva,sans-serif;
+  font-size:13px;color:var(--ink);
+  background:#008080;
+  background-image:
+    repeating-linear-gradient(45deg,rgba(255,255,255,.035) 0 8px,transparent 8px 16px),
+    radial-gradient(circle at 22% 12%,#0aa 0%,#066 60%,#044 100%);
+  overflow:hidden;                 /* a desktop doesn't scroll */
+  -webkit-font-smoothing:none;
+}
+[hidden]{display:none!important}
+img{max-width:100%}
+button{font-family:inherit}
+
+/* ============================== BEVELS ============================== */
+.out{border:2px solid;border-color:#fff var(--gray-d) var(--gray-d) #fff;
+     box-shadow:inset -1px -1px 0 #000,inset 1px 1px 0 var(--gray-l)}
+.in {border:2px solid;border-color:var(--gray-d) #fff #fff var(--gray-d);
+     box-shadow:inset 1px 1px 0 #000,inset -1px -1px 0 var(--gray-l)}
+
+/* ============================== DESKTOP ============================== */
+#desktop{position:fixed;inset:0 0 var(--taskh) 0;overflow:hidden}
+#wallpaper{
+  position:absolute;inset:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:6px;
+  pointer-events:none;user-select:none;opacity:.5;
+}
+#wallpaper img{width:min(20vw,190px);height:auto;filter:drop-shadow(5px 5px 0 rgba(0,0,0,.4))}
+#wallpaper .wm{
+  font-family:Impact,Haettenschweiler,"Arial Black",sans-serif;
+  font-size:min(7vw,74px);line-height:.95;text-transform:uppercase;letter-spacing:1px;
+  background:linear-gradient(#fff2c4 0%,#ffd166 18%,#ff8c1a 48%,#e05a00 72%,#ffb03a 100%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  -webkit-text-stroke:2px #4a1d00;filter:drop-shadow(4px 4px 0 rgba(0,0,0,.5));
+  text-align:center;
+}
+
+/* ---------- desktop icons ---------- */
+#icons{position:absolute;top:8px;left:8px;display:flex;flex-direction:column;gap:4px;z-index:2}
+.dicon{width:78px;padding:5px 3px;text-align:center;cursor:pointer;border:1px dotted transparent;background:none}
+.dicon .g{font-size:26px;line-height:1;display:block;filter:drop-shadow(2px 2px 0 rgba(0,0,0,.4))}
+.dicon .l{display:block;color:#fff;font-size:11px;margin-top:3px;text-shadow:1px 1px 0 #000,0 0 3px #000;word-break:break-word}
+.dicon:hover .l{background:var(--navy)}
+.dicon:focus-visible{border-color:#fff;outline:none}
+
+/* ============================== WINDOWS ============================== */
+.win{
+  position:absolute;display:flex;flex-direction:column;background:var(--gray);
+  border:2px solid;border-color:var(--gray-l) #000 #000 var(--gray-l);
+  box-shadow:inset 1px 1px 0 #fff,inset -1px -1px 0 var(--gray-d),3px 3px 10px rgba(0,0,0,.4);
+  min-width:230px;min-height:calc(var(--tbh) + 14px);
+}
+.win.dragging,.win.resizing{box-shadow:inset 1px 1px 0 #fff,inset -1px -1px 0 var(--gray-d),10px 14px 22px rgba(0,0,0,.45)}
+.tb{
+  display:flex;align-items:center;gap:6px;flex:0 0 auto;height:var(--tbh);
+  margin:2px;padding:0 3px;color:#fff;font-weight:bold;letter-spacing:.2px;
+  background:linear-gradient(90deg,#6b6b6b,#a8a8a8);   /* inactive */
+  cursor:grab;user-select:none;touch-action:none;
+}
+.win.active .tb{background:linear-gradient(90deg,var(--orange-d),var(--orange))}
+.win.active .tb.navy{background:linear-gradient(90deg,#000080,#1084d0)}
+.win.dragging .tb{cursor:grabbing}
+.tb .ico{flex:0 0 auto;font-size:13px;line-height:1}
+.tb .t{flex:1;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+       text-shadow:1px 1px 0 rgba(0,0,0,.45)}
+.tb .btns{display:flex;gap:2px;flex:0 0 auto}
+.tb .btns button{
+  width:18px;height:16px;padding:0;line-height:14px;font-size:10px;font-weight:bold;
+  background:var(--gray);color:#000;cursor:pointer;
+  border:1px solid;border-color:#fff var(--gray-d) var(--gray-d) #fff;
+}
+.tb .btns button:active{border-color:var(--gray-d) #fff #fff var(--gray-d)}
+.win .body{flex:1 1 auto;overflow:auto;padding:9px;margin:0 2px 2px;
+  background:var(--gray);-webkit-overflow-scrolling:touch}
+.win.rolled .body,.win.rolled .grip,.win.rolled .status{display:none}
+.win.rolled{height:auto!important;min-height:0}
+.grip{position:absolute;right:0;bottom:0;width:16px;height:16px;cursor:nwse-resize;touch-action:none;
+  background:
+    linear-gradient(135deg,transparent 0 45%,var(--gray-d) 45% 55%,transparent 55%),
+    linear-gradient(135deg,transparent 0 70%,var(--gray-d) 70% 80%,transparent 80%)}
+.status{flex:0 0 auto;margin:0 2px 2px;padding:3px 6px;font-size:11px;color:#333;
+  border:1px solid;border-color:var(--gray-d) #fff #fff var(--gray-d)}
+
+/* ============================== CONTROLS ============================== */
+fieldset{border:2px groove var(--gray-l);margin:0 0 9px;padding:7px}
+legend{font-weight:bold;padding:0 4px;font-size:11px}
+.sunken{background:#fff;border:2px solid;border-color:var(--gray-d) #fff #fff var(--gray-d);padding:7px}
+.b95{font-size:12px;padding:4px 12px;background:var(--gray);cursor:pointer;
+  border:2px solid;border-color:#fff var(--gray-d) var(--gray-d) #fff;
+  box-shadow:inset -1px -1px 0 #000,inset 1px 1px 0 var(--gray-l)}
+.b95:active{border-color:var(--gray-d) #fff #fff var(--gray-d);box-shadow:none}
+.i95{font-family:inherit;font-size:12px;padding:4px;width:100%;background:#fff;
+  border:2px solid;border-color:var(--gray-d) #fff #fff var(--gray-d)}
+a{color:var(--navy)}
+a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible,.dicon:focus-visible
+  {outline:2px dotted #000;outline-offset:1px}
+
+/* ============================== READOUTS ============================== */
+.odo{font-family:"Courier New",monospace;font-weight:bold;background:#000;color:#0f0;
+  text-align:center;padding:9px 5px;letter-spacing:1px;font-size:clamp(15px,3.6vw,30px);
+  border:2px solid;border-color:var(--gray-d) #fff #fff var(--gray-d);
+  text-shadow:0 0 8px rgba(0,255,0,.55);overflow-x:auto;font-variant-numeric:tabular-nums}
+.odo.amber{color:#ffb000;text-shadow:0 0 8px rgba(255,176,0,.55)}
+.odo.small{font-size:clamp(14px,2.4vw,20px)}
+.kv{display:flex;justify-content:space-between;gap:10px;padding:3px 0;
+  border-bottom:1px dotted #9a9a9a;font-size:12px}
+.kv:last-child{border-bottom:0}
+.kv b{font-family:"Courier New",monospace;font-variant-numeric:tabular-nums}
+.up{color:#b00;font-weight:bold}.down{color:#060;font-weight:bold}
+.note{font-size:10px;color:#3a3a3a;margin:8px 0 0;line-height:1.45}
+.bar{height:20px;background:#fff;position:relative;overflow:hidden;
+  border:2px solid;border-color:var(--gray-d) #fff #fff var(--gray-d)}
+.bar i{display:block;height:100%;background:repeating-linear-gradient(90deg,var(--navy) 0 11px,transparent 11px 14px)}
+.bar.red i{background:repeating-linear-gradient(90deg,#c00 0 11px,transparent 11px 14px)}
+.bar em{position:absolute;inset:0;display:grid;place-items:center;font-style:normal;font-weight:bold;font-size:11px}
+.bar em span{background:rgba(255,255,255,.93);padding:0 6px;border:1px solid rgba(0,0,0,.35)}
+.spark{width:100%;height:38px;display:block;background:#f7f7f2;
+  border:2px solid;border-color:var(--gray-d) #fff #fff var(--gray-d)}
+.freshness{font-size:10px;padding:2px 5px;display:inline-block;border:1px solid}
+.fresh-ok{background:#dfffdf;border-color:#0a0;color:#040}
+.fresh-old{background:#fff4d0;border-color:#a80;color:#640}
+.fresh-bad{background:#ffe0e0;border-color:#a00;color:#600}
+
+/* ---------- truth feed ---------- */
+.post{border-bottom:1px solid #ccc;padding:7px 0;position:relative}
+.post:last-child{border-bottom:0}
+.post.isnew{background:#ffffd0;box-shadow:-4px 0 0 #ffb000}
+.post .meta{font-size:10px;color:#555;font-family:"Courier New",monospace;margin-bottom:3px;
+  display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.post .txt{font-size:12.5px;line-height:1.5;white-space:pre-wrap;word-break:break-word}
+.post .img-only{color:#777;font-style:italic}
+.post .acts{margin-top:5px;display:flex;gap:6px;flex-wrap:wrap}
+.post .acts button{font-size:10px;padding:2px 7px;background:var(--gray);cursor:pointer;
+  border:2px solid;border-color:#fff var(--gray-d) var(--gray-d) #fff}
+.newbadge{background:#c00;color:#fff;font-size:9px;padding:1px 5px;font-weight:bold}
+.caps{background:#ffe;border:1px dashed #a80;padding:6px;margin-top:8px;font-size:11px}
+
+/* ---------- gauge + pet ---------- */
+.gauge{display:grid;place-items:center}
+.gauge svg{width:100%;max-width:250px;height:auto}
+#pet{font-size:44px;text-align:center;line-height:1;transition:transform .3s}
+#petsay{text-align:center;font-size:11px;margin-top:6px;min-height:30px;
+  background:#fff;border:2px solid #000;border-radius:9px;padding:5px;position:relative}
+
+/* ============================== TASKBAR ============================== */
+#taskbar{
+  position:fixed;left:0;right:0;bottom:0;height:var(--taskh);z-index:9000;
+  background:var(--gray);border-top:2px solid #fff;box-shadow:0 -2px 0 var(--gray-d);
+  display:flex;align-items:center;gap:5px;padding:0 5px;
+  padding-bottom:env(safe-area-inset-bottom,0)
+}
+#startBtn{display:flex;align-items:center;gap:5px;font-weight:bold;font-size:12px;
+  padding:4px 9px;background:var(--gray);cursor:pointer;flex:0 0 auto;
+  border:2px solid;border-color:#fff var(--gray-d) var(--gray-d) #fff}
+#startBtn.on,#startBtn:active{border-color:var(--gray-d) #fff #fff var(--gray-d)}
+.flag{width:14px;height:14px;display:inline-block;
+  background:conic-gradient(from 180deg at 50% 50%,#ff3b30 0 25%,#34c759 0 50%,#007aff 0 75%,#ffcc00 0)}
+#tasks{flex:1 1 auto;display:flex;gap:4px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none}
+#tasks::-webkit-scrollbar{display:none}
+#tasks button{font-size:11px;padding:4px 8px;min-width:96px;max-width:150px;flex:0 0 auto;
+  text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;
+  background:var(--gray);border:2px solid;border-color:#fff var(--gray-d) var(--gray-d) #fff}
+#tasks button.on{border-color:var(--gray-d) #fff #fff var(--gray-d);font-weight:bold;
+  background:repeating-linear-gradient(45deg,#d4d0c8 0 2px,#c0c0c0 2px 4px)}
+#tray{flex:0 0 auto;display:flex;align-items:center;gap:7px;font-size:11px;padding:4px 8px;
+  font-family:"Courier New",monospace;
+  border:2px solid;border-color:var(--gray-d) #fff #fff var(--gray-d)}
+#trayWatch{cursor:pointer}
+#trayWatch.hot{color:#b00;font-weight:bold}
+
+/* ============================== START MENU ============================== */
+#startMenu{position:fixed;left:5px;bottom:calc(var(--taskh) + 2px);width:262px;z-index:9001;
+  background:var(--gray);display:flex;
+  border:2px solid;border-color:#fff var(--gray-d) var(--gray-d) #fff;
+  box-shadow:4px 4px 12px rgba(0,0,0,.45)}
+#startMenu .rail{width:28px;background:linear-gradient(#a33f00,#ff7a00);color:#fff;
+  writing-mode:vertical-rl;transform:rotate(180deg);text-align:right;
+  padding:9px 5px;font-weight:bold;font-size:15px;letter-spacing:1px}
+#startMenu ul{list-style:none;margin:0;padding:4px;flex:1}
+#startMenu li{padding:6px 9px;cursor:pointer;font-size:12px;display:flex;gap:8px;align-items:center}
+#startMenu li:hover{background:var(--navy);color:#fff}
+#startMenu hr{border:0;border-top:1px solid var(--gray-d);border-bottom:1px solid #fff;margin:4px 2px}
+
+/* ============================== MODAL ============================== */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9500;display:grid;place-items:center;padding:14px}
+.modal .win{position:relative;max-width:430px;width:100%;inset:auto}
+.modal .row{display:flex;gap:12px;align-items:flex-start}
+.modal .glyph{font-size:30px;line-height:1;flex:0 0 auto}
+
+/* ============================== BOOT ============================== */
+#boot{position:fixed;inset:0;z-index:10000;background:#000;color:#c8c8c8;
+  font-family:"Courier New",monospace;font-size:13px;padding:22px;line-height:1.55;overflow:hidden}
+#boot b{color:#fff}
+#boot .cur{display:inline-block;width:8px;height:14px;background:#c8c8c8;vertical-align:-2px;
+  animation:cur 1s steps(1) infinite}
+@keyframes cur{50%{opacity:0}}
+#bootskip{position:absolute;right:14px;bottom:12px;font-size:11px;color:#777}
+
+/* ============================== MINESWEEPER ============================== */
+#msGrid{display:grid;gap:0;background:var(--gray-d);width:max-content;margin:0 auto}
+.cell{width:20px;height:20px;font-size:12px;font-weight:bold;line-height:20px;text-align:center;
+  background:var(--gray);cursor:pointer;padding:0;
+  border:2px solid;border-color:#fff var(--gray-d) var(--gray-d) #fff;font-family:"Courier New",monospace}
+.cell.open{border:1px solid #9a9a9a;background:#c8c8c8;cursor:default}
+.cell.mine{background:#c00}
+.c1{color:#0000ff}.c2{color:#008000}.c3{color:#ff0000}.c4{color:#000080}
+.c5{color:#800000}.c6{color:#008080}.c7{color:#000}.c8{color:#808080}
+
+/* ============================== MOBILE ============================== */
+body.mobile{overflow:auto;height:auto;min-height:100%}
+body.mobile #desktop{position:static;inset:auto;height:auto;overflow:visible;
+  padding:8px 8px calc(var(--taskh) + 14px)}
+body.mobile #wallpaper{position:static;inset:auto;opacity:1;margin-bottom:10px;
+  flex-direction:row;justify-content:center;gap:12px}
+body.mobile #wallpaper img{width:64px}
+body.mobile #wallpaper .wm{font-size:30px;text-align:left}
+body.mobile #icons{display:none}
+body.mobile .win{position:static;width:auto!important;height:auto!important;
+  transform:none!important;min-height:0;display:none;margin:0}
+body.mobile .win.active{display:flex}
+body.mobile .win .body{max-height:none;overflow:visible}
+body.mobile .grip{display:none}
+body.mobile .tb{cursor:default}
+body.mobile .tb .btns button[data-max],body.mobile .tb .btns button[data-close]{display:none}
+
+body.mobile #tasks button{min-width:0;padding:4px 9px;font-size:11px}
+body.mobile #trayClock{display:none}
+body.mobile #tray{padding:4px 6px}
+body.mobile #startBtn span:last-child{display:none}
+body.mobile #startBtn{padding:5px 8px}
+
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;
+    transition-duration:.001ms!important}
+}
+</style>
+</head>
+<body>
+
+<!-- ===================== BOOT ===================== -->
+<div id="boot" aria-hidden="true"><pre id="bootlog"></pre><div id="bootskip">click anywhere to skip</div></div>
+
+<!-- ===================== DESKTOP ===================== -->
+<div id="desktop">
+  <div id="wallpaper">
+    <img src="/logo.svg" alt="" width="190" height="190">
+    <div class="wm">The Supreme<br>Cheeto</div>
+  </div>
+
+  <div id="icons"></div>
+
+  <!-- ---------------- DEBT ---------------- -->
+  <section class="win" id="w-debt" data-title="NATIONAL_DEBT.EXE" data-icon="&#128181;"
+           data-x="240" data-y="30" data-w="520" data-h="330">
+    <div class="tb"><span class="ico">&#128181;</span><span class="t">C:\GOV\NATIONAL_DEBT.EXE</span>
+      <span class="btns"><button data-min title="Minimize">_</button><button data-max title="Maximize">&#9633;</button><button data-close title="Close">&times;</button></span></div>
+    <div class="body">
+      <div class="odo" id="debtClock">$00,000,000,000,000.00</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:9px">
+        <fieldset><legend>Per citizen</legend><div class="kv"><span>Your share</span><b id="perCitizen">&mdash;</b></div></fieldset>
+        <fieldset><legend>Since Jan 20 2025</legend><div class="kv"><span>Added</span><b id="debtSince">&mdash;</b></div></fieldset>
+        <fieldset><legend>Burn rate</legend><div class="kv"><span>Per second</span><b id="perSec">&mdash;</b></div></fieldset>
+        <fieldset><legend>This visit</legend><div class="kv"><span>New debt</span><b id="sessionDebt">$0</b></div></fieldset>
+      </div>
+      <fieldset><legend>Last 30 days</legend><svg class="spark" id="sparkDebt" viewBox="0 0 300 38" preserveAspectRatio="none"></svg></fieldset>
+      <p class="note">Seed from the U.S. Treasury <a href="https://fiscaldata.treasury.gov/datasets/debt-to-the-penny/debt-to-the-penny" target="_blank" rel="noopener">Debt to the Penny</a> API (<span data-f="debtDate"></span>), extrapolated at the trailing 12-month average. <b>The ticking is an estimate; only the seed is exact.</b> Per-citizen assumes a ~342.5M population.</p>
+    </div>
+    <div class="status"><span id="stDebt" class="freshness fresh-ok">&mdash;</span></div>
+    <div class="grip"></div>
+  </section>
+
+  <!-- ---------------- TRUTH ---------------- -->
+  <section class="win" id="w-truth" data-title="TRUTH_SOCIAL.EXE" data-icon="&#128226;"
+           data-x="240" data-y="374" data-w="520" data-h="420">
+    <div class="tb navy"><span class="ico">&#128226;</span><span class="t">TRUTH_SOCIAL_FEED.EXE &mdash; @realDonaldTrump</span>
+      <span class="btns"><button data-min>_</button><button data-max>&#9633;</button><button data-close>&times;</button></span></div>
+    <div class="body">
+      <fieldset style="margin-bottom:8px"><legend>&#128064; POST WATCH</legend>
+        <div class="odo amber small" id="sinceLast">&mdash;</div>
+        <div style="display:flex;gap:8px;margin-top:7px">
+          <div class="kv" style="flex:1;border:0"><span>Posts today</span><b id="postsToday">&mdash;</b></div>
+          <div class="kv" style="flex:1;border:0"><span>Last 24h</span><b id="posts24">&mdash;</b></div>
+        </div>
+      </fieldset>
+      <div class="sunken" id="feed" style="max-height:none"></div>
+      <div class="caps"><b>&#128202; SHOUT ANALYSIS</b> (<span id="capsN">0</span> posts with text)<br>
+        ALL-CAPS: <b id="capsPct">&mdash;</b> &middot; EXCLAMATIONS: <b id="bangs">&mdash;</b> &middot; AVG !!! / POST: <b id="bangsAvg">&mdash;</b></div>
+      <p class="note">Post text is reproduced verbatim from the public feed &mdash; nothing here is written, paraphrased or invented by this site. Image-only and link-only posts are labeled as such.</p>
+    </div>
+    <div class="status"><span id="stTruth" class="freshness fresh-ok">&mdash;</span></div>
+    <div class="grip"></div>
+  </section>
+
+  <!-- ---------------- POLLS ---------------- -->
+  <section class="win" id="w-polls" data-title="APPROVAL.EXE" data-icon="&#128499;"
+           data-x="776" data-y="30" data-w="340" data-h="300">
+    <div class="tb"><span class="ico">&#128499;</span><span class="t">APPROVAL_RATING.EXE</span>
+      <span class="btns"><button data-min>_</button><button data-max>&#9633;</button><button data-close>&times;</button></span></div>
+    <div class="body">
+      <fieldset><legend>APPROVE</legend><div class="bar"><i id="barApp"></i><em id="lblApp"></em></div></fieldset>
+      <fieldset><legend>DISAPPROVE</legend><div class="bar red"><i id="barDis"></i><em id="lblDis"></em></div></fieldset>
+      <div class="odo amber small" id="netApp">NET &mdash;</div>
+      <fieldset style="margin-top:9px"><legend>Approval trend</legend><svg class="spark" id="sparkApp" viewBox="0 0 300 38" preserveAspectRatio="none"></svg></fieldset>
+      <p class="note">Quality- and recency-weighted polling average from <a href="https://fiftyplusone.news/polls/approval/president" target="_blank" rel="noopener">FiftyPlusOne</a>.</p>
+    </div>
+    <div class="status"><span id="stPolls" class="freshness fresh-ok">&mdash;</span></div>
+    <div class="grip"></div>
+  </section>
+
+  <!-- ---------------- CHEETO METER ---------------- -->
+  <section class="win" id="w-meter" data-title="CHEETO-METER.EXE" data-icon="&#129472;"
+           data-x="776" data-y="344" data-w="340" data-h="450">
+    <div class="tb"><span class="ico">&#129472;</span><span class="t">THE_CHEETO-METER.EXE</span>
+      <span class="btns"><button data-min>_</button><button data-max>&#9633;</button><button data-close>&times;</button></span></div>
+    <div class="body">
+      <div class="gauge">
+        <svg viewBox="0 0 200 112" aria-hidden="true">
+          <defs><linearGradient id="gg" x1="0" x2="1">
+            <stop offset="0" stop-color="#0a0"/><stop offset=".5" stop-color="#fc0"/><stop offset="1" stop-color="#c00"/>
+          </linearGradient></defs>
+          <path d="M15 100 A85 85 0 0 1 185 100" fill="none" stroke="url(#gg)" stroke-width="19"/>
+          <line id="needle" x1="100" y1="100" x2="100" y2="30" stroke="#000" stroke-width="4" stroke-linecap="round"/>
+          <circle cx="100" cy="100" r="8" fill="#000"/>
+        </svg>
+      </div>
+      <div class="odo amber" id="cheetoVal">&mdash;</div>
+      <div style="text-align:center;font-weight:bold;margin-top:5px" id="cheetoLabel">CALIBRATING&hellip;</div>
+      <fieldset style="margin-top:9px"><legend>Desktop pet</legend>
+        <div id="pet">&#129472;</div><div id="petsay">booting&hellip;</div>
+      </fieldset>
+      <svg class="spark" id="sparkCheeto" viewBox="0 0 300 38" preserveAspectRatio="none" style="margin-top:8px"></svg>
+      <p class="note">A joke composite, computed openly: equal-weight average of disapproval, gas vs. a year ago, CPI vs. the 2% target, the effective tariff rate, and debt growth &mdash; each scaled 0&ndash;100. A vibe, not an economic indicator.</p>
+    </div>
+    <div class="grip"></div>
+  </section>
+
+  <!-- ---------------- ECONOMY ---------------- -->
+  <section class="win" id="w-econ" data-title="ECONOMY.EXE" data-icon="&#129370;"
+           data-x="240" data-y="70" data-w="400" data-h="290">
+    <div class="tb"><span class="ico">&#129370;</span><span class="t">KITCHEN_TABLE_ECONOMY.EXE</span>
+      <span class="btns"><button data-min>_</button><button data-max>&#9633;</button><button data-close>&times;</button></span></div>
+    <div class="body">
+      <div class="sunken" id="econ"></div>
+      <fieldset style="margin-top:9px"><legend>Gas price trend</legend><svg class="spark" id="sparkGas" viewBox="0 0 300 38" preserveAspectRatio="none"></svg></fieldset>
+      <p class="note">Gas: AAA daily national average. Eggs: BLS average price, Grade A large. CPI: BLS year-over-year. Tariff: Penn Wharton effective rate. Monthly series are labeled with their reference month rather than dressed up as live.</p>
+    </div>
+    <div class="status"><span id="stEcon" class="freshness fresh-ok">&mdash;</span></div>
+    <div class="grip"></div>
+  </section>
+
+  <!-- ---------------- COUNTDOWN ---------------- -->
+  <section class="win" id="w-count" data-title="COUNTDOWN.EXE" data-icon="&#8987;"
+           data-x="300" data-y="110" data-w="380" data-h="270">
+    <div class="tb"><span class="ico">&#8987;</span><span class="t">TERM_COUNTDOWN.EXE</span>
+      <span class="btns"><button data-min>_</button><button data-max>&#9633;</button><button data-close>&times;</button></span></div>
+    <div class="body">
+      <div class="odo small" id="cd">&mdash;</div>
+      <fieldset style="margin-top:9px"><legend>Term progress</legend><div class="bar"><i id="barTerm"></i><em id="lblTerm"></em></div></fieldset>
+      <div class="kv"><span>Days served</span><b id="served">&mdash;</b></div>
+      <div class="kv"><span>Days remaining</span><b id="remain">&mdash;</b></div>
+      <p class="note">Second term: January 20, 2025 &rarr; January 20, 2029, per the 20th Amendment.</p>
+    </div>
+    <div class="grip"></div>
+  </section>
+
+  <!-- ---------------- GOLF ---------------- -->
+  <section class="win" id="w-golf" data-title="GOLF.EXE" data-icon="&#9971;"
+           data-x="340" data-y="150" data-w="360" data-h="290">
+    <div class="tb"><span class="ico">&#9971;</span><span class="t">GOLF_TRACKER.EXE</span>
+      <span class="btns"><button data-min>_</button><button data-max>&#9633;</button><button data-close>&times;</button></span></div>
+    <div class="body">
+      <div class="odo amber" id="golfDays">&mdash;</div>
+      <div style="text-align:center;font-size:11px;margin:4px 0 9px">DAYS AT A GOLF COURSE THIS TERM</div>
+      <fieldset><legend>Share of presidency spent golfing</legend><div class="bar"><i id="barGolf"></i><em id="lblGolf"></em></div></fieldset>
+      <p class="note">Counts from <a href="https://donaldtrump.golf/" target="_blank" rel="noopener">donaldtrump.golf</a>, an independent tracker. Not an official figure.</p>
+    </div>
+    <div class="status"><span id="stGolf" class="freshness fresh-ok">&mdash;</span></div>
+    <div class="grip"></div>
+  </section>
+
+  <!-- ---------------- EXEC ORDERS ---------------- -->
+  <section class="win" id="w-eo" data-title="EXEC_ORDERS.EXE" data-icon="&#9998;"
+           data-x="380" data-y="190" data-w="380" data-h="300">
+    <div class="tb"><span class="ico">&#9998;</span><span class="t">EXECUTIVE_ORDERS.EXE</span>
+      <span class="btns"><button data-min>_</button><button data-max>&#9633;</button><button data-close>&times;</button></span></div>
+    <div class="body">
+      <div class="odo" id="eoCount">&mdash;</div>
+      <div style="text-align:center;font-size:11px;margin:4px 0 9px">EXECUTIVE ORDERS SIGNED, TERM 2</div>
+      <div class="kv"><span>Orders per week</span><b id="eoRate">&mdash;</b></div>
+      <div class="kv"><span>Latest</span><b id="eoLatest">&mdash;</b></div>
+      <div class="kv" style="font-size:11px"><em id="eoTitle" style="color:#333"></em></div>
+      <p class="note">Derived from Federal Register numbering &mdash; the second term runs EO&nbsp;14147 (Jan&nbsp;20,&nbsp;2025) through the latest signed order.</p>
+    </div>
+    <div class="status"><span id="stEo" class="freshness fresh-ok">&mdash;</span></div>
+    <div class="grip"></div>
+  </section>
+
+  <!-- ---------------- 8 BALL ---------------- -->
+  <section class="win" id="w-ball" data-title="8-BALL.EXE" data-icon="&#127921;"
+           data-x="420" data-y="230" data-w="330" data-h="290">
+    <div class="tb navy"><span class="ico">&#127921;</span><span class="t">MAGIC_8-BALL.EXE &mdash; novelty</span>
+      <span class="btns"><button data-min>_</button><button data-max>&#9633;</button><button data-close>&times;</button></span></div>
+    <div class="body">
+      <p style="margin:0 0 8px;font-size:12px">Ask it anything. It knows nothing. <b>Answers are random</b> and are not predictions, quotes, or claims about anyone.</p>
+      <input class="i95" id="ballQ" placeholder="Will he post before midnight?" maxlength="80">
+      <div style="text-align:center;margin:9px 0"><button class="b95" id="ballGo">&#127921; SHAKE</button></div>
+      <div class="sunken" id="ballOut" style="text-align:center;min-height:56px;display:grid;place-items:center;font-weight:bold;background:#111;color:#7fe3ff;font-family:'Courier New',monospace">&hellip;</div>
+    </div>
+    <div class="grip"></div>
+  </section>
+
+  <!-- ---------------- MINESWEEPER ---------------- -->
+  <section class="win" id="w-mine" data-title="MINESWEEPER" data-icon="&#128163;"
+           data-x="460" data-y="270" data-w="260" data-h="330">
+    <div class="tb"><span class="ico">&#128163;</span><span class="t">Minesweeper</span>
+      <span class="btns"><button data-min>_</button><button data-max>&#9633;</button><button data-close>&times;</button></span></div>
+    <div class="body" style="text-align:center">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px" class="in">
+        <b id="msMines" style="font-family:'Courier New',monospace;background:#000;color:#f00;padding:2px 6px">010</b>
+        <button class="b95" id="msFace" style="padding:2px 9px">&#128512;</button>
+        <b id="msTime" style="font-family:'Courier New',monospace;background:#000;color:#f00;padding:2px 6px">000</b>
+      </div>
+      <div id="msGrid"></div>
+      <p class="note" style="text-align:left">Left-click to open, right-click (or long-press) to flag. 9&times;9, 10 mines.</p>
+    </div>
+    <div class="grip"></div>
+  </section>
+
+  <!-- ---------------- ABOUT ---------------- -->
+  <section class="win" id="w-about" data-title="ABOUT.HTM" data-icon="&#8505;"
+           data-x="500" data-y="120" data-w="470" data-h="400">
+    <div class="tb"><span class="ico">&#8505;</span><span class="t">ABOUT.HTM &mdash; sources &amp; disclaimer</span>
+      <span class="btns"><button data-min>_</button><button data-max>&#9633;</button><button data-close>&times;</button></span></div>
+    <div class="body">
+      <p style="margin-top:0"><b>THE SUPREME CHEETO v2.0</b> &mdash; a satirical dashboard.</p>
+      <p style="font-size:12px;line-height:1.6">Every figure comes from a linked public source and is shown without alteration. Truth Social posts are reproduced verbatim; nothing is invented, and no quote is ever attributed to anyone who did not say it. The jokes live in the framing, not the data. Not affiliated with anyone.</p>
+      <fieldset><legend>Data freshness</legend><div id="freshAll" style="font-size:11px"></div></fieldset>
+      <fieldset><legend>Sources</legend><div style="font-size:11px;line-height:1.9" id="srcList"></div></fieldset>
+      <p class="note">Refreshed every 15 minutes by a scheduled job. If a source can't be reached, the previous value is kept and marked stale rather than replaced with a guess.</p>
+    </div>
+    <div class="grip"></div>
+  </section>
+</div>
+
+<!-- ===================== TASKBAR ===================== -->
+<div id="taskbar">
+  <div id="startBtn" role="button" tabindex="0"><span class="flag"></span> Start</div>
+  <div id="tasks"></div>
+  <div id="tray"><span id="trayWatch" title="Time since last post">&#128064; &mdash;</span><span id="trayClock">--:--</span></div>
+</div>
+
+<div id="startMenu" hidden>
+  <div class="rail">Cheeto 95</div>
+  <ul id="startList"></ul>
+</div>
+
+<div class="modal" id="modal" hidden>
+  <div class="win active">
+    <div class="tb navy"><span class="t" id="modalTitle">Message</span>
+      <span class="btns"><button id="modalX">&times;</button></span></div>
+    <div class="body">
+      <div class="row"><div class="glyph" id="modalGlyph">&#8505;</div><div id="modalBody" style="font-size:12px;line-height:1.55"></div></div>
+      <div style="text-align:center;margin-top:13px"><button class="b95" id="modalOk" style="min-width:88px">OK</button></div>
+    </div>
+  </div>
+</div>
+
+<script src="/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+{
+  "name": "supreme-cheeto",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A 1997-style Windows desktop that tracks the national debt, Truth Social, approval ratings and the price of eggs.",
+  "dependencies": {
+    "@netlify/blobs": "^8.1.0"
+  }
+}

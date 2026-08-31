@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400" role="img" aria-label="Cartoon cheese puff mascot with a blonde combover, wearing a suit and long red tie">
+  <defs>
+    <linearGradient id="puff" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0"   stop-color="#ffb84d"/>
+      <stop offset=".45" stop-color="#ff8c1a"/>
+      <stop offset="1"   stop-color="#dd5f00"/>
+    </linearGradient>
+    <linearGradient id="hair" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0"   stop-color="#fff3b0"/>
+      <stop offset=".5"  stop-color="#f6d873"/>
+      <stop offset="1"   stop-color="#d9ac36"/>
+    </linearGradient>
+    <linearGradient id="tie" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e8272b"/>
+      <stop offset="1" stop-color="#9d0d13"/>
+    </linearGradient>
+    <linearGradient id="suit" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2b3a5c"/>
+      <stop offset="1" stop-color="#16203a"/>
+    </linearGradient>
+    <radialGradient id="dust" cx=".5" cy=".5" r=".5">
+      <stop offset="0" stop-color="#ffd98a" stop-opacity=".85"/>
+      <stop offset="1" stop-color="#ffd98a" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- ============ SUIT / SHOULDERS ============ -->
+  <path d="M104 400 C104 352 138 330 168 322 L200 352 L232 322 C262 330 296 352 296 400 Z"
+        fill="url(#suit)" stroke="#0b1120" stroke-width="7" stroke-linejoin="round"/>
+  <!-- shirt V -->
+  <path d="M168 322 L200 352 L232 322 L216 314 L200 330 L184 314 Z"
+        fill="#f7f9fc" stroke="#0b1120" stroke-width="5" stroke-linejoin="round"/>
+  <!-- long red tie -->
+  <path d="M200 336 L214 350 L208 400 L192 400 L186 350 Z"
+        fill="url(#tie)" stroke="#0b1120" stroke-width="5" stroke-linejoin="round"/>
+  <path d="M193 343 L200 336 L207 343 L200 352 Z" fill="#b91419" stroke="#0b1120" stroke-width="4" stroke-linejoin="round"/>
+
+  <!-- ============ CHEESE PUFF BODY ============ -->
+  <path d="M200 118
+           C242 116 270 140 272 174
+           C296 186 294 214 272 224
+           C294 240 288 268 264 274
+           C278 298 258 322 234 316
+           C230 340 202 350 184 332
+           C160 346 136 330 136 308
+           C110 304 104 278 122 260
+           C100 246 106 216 128 208
+           C112 190 124 160 148 156
+           C154 132 174 118 200 118 Z"
+        fill="url(#puff)" stroke="#7a3200" stroke-width="9" stroke-linejoin="round"/>
+
+  <!-- cheese-dust speckles -->
+  <g fill="#8a3d00" opacity=".28">
+    <circle cx="160" cy="212" r="4.5"/><circle cx="243" cy="200" r="3.6"/>
+    <circle cx="256" cy="252" r="4.2"/><circle cx="147" cy="268" r="3.8"/>
+    <circle cx="205" cy="300" r="4"/>  <circle cx="176" cy="180" r="3"/>
+    <circle cx="228" cy="288" r="3"/>  <circle cx="134" cy="238" r="3.2"/>
+  </g>
+  <ellipse cx="168" cy="200" rx="26" ry="18" fill="url(#dust)" transform="rotate(-22 168 200)"/>
+
+  <!-- ============ FACE ============ -->
+  <!-- squint brows -->
+  <path d="M150 214 C162 204 182 202 194 208" fill="none" stroke="#7a3200" stroke-width="9" stroke-linecap="round"/>
+  <path d="M254 208 C244 200 226 200 214 206" fill="none" stroke="#7a3200" stroke-width="9" stroke-linecap="round"/>
+  <!-- eyes -->
+  <ellipse cx="171" cy="233" rx="17" ry="15" fill="#fffdf6" stroke="#7a3200" stroke-width="6"/>
+  <ellipse cx="233" cy="231" rx="17" ry="15" fill="#fffdf6" stroke="#7a3200" stroke-width="6"/>
+  <circle cx="175" cy="235" r="6.5" fill="#1a1207"/>
+  <circle cx="229" cy="233" r="6.5" fill="#1a1207"/>
+  <circle cx="177.5" cy="232" r="2.2" fill="#fff"/>
+  <circle cx="231.5" cy="230" r="2.2" fill="#fff"/>
+  <!-- pursed mouth -->
+  <ellipse cx="201" cy="279" rx="18" ry="12" fill="#8f3a08" stroke="#5e2400" stroke-width="6"/>
+  <ellipse cx="201" cy="275" rx="11" ry="6" fill="#c25a1c" opacity=".75"/>
+
+  <!-- ============ COMBOVER ============ -->
+  <!-- one solid mass capping the crown, swept right and overhanging the temple -->
+  <path d="M124 198
+           C106 142 152 92 204 88
+           C262 83 306 108 316 146
+           C321 168 310 184 292 184
+           C284 162 258 152 230 156
+           C192 162 154 178 140 204
+           Z"
+        fill="url(#hair)" stroke="#8a6a12" stroke-width="8" stroke-linejoin="round"/>
+  <!-- swept strands, following the sweep of the mass -->
+  <g fill="none" stroke="#c9a333" stroke-width="5" stroke-linecap="round" opacity=".75">
+    <path d="M150 178 C170 140 214 118 258 124"/>
+    <path d="M142 158 C164 124 208 104 252 110"/>
+    <path d="M268 128 C290 132 302 146 304 162"/>
+  </g>
+  <!-- forward flick over the left brow -->
+  <path d="M124 198 C114 176 120 152 138 140 C128 162 128 182 140 204 Z"
+        fill="#fbe79a" stroke="#8a6a12" stroke-width="7" stroke-linejoin="round"/>
+</svg>
