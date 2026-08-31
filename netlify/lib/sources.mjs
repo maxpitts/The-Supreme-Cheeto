@@ -126,7 +126,7 @@ async function posts() {
     // the one structurally stable hook on the page, so split on it rather than
     // guessing at class names.
     const html = await grab("https://trumpstruth.org/");
-    const marker = /data-status-url="https:\/\/trumpstruth\.org\/statuses\/(\d+)"/g;
+    const marker = /data-status-url="[^"]*?\/statuses\/(\d+)[^"]*"/g;
     const hits = [...html.matchAll(marker)];
     const list = [];
     for (let i = 0; i < hits.length && list.length < 20; i++) {
@@ -179,7 +179,9 @@ async function approval() {
   // Require a decimal percentage near the label. The previous loose pattern
   // matched the first stray integer on the page and returned 23/23.
   const pick = (label) => {
-    const re = new RegExp(label + "[^0-9%]{0,80}?(\\d{1,2}(?:\\.\\d)?)\\s*%", "i");
+    // \b matters enormously here: without it, "Approve" matches inside
+    // "Disapprove" and both labels return the same (disapproval) number.
+    const re = new RegExp("\\b" + label + "\\b[^0-9%]{0,80}?(\\d{1,2}(?:\\.\\d)?)\\s*%", "i");
     const m = text.match(re);
     return m ? parseFloat(m[1]) : null;
   };

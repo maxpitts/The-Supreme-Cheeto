@@ -15,7 +15,10 @@ const SRC = {
 };
 
 export default async (req) => {
-  const src = new URL(req.url).searchParams.get("src") || "truth";
+  // req.url can arrive relative depending on runtime, which silently fell back
+  // to the default and made every request return the same source.
+  let src = "truth";
+  try { src = new URL(req.url, "http://x").searchParams.get("src") || "truth"; } catch {}
   const cfg = SRC[src];
   if (!cfg) return new Response("unknown src. use: " + Object.keys(SRC).join("|"), { status: 400 });
 
