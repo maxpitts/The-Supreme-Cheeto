@@ -303,6 +303,7 @@ const WM = {
     const items = this.wins.map((w) => ({ label: w.title, icon: w.icon, act: () => this.open(w.id) }));
     const extras = [
       { sep: true },
+      { label: "Install to home screen", icon: "&#128229;", id: "installItem", act: () => promptInstall() },
       { label: "Refresh data now", icon: "&#128260;", act: () => loadLive(true) },
       { label: "Reset window layout", icon: "&#129704;", act: () => { localStorage.removeItem(this.KEY); location.reload(); } },
       { sep: true },
@@ -313,6 +314,7 @@ const WM = {
     [...items, ...extras].forEach((it) => {
       if (it.sep) { ul.appendChild(document.createElement("hr")); return; }
       const li = document.createElement("li");
+      if (it.id) { li.id = it.id; li.hidden = !deferredInstall; }
       li.innerHTML = `<span>${it.icon}</span><span>${esc(it.label)}</span>`;
       li.addEventListener("click", () => { $("#startMenu").hidden = true; $("#startBtn").classList.remove("on"); it.act(); });
       ul.appendChild(li);
@@ -864,6 +866,68 @@ function boot() {
 }
 
 /* =====================================================================
+   PWA
+   ===================================================================== */
+let deferredInstall = null;
+
+window.addEventListener("beforeinstallprompt", (e) => {
+  e.preventDefault();               // we surface it from the Start menu instead
+  deferredInstall = e;
+  const item = $("#installItem");
+  if (item) item.hidden = false;
+});
+
+async function promptInstall() {
+  if (!deferredInstall) {
+    // iOS Safari never fires beforeinstallprompt — tell people what to do there.
+    const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    showModal("Install", "&#128229;", ios
+      ? "On iPhone: tap the <b>Share</b> button, then <b>Add to Home Screen</b>.<br><br><span style='color:#555;font-size:11px'>iOS doesn't let a site trigger this itself.</span>"
+      : "Your browser hasn't offered an install prompt.<br><br><span style='color:#555;font-size:11px'>Look for an install icon in the address bar, or use the browser menu. Already installed? Then there's nothing to do.</span>");
+    return;
+  }
+  deferredInstall.prompt();
+  const { outcome } = await deferredInstall.userChoice;
+  deferredInstall = null;
+  const item = $("#installItem");
+  if (item) item.hidden = true;
+  if (outcome === "accepted") showModal("Installed", "&#127881;", "The Supreme Cheeto is on your home screen.");
+}
+
+window.addEventListener("appinstalled", () => { deferredInstall = null; });
+
+function initSW() {
+  if (!("serviceWorker" in navigator)) return;
+  // file:// and localhost-without-https will reject registration; ignore quietly.
+  navigator.serviceWorker.register("/sw.js").then((reg) => {
+    reg.addEventListener("updatefound", () => {
+      const sw = reg.installing;
+      if (!sw) return;
+      sw.addEventListener("statechange", () => {
+        if (sw.state === "installed" && navigator.serviceWorker.controller) {
+          // A new build is ready. Don't reload under them mid-read — offer it.
+          showModal("Update available", "&#128260;",
+            "A newer version of the site is ready.<br><br>" +
+            "<button class='b95' id='swReload'>Reload now</button>");
+          setTimeout(() => {
+            const btn = $("#swReload");
+            if (btn) btn.addEventListener("click", () => { sw.postMessage("skip-waiting"); location.reload(); });
+          }, 0);
+        }
+      });
+    });
+  }).catch(() => {});
+}
+
+/* deep links from the manifest shortcuts: /?open=w-truth */
+function openFromQuery() {
+  try {
+    const want = new URLSearchParams(location.search).get("open");
+    if (want && WM.byId(want)) WM.open(want);
+  } catch {}
+}
+
+/* =====================================================================
    GO
    ===================================================================== */
 function start() {
@@ -877,6 +941,9 @@ function start() {
   setInterval(tickCountdown, 1000);
   setInterval(tickWatch, 1000);
   tickCountdown();
+
+  initSW();
+  openFromQuery();
 
   loadLive();
   setInterval(loadLive, 5 * 60000);        // page re-checks every 5 min

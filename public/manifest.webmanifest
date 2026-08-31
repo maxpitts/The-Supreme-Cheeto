@@ -1,0 +1,24 @@
+{
+  "name": "The Supreme Cheeto",
+  "short_name": "Cheeto",
+  "description": "A 1997-style Windows desktop tracking the national debt, Truth Social, approval ratings and the price of eggs.",
+  "id": "/",
+  "start_url": "/?src=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#008080",
+  "theme_color": "#008080",
+  "categories": ["news", "politics", "entertainment"],
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Truth feed", "short_name": "Feed", "url": "/?open=w-truth",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Debt clock", "short_name": "Debt", "url": "/?open=w-debt",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] }
+  ]
+}
