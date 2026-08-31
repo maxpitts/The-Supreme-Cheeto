@@ -1378,6 +1378,8 @@ function start() {
   initMines();
   initSolitaire();
   initBlackjack();
+  // chat.js self-initialises; it loads after this file so initChat isn't
+  // defined yet at this point in execution.
   renderAll();
 
   setInterval(tickDebt, 100);

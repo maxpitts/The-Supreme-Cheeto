@@ -353,6 +353,38 @@ body.mobile #startBtn{padding:5px 8px}
 body.mobile #cheetip{right:8px;bottom:calc(var(--taskh) + 8px)}
 body.mobile .tip-char img{width:48px;height:48px}
 body.mobile .tip-bubble{max-width:200px;font-size:11px}
+
+/* ============================== CHEETOCHAT ============================== */
+#chatLog{height:250px;overflow-y:auto;background:#fff;margin:8px 0;font-size:12px}
+.msg{padding:5px 0;border-bottom:1px dotted #ddd}
+.msg:last-child{border-bottom:0}
+.msg-head{display:flex;align-items:center;gap:7px;font-size:11px}
+.msg-head b{color:var(--navy)}
+.msg-head b.admin{color:#a33f00}
+.msg-head b.admin::after{content:" ADMIN";font-size:8px;background:#a33f00;color:#fff;padding:0 3px;margin-left:3px}
+.msg-t{color:#888;font-family:"Courier New",monospace}
+.msg-acts{margin-left:auto;display:flex;gap:3px;opacity:0;transition:opacity .12s}
+.msg:hover .msg-acts,.msg:focus-within .msg-acts{opacity:1}
+.msg-acts button{font-size:10px;padding:0 4px;cursor:pointer;background:var(--gray);
+  border:1px solid;border-color:#fff var(--gray-d) var(--gray-d) #fff}
+.msg-body{word-break:break-word;line-height:1.45;margin-top:2px}
+.login-box{background:var(--gray);border:2px groove var(--gray-l);padding:10px}
+.login-title{font-weight:bold;margin-bottom:5px}
+.login-btns{display:flex;flex-direction:column;gap:6px}
+.b95.oauth{display:flex;align-items:center;gap:8px;justify-content:center;font-weight:bold}
+.b95.oauth span{display:inline-grid;place-items:center;width:17px;height:17px;color:#fff;font-size:11px}
+.b95.oauth.google span{background:#4285f4}
+.b95.oauth.discord span{background:#5865f2}
+.who{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;
+  background:var(--gray);border:2px groove var(--gray-l);padding:6px 8px}
+.who .adm{background:#a33f00;color:#fff;font-size:9px;padding:1px 4px}
+.compose{display:flex;gap:6px}
+.compose input{flex:1}
+.compose-note{font-size:10px;margin-top:4px;min-height:13px}
+.qrow{border:2px groove var(--gray-l);padding:7px;margin-bottom:7px}
+.qbody{background:#fff;border:1px solid var(--gray-d);padding:5px;margin:4px 0;font-size:12px;word-break:break-word}
+body.mobile #chatLog{height:44vh}
+
 @media (prefers-reduced-motion: reduce){.tip-char{animation:none}}
 
 @media (prefers-reduced-motion: reduce){
@@ -573,6 +605,23 @@ body.mobile .tip-bubble{max-width:200px;font-size:11px}
     <div class="grip"></div>
   </section>
 
+
+  <!-- ---------------- CHEETOCHAT ---------------- -->
+  <section class="win" id="w-chat" data-title="CHEETOCHAT" data-icon="&#128172;"
+           data-x="200" data-y="90" data-w="470" data-h="500">
+    <div class="tb navy"><span class="ico">&#128172;</span><span class="t">CheetoChat &mdash; General</span>
+      <span class="btns"><button data-min>_</button><button data-max>&#9633;</button><button data-close>&times;</button></span></div>
+    <div class="body" id="chatBody">
+      <div id="chatAuth"></div>
+      <div class="sunken" id="chatLog">Connecting&hellip;</div>
+      <div id="chatCompose"></div>
+      <div id="chatAdmin" hidden></div>
+      <p class="note">Be civil. Messages are rate limited, filtered and moderated; bans are enforced by the
+      database, not by politeness. Reading is open to everyone &mdash; an account is only needed to post.</p>
+    </div>
+    <div class="grip"></div>
+  </section>
+
   <!-- ---------------- ABOUT ---------------- -->
   <section class="win" id="w-about" data-title="ABOUT.HTM" data-icon="&#8505;"
            data-x="500" data-y="120" data-w="470" data-h="400">
@@ -620,6 +669,11 @@ body.mobile .tip-bubble{max-width:200px;font-size:11px}
   </div>
 </div>
 
+<!-- supabase-js is vendored rather than pulled from a CDN: it works offline in the
+     PWA, is cached by the service worker, and removes a third-party script
+     dependency from a page that handles auth. -->
+<script src="/supabase.js"></script>
 <script src="/app.js"></script>
+<script src="/chat.js"></script>
 </body>
 </html>
