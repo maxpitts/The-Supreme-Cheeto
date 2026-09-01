@@ -130,6 +130,14 @@ const WM = {
     // Which windows are open by default: on desktop, a curated set; on mobile, one.
     const DEFAULT_OPEN = ["w-debt", "w-truth", "w-polls", "w-meter"];
     this.wins.forEach((w) => {
+      // Transient windows (the visit digest) have an empty body until something
+      // fills them. Mobile unhides everything by design, which would otherwise
+      // leave an empty panel sitting in the stack forever.
+      if (w.el.dataset.transient !== undefined) {
+        w.el.style.left = w.el.style.top = w.el.style.width = w.el.style.height = "";
+        w.open = false; w.el.hidden = true;
+        return;
+      }
       if (this.mobile) {
         w.el.style.left = w.el.style.top = w.el.style.width = w.el.style.height = "";
         w.el.hidden = false;
@@ -178,9 +186,17 @@ const WM = {
 
     el.addEventListener("pointerdown", () => this.focus(w), true);
 
-    $("[data-min]", el).addEventListener("click", (e) => { e.stopPropagation(); this.minimize(w); });
-    $("[data-max]", el).addEventListener("click", (e) => { e.stopPropagation(); this.toggleMax(w); });
-    $("[data-close]", el).addEventListener("click", (e) => { e.stopPropagation(); this.close(w); });
+    // Not every window carries all three buttons — a transient panel has no
+    // maximise, for instance. Wiring them unconditionally threw on the first
+    // window that omitted one and aborted the whole init loop partway through,
+    // leaving every window after it dead. Wire what's actually there.
+    const btn = (sel, fn) => {
+      const b = $(sel, el);
+      if (b) b.addEventListener("click", (e) => { e.stopPropagation(); fn(); });
+    };
+    btn("[data-min]", () => this.minimize(w));
+    btn("[data-max]", () => this.toggleMax(w));
+    btn("[data-close]", () => this.close(w));
 
     tb.addEventListener("dblclick", (e) => {
       if (e.target.closest("button")) return;
@@ -327,8 +343,8 @@ const WM = {
     box.innerHTML = "";
     const SHORT = { "w-truth": "Truth Feed", "w-debt": "Debt Clock", "w-chat": "CheetoChat",
                     "w-board": "Bulletin", "w-meter": "Cheeto-Meter", "w-sol": "Solitaire",
-                    "w-mine": "Minesweeper", "w-about": "About" };
-    ["w-truth", "w-chat", "w-board", "w-debt", "w-meter", "w-sol", "w-mine", "w-about"].forEach((id) => {
+                    "w-mine": "Minesweeper", "w-about": "About", "w-predict": "Call It" };
+    ["w-truth", "w-predict", "w-chat", "w-board", "w-debt", "w-meter", "w-sol", "w-mine", "w-about"].forEach((id) => {
       const w = this.byId(id); if (!w) return;
       const b = document.createElement("button");
       b.className = "dicon"; b.type = "button";
@@ -349,7 +365,7 @@ const WM = {
     // duplication you spotted.
     const groups = [
       { head: "Trackers", items: ["w-debt", "w-truth", "w-polls", "w-meter", "w-econ", "w-count", "w-golf", "w-eo"] },
-      { head: "Games",    items: ["w-sol", "w-bj", "w-mine", "w-ball"] },
+      { head: "Games",    items: ["w-predict", "w-sol", "w-bj", "w-mine", "w-ball"] },
       { head: "Community",items: ["w-chat", "w-board", "w-profile"] },
     ];
 
@@ -456,11 +472,14 @@ const WM = {
       // height. Anything implausible falls back to the window's design size.
       const width  = (s.w && s.w >= 200) ? s.w : w.def.w;
       const height = (s.h && s.h >= 90)  ? s.h : w.def.h;
-      w.saved = true; w.open = s.open; w.min = s.min; w.rolled = s.rolled; w.touched = s.touched;
+      // A transient window has an empty body until something fills it, so
+      // restoring it "open" would reopen a blank window every visit.
+      const openState = w.el.dataset.transient !== undefined ? false : s.open;
+      w.saved = true; w.open = openState; w.min = s.min; w.rolled = s.rolled; w.touched = s.touched;
       w.lastW = width; w.lastH = height;
       Object.assign(w.el.style, { left: s.x + "px", top: s.y + "px", width: width + "px", height: height + "px" });
       w.el.classList.toggle("rolled", !!s.rolled);
-      w.el.hidden = !s.open || s.min;
+      w.el.hidden = !openState || s.min;
     });
   },
 };
@@ -1596,6 +1615,9 @@ const Cheetip = {
     if (D.golf?.days) lines.push(`${D.golf.days} days at a golf course this term. It looks like you're trying to lower your handicap.`);
     if (D.eo?.orders) lines.push(`${D.eo.orders} executive orders signed. That's a lot of pens.`);
     if (D.eggs?.v) lines.push(`Eggs are $${D.eggs.v.toFixed(2)} a dozen. I remain a snack food, so I'm fine.`);
+    if (typeof PG === "object" && PG.open?.length) {
+      lines.push(`There ${PG.open.length === 1 ? "is 1 open question" : `are ${PG.open.length} open questions`} in Call It. It looks like you're trying to be right about something.`);
+    }
 
     const times = (D.posts?.list || []).map(postTime).filter(Boolean);
     if (times.length) {

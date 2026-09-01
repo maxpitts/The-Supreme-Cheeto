@@ -13,6 +13,7 @@
  *   4. Nothing is ever fabricated. If we can't read it, we say so.
  */
 import { getStore } from "@netlify/blobs";
+import { runPredictions } from "./predictions.mjs";
 
 const STORE = "cheeto";
 const KEY = "state";
@@ -308,6 +309,21 @@ export async function runRefresh() {
     while (history.length > 720) history.shift();
   }
 
+  /* Rolling post ledger, 72 hours deep.
+     The feed only ever exposes ~20 posts, so counting "how many times did he
+     post in the last 24h" straight from it silently undercounts a busy day —
+     which would quietly corrupt the prediction game's scoring. Merging each
+     15-minute pull into a ledger fixes that: to be undercounted now he'd have
+     to post 20+ times inside a single 15-minute window. */
+  const ledger = new Map();
+  (Array.isArray(prev.postLedger) ? prev.postLedger : []).forEach((x) => ledger.set(x.id, x.at));
+  (p.list || []).forEach((x) => { if (x.id && x.at) ledger.set(x.id, x.at); });
+  const ledgerCut = Date.now() - 72 * 3600e3;
+  const postLedger = [...ledger.entries()]
+    .map(([id, at]) => ({ id, at }))
+    .filter((x) => { const t = Date.parse(x.at); return isFinite(t) && t >= ledgerCut; })
+    .sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
+
   const state = {
     updatedAt: nowISO(),
     debt: d,
@@ -325,12 +341,25 @@ export async function runRefresh() {
     newPost,
     newestPostId: newestId,
     history,
+    postLedger,
   };
 
   await store.setJSON(KEY, state);
 
+  /* The prediction game rides on this schedule: it opens questions against the
+     figures we just fetched and resolves any whose window has closed. It runs
+     AFTER the blob is written so a Supabase outage can never cost us a data
+     refresh, and it swallows its own errors for the same reason. */
+  let predictions = { ok: false, error: "not run" };
+  try {
+    predictions = await runPredictions(state);
+  } catch (e) {
+    predictions = { ok: false, error: e.message };
+  }
+
   const failed = ["debt", "posts", "approval", "gas", "eo", "golf"].filter((k) => !state[k]?.ok);
-  return { ok: true, updatedAt: state.updatedAt, failed, postsVia: p.via ?? null, posts: p.list?.length ?? 0 };
+  return { ok: true, updatedAt: state.updatedAt, failed, postsVia: p.via ?? null,
+           posts: p.list?.length ?? 0, predictions };
 }
 
 export { STORE, KEY };

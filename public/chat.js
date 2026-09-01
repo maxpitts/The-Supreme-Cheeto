@@ -84,6 +84,9 @@ async function afterAuthChange() {
   if (typeof renderProfileEditor === "function" && !document.getElementById("w-profile")?.hidden) {
     renderProfileEditor();
   }
+  // Modules that load after this one listen for this rather than being called
+  // by name — the same pattern as cheeto:data, and for the same reason.
+  document.dispatchEvent(new CustomEvent("cheeto:auth"));
 }
 
 async function refreshPostStatus() {

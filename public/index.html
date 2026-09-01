@@ -753,6 +753,65 @@ body.mobile .win.popup{left:8px!important;right:8px;width:auto!important;
 .sw-a{background:#0d7a0d}.sw-u{background:#7d7d7d}.sw-d{background:#b31414}
 .tug-net{text-align:center;font-family:"Courier New",monospace;font-weight:bold;font-size:13px;margin-top:6px}
 
+/* ===================== PREDICTION GAME ===================== */
+.pg-sec{font-size:9.5px;font-weight:bold;letter-spacing:1.1px;color:var(--note-ink);
+  margin:13px 0 6px;padding-bottom:3px;border-bottom:1px solid var(--gray-d)}
+.pg-sec:first-child{margin-top:2px}
+
+.pg-you{display:flex;gap:4px;padding:8px;background:var(--field);color:var(--field-ink);
+  border:2px solid;border-color:var(--gray-d) var(--hi) var(--hi) var(--gray-d)}
+.pg-you.pg-signed-out{display:block;font-size:12px}
+.pg-stat{flex:1;text-align:center;min-width:0}
+.pg-stat b{display:block;font-family:"Courier New",monospace;font-size:19px;line-height:1.1}
+.pg-stat span{font-size:9px;letter-spacing:.6px;color:var(--note-ink);text-transform:uppercase}
+
+.pg-q{padding:9px;margin-bottom:8px;background:var(--gray);
+  border:2px solid;border-color:var(--hi) var(--gray-d) var(--gray-d) var(--hi)}
+.pg-q.picked{border-left:4px solid var(--orange,#ff7a00);padding-left:7px}
+.pg-prompt{font-size:12px;line-height:1.45;margin-bottom:9px}
+.pg-opts{display:flex;gap:6px;flex-wrap:wrap}
+.pg-opt{flex:1 1 120px;min-height:34px;font-size:11.5px;padding:6px 8px;text-align:center}
+.pg-opt.on{background:#0a3f7a;color:#fff;border-color:#062a52 #5b9ae0 #5b9ae0 #062a52;font-weight:bold}
+.pg-opt:disabled{opacity:.55;cursor:default}
+.pg-meta{font-size:10px;color:var(--note-ink);margin-top:7px}
+.pg-locked{color:#0a6b0a;font-weight:bold}
+body.dark .pg-locked{color:#5fd35f}
+
+.pg-r{padding:8px;margin-bottom:6px;font-size:11px;background:var(--field);color:var(--field-ink);
+  border:1px solid;border-color:var(--gray-d) var(--hi) var(--hi) var(--gray-d)}
+.pg-r.win{border-left:4px solid #0a7a0a}
+.pg-r.lose{border-left:4px solid #b31414}
+.pg-r-top{display:flex;justify-content:space-between;gap:8px;align-items:baseline;margin-bottom:4px}
+.pg-r-badge{font-size:8.5px;font-weight:bold;letter-spacing:.9px;padding:2px 5px;
+  background:var(--gray-d);color:#fff}
+.pg-r.win .pg-r-badge{background:#0a7a0a}
+.pg-r.lose .pg-r-badge{background:#b31414}
+.pg-r-q{font-size:10.5px;color:var(--note-ink);line-height:1.4}
+
+.pg-board{width:100%;border-collapse:collapse;font-size:11px}
+.pg-board th{text-align:left;font-size:9px;letter-spacing:.7px;text-transform:uppercase;
+  color:var(--note-ink);padding:3px 5px;border-bottom:1px solid var(--gray-d)}
+.pg-board td{padding:4px 5px;border-bottom:1px solid var(--gray-d)}
+.pg-board tr.me{background:var(--field);color:var(--field-ink);font-weight:bold}
+.pg-who{display:flex;align-items:center;gap:5px}
+.pg-who img{border-radius:2px;flex:none}
+
+/* ===================== WHILE YOU WERE OUT ===================== */
+.dg-head{display:flex;gap:10px;align-items:flex-start;margin-bottom:11px}
+.dg-glyph{font-size:30px;line-height:1;flex:none}
+.dg-head b{font-size:13px}
+.dg-since{font-size:10.5px;color:var(--note-ink);margin-top:3px}
+.dg-list{list-style:none;margin:0;padding:0;
+  background:var(--field);color:var(--field-ink);
+  border:2px solid;border-color:var(--gray-d) var(--hi) var(--hi) var(--gray-d)}
+.dg-list li{display:flex;gap:8px;align-items:flex-start;padding:7px 8px;font-size:11.5px;line-height:1.45}
+.dg-list li + li{border-top:1px solid var(--gray-d)}
+.dg-i{flex:none;font-size:14px;line-height:1.25}
+.dg-bad{border-left:4px solid #b31414}
+.dg-good{border-left:4px solid #0a7a0a}
+.dg-note{border-left:4px solid #4a6ea8}
+.dg-foot{display:flex;gap:7px;justify-content:flex-end;margin-top:11px;flex-wrap:wrap}
+
 @media (prefers-reduced-motion: reduce){
   .ad-shine{animation:none;display:none}
   .win.popup{animation:none}
@@ -1050,6 +1109,30 @@ body.mobile .win.popup{left:8px!important;right:8px;width:auto!important;
   </section>
 
 
+  <!-- ---------------- PREDICTION GAME ---------------- -->
+  <section class="win" id="w-predict" data-title="CALL_IT.EXE" data-icon="&#127919;"
+           data-x="240" data-y="60" data-w="440" data-h="560">
+    <div class="tb navy"><span class="ico">&#127919;</span><span class="t">Call It &mdash; the prediction game</span>
+      <span class="btns"><button data-min>_</button><button data-max>&#9633;</button><button data-close>&times;</button></span></div>
+    <div class="body">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <b style="font-size:12px">&#127919; MAKE THE CALL</b>
+        <button class="b95 tiny" id="predictRefresh">Refresh</button>
+      </div>
+      <div id="predictBody"><div class="note">Loading&hellip;</div></div>
+    </div>
+    <div class="grip"></div>
+  </section>
+
+  <!-- ---------------- WHILE YOU WERE OUT ---------------- -->
+  <section class="win" id="w-digest" data-title="INBOX" data-icon="&#128231;" data-transient hidden
+           data-x="330" data-y="130" data-w="400" data-h="380">
+    <div class="tb navy"><span class="ico">&#128231;</span><span class="t">While You Were Out</span>
+      <span class="btns"><button data-min>_</button><button data-close>&times;</button></span></div>
+    <div class="body" id="digestBody"></div>
+    <div class="grip"></div>
+  </section>
+
   <!-- ---------------- PROFILE ---------------- -->
   <section class="win" id="w-profile" data-title="MY_PROFILE" data-icon="&#128100;"
            data-x="260" data-y="70" data-w="420" data-h="520">
@@ -1152,6 +1235,8 @@ body.mobile .win.popup{left:8px!important;right:8px;width:auto!important;
 <script src="/chat.js"></script>
 <script src="/charts.js"></script>
 <script src="/community.js"></script>
+<script src="/predict.js"></script>
+<script src="/digest.js"></script>
 <script src="/ads.js"></script>
 </body>
 </html>
