@@ -43,9 +43,14 @@
   --deskA:#0aa; --deskB:#066; --deskC:#044;
   --tbh:22px;               /* title bar height */
   --taskh:40px;
+  --safe-b:env(safe-area-inset-bottom,0px);
+  --safe-t:env(safe-area-inset-top,0px);
 }
 *{box-sizing:border-box}
 html,body{margin:0;padding:0;height:100%}
+/* dvh tracks the *visible* viewport, so mobile browser chrome collapsing (and
+   standalone mode having none) no longer leaves the desktop the wrong height. */
+@supports (height:100dvh){ html,body{height:100dvh} }
 body{
   font-family:"MS Sans Serif",Tahoma,Verdana,Geneva,sans-serif;
   font-size:13px;color:var(--ink);
@@ -67,7 +72,8 @@ button{font-family:inherit}
      box-shadow:inset 1px 1px 0 #000,inset -1px -1px 0 var(--gray-l)}
 
 /* ============================== DESKTOP ============================== */
-#desktop{position:fixed;inset:0 0 var(--taskh) 0;overflow:hidden}
+#desktop{position:fixed;left:0;right:0;top:var(--safe-t);
+  bottom:calc(var(--taskh) + var(--safe-b));overflow:hidden}
 #wallpaper{
   position:absolute;inset:0;display:flex;flex-direction:column;
   align-items:center;justify-content:center;gap:6px;
@@ -195,10 +201,11 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible,
 
 /* ============================== TASKBAR ============================== */
 #taskbar{
-  position:fixed;left:0;right:0;bottom:0;height:var(--taskh);z-index:9000;
-  background:var(--gray);border-top:2px solid #fff;box-shadow:0 -2px 0 var(--gray-d);
-  display:flex;align-items:center;gap:5px;padding:0 5px;
-  padding-bottom:env(safe-area-inset-bottom,0)
+  position:fixed;left:0;right:0;bottom:0;z-index:9000;
+  height:calc(var(--taskh) + var(--safe-b));
+  padding:0 5px var(--safe-b);
+  background:var(--gray);border-top:2px solid var(--hi);box-shadow:0 -2px 0 var(--gray-d);
+  display:flex;align-items:center;gap:5px;
 }
 #startBtn{display:flex;align-items:center;gap:5px;font-weight:bold;font-size:12px;
   padding:4px 9px;background:var(--gray);cursor:pointer;flex:0 0 auto;
@@ -220,7 +227,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible,
 #trayWatch.hot{color:#b00;font-weight:bold}
 
 /* ============================== START MENU ============================== */
-#startMenu{position:fixed;left:5px;bottom:calc(var(--taskh) + 2px);width:262px;z-index:9001;
+#startMenu{position:fixed;left:5px;bottom:calc(var(--taskh) + var(--safe-b) + 2px);width:262px;z-index:9001;
   background:var(--gray);display:flex;
   border:2px solid;border-color:#fff var(--gray-d) var(--gray-d) #fff;
   box-shadow:4px 4px 12px rgba(0,0,0,.45)}
@@ -257,10 +264,16 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible,
 .c1{color:#0000ff}.c2{color:#008000}.c3{color:#ff0000}.c4{color:#000080}
 .c5{color:#800000}.c6{color:#008080}.c7{color:#000}.c8{color:#808080}
 
+/* ---------- installed as an app: no browser chrome to lean on ---------- */
+@media (display-mode: standalone){
+  body{overscroll-behavior:none}          /* no rubber-band revealing the page edge */
+  body.mobile #desktop{padding-top:calc(10px + var(--safe-t))}
+}
+
 /* ============================== MOBILE ============================== */
 body.mobile{overflow:auto;height:auto;min-height:100%}
 body.mobile #desktop{position:static;inset:auto;height:auto;overflow:visible;
-  padding:8px 8px calc(var(--taskh) + 14px)}
+  padding:calc(8px + var(--safe-t)) 8px calc(var(--taskh) + var(--safe-b) + 16px)}
 body.mobile #wallpaper{position:static;inset:auto;opacity:1;margin-bottom:10px;
   flex-direction:row;justify-content:center;gap:12px}
 body.mobile #wallpaper img{width:64px}
@@ -342,7 +355,7 @@ body.mobile #startBtn{padding:5px 8px}
 .sp-note{font-size:11px;color:#444;min-height:15px;font-family:"Courier New",monospace}
 
 /* ============================== CHEETIP ============================== */
-#cheetip{position:fixed;right:14px;bottom:calc(var(--taskh) + 12px);z-index:8500;
+#cheetip{position:fixed;right:14px;bottom:calc(var(--taskh) + var(--safe-b) + 12px);z-index:8500;
   display:flex;flex-direction:column;align-items:flex-end;gap:7px;pointer-events:none}
 .tip-bubble{pointer-events:auto;max-width:260px;background:#ffffe1;color:#000;font-size:12px;
   line-height:1.45;padding:9px 11px;border:1px solid #000;position:relative;
@@ -358,7 +371,7 @@ body.mobile #startBtn{padding:5px 8px}
 .tip-char button{position:absolute;top:-5px;right:-5px;width:19px;height:19px;padding:0;
   font-size:12px;font-weight:bold;line-height:15px;cursor:pointer;background:var(--gray);
   border:2px solid;border-color:#fff var(--gray-d) var(--gray-d) #fff}
-body.mobile #cheetip{right:8px;bottom:calc(var(--taskh) + 8px)}
+body.mobile #cheetip{right:8px;bottom:calc(var(--taskh) + var(--safe-b) + 8px)}
 body.mobile .tip-char img{width:48px;height:48px}
 body.mobile .tip-bubble{max-width:200px;font-size:11px}
 
@@ -683,7 +696,63 @@ body.dark #trayTheme{background:var(--gray);border-color:var(--gray-l) #000 #000
 body.dark .alert-meta a{color:#8ec5ff}
 
 body.mobile .win.popup{left:8px!important;right:8px;width:auto!important;
-  top:auto!important;bottom:calc(var(--taskh) + 10px)}
+  top:auto!important;bottom:calc(var(--taskh) + var(--safe-b) + 10px)}
+
+/* ============================== CHARTS ============================== */
+/* then vs now */
+.tn{margin-bottom:11px}
+.tn-label{display:flex;justify-content:space-between;gap:8px;font-size:11px;font-weight:bold;margin-bottom:3px}
+.tn-delta{font-family:"Courier New",monospace}
+.tn-row{display:flex;align-items:center;gap:6px;margin-bottom:3px}
+.tn-tag{flex:0 0 66px;font-size:9.5px;color:var(--note-ink);text-align:right}
+.tn-track{flex:1;height:15px;background:var(--field);
+  border:1px solid;border-color:var(--gray-d) var(--hi) var(--hi) var(--gray-d);overflow:hidden}
+.tn-track i{display:block;height:100%;transition:width .5s cubic-bezier(.2,.9,.3,1)}
+.tn-then{background:repeating-linear-gradient(90deg,#7a7a7a 0 8px,#8e8e8e 8px 11px)}
+.tn-now{background:repeating-linear-gradient(90deg,var(--orange-d) 0 8px,var(--orange) 8px 11px)}
+.tn-val{flex:0 0 68px;font-family:"Courier New",monospace;font-size:11px;text-align:right}
+
+/* receipt */
+.receipt{background:#f4f1e4;color:#1a1a1a;font-family:"Courier New",monospace;font-size:11.5px;
+  line-height:1.5;padding:12px 13px;max-width:290px;margin:0 auto;
+  box-shadow:0 2px 5px rgba(0,0,0,.35);
+  clip-path:polygon(0 0,100% 0,100% calc(100% - 6px),96% 100%,92% calc(100% - 6px),88% 100%,
+    84% calc(100% - 6px),80% 100%,76% calc(100% - 6px),72% 100%,68% calc(100% - 6px),64% 100%,
+    60% calc(100% - 6px),56% 100%,52% calc(100% - 6px),48% 100%,44% calc(100% - 6px),40% 100%,
+    36% calc(100% - 6px),32% 100%,28% calc(100% - 6px),24% 100%,20% calc(100% - 6px),16% 100%,
+    12% calc(100% - 6px),8% 100%,4% calc(100% - 6px),0 100%)}
+.r-head{text-align:center;font-weight:bold;letter-spacing:.5px;margin-bottom:7px}
+.r-small{font-weight:normal;font-size:10px}
+.r-rule{border-top:1px dashed #555;margin:6px 0}
+.r-line{display:flex;justify-content:space-between;gap:8px;white-space:pre}
+.r-total{font-weight:bold}
+.r-worse{color:#a00}.r-better{color:#060}
+.r-foot{text-align:center;font-size:9.5px;margin-top:9px;line-height:1.6;color:#444}
+
+/* meter breakdown */
+.mp{margin-bottom:8px}
+.mp-top{display:flex;justify-content:space-between;font-size:11px;font-weight:bold}
+.mp-top b{font-family:"Courier New",monospace}
+.mp-track{height:11px;background:var(--field);margin:2px 0;
+  border:1px solid;border-color:var(--gray-d) var(--hi) var(--hi) var(--gray-d)}
+.mp-track i{display:block;height:100%;transition:width .5s cubic-bezier(.2,.9,.3,1)}
+.mp-why{font-size:9.5px;color:var(--note-ink)}
+.mp-sum{font-size:10.5px;margin-top:9px;padding-top:7px;border-top:1px solid var(--gray-d)}
+
+/* tug of war */
+.tug{margin-bottom:10px}
+.tug-bar{display:flex;height:30px;overflow:hidden;
+  border:2px solid;border-color:var(--gray-d) var(--hi) var(--hi) var(--gray-d)}
+.tug-bar i{display:flex;align-items:center;justify-content:center;font-style:normal;
+  font-size:11px;font-weight:bold;color:#fff;transition:width .55s cubic-bezier(.2,.9,.3,1);overflow:hidden}
+.tug-a{background:repeating-linear-gradient(90deg,#0a5f0a 0 10px,#0d7a0d 10px 13px)}
+.tug-u{background:repeating-linear-gradient(90deg,#6a6a6a 0 10px,#7d7d7d 10px 13px)}
+.tug-d{background:repeating-linear-gradient(90deg,#8f0f0f 0 10px,#b31414 10px 13px)}
+.tug-legend{display:flex;gap:12px;justify-content:center;font-size:9.5px;margin-top:5px;color:var(--note-ink)}
+.sw{display:inline-block;width:9px;height:9px;vertical-align:-1px;margin-right:3px}
+.sw-a{background:#0d7a0d}.sw-u{background:#7d7d7d}.sw-d{background:#b31414}
+.tug-net{text-align:center;font-family:"Courier New",monospace;font-weight:bold;font-size:13px;margin-top:6px}
+
 @media (prefers-reduced-motion: reduce){
   .ad-shine{animation:none;display:none}
   .win.popup{animation:none}
@@ -763,7 +832,7 @@ body.mobile .win.popup{left:8px!important;right:8px;width:auto!important;
         Illustrative, not accountancy.</p>
       </fieldset>
 
-      <fieldset><legend>Last 30 days</legend>
+      <fieldset id="fsSparkDebt" hidden><legend>Last 30 days</legend>
         <svg class="spark" id="sparkDebt" viewBox="0 0 300 38" preserveAspectRatio="none"></svg></fieldset>
 
       <p class="note">Seeded from the U.S. Treasury
@@ -804,10 +873,12 @@ body.mobile .win.popup{left:8px!important;right:8px;width:auto!important;
     <div class="tb"><span class="ico">&#128499;</span><span class="t">APPROVAL_RATING.EXE</span>
       <span class="btns"><button data-min>_</button><button data-max>&#9633;</button><button data-close>&times;</button></span></div>
     <div class="body">
+      <div id="approvalTug"></div>
       <fieldset><legend>APPROVE</legend><div class="bar"><i id="barApp"></i><em id="lblApp"></em></div></fieldset>
       <fieldset><legend>DISAPPROVE</legend><div class="bar red"><i id="barDis"></i><em id="lblDis"></em></div></fieldset>
       <div class="odo amber small" id="netApp">NET &mdash;</div>
-      <fieldset style="margin-top:9px"><legend>Approval trend</legend><svg class="spark" id="sparkApp" viewBox="0 0 300 38" preserveAspectRatio="none"></svg></fieldset>
+      <fieldset id="fsSparkApp" hidden style="margin-top:9px"><legend>Approval trend</legend>
+        <svg class="spark" id="sparkApp" viewBox="0 0 300 38" preserveAspectRatio="none"></svg></fieldset>
       <p class="note">Quality- and recency-weighted polling average from <a href="https://fiftyplusone.news/polls/approval/president" target="_blank" rel="noopener">FiftyPlusOne</a>.</p>
     </div>
     <div class="status"><span id="stPolls" class="freshness fresh-ok">&mdash;</span></div>
@@ -835,7 +906,9 @@ body.mobile .win.popup{left:8px!important;right:8px;width:auto!important;
       <fieldset style="margin-top:9px"><legend>Desktop pet</legend>
         <div id="pet">&#129472;</div><div id="petsay">booting&hellip;</div>
       </fieldset>
-      <svg class="spark" id="sparkCheeto" viewBox="0 0 300 38" preserveAspectRatio="none" style="margin-top:8px"></svg>
+      <fieldset style="margin-top:9px"><legend>&#128300; Why it reads that</legend>
+        <div id="meterParts"></div></fieldset>
+      <svg class="spark" id="sparkCheeto" viewBox="0 0 300 38" preserveAspectRatio="none" style="margin-top:8px" hidden></svg>
       <p class="note">A joke composite, computed openly: equal-weight average of disapproval, gas vs. a year ago, CPI vs. the 2% target, the effective tariff rate, and debt growth &mdash; each scaled 0&ndash;100. A vibe, not an economic indicator.</p>
     </div>
     <div class="grip"></div>
@@ -848,7 +921,12 @@ body.mobile .win.popup{left:8px!important;right:8px;width:auto!important;
       <span class="btns"><button data-min>_</button><button data-max>&#9633;</button><button data-close>&times;</button></span></div>
     <div class="body">
       <div class="sunken" id="econ"></div>
-      <fieldset style="margin-top:9px"><legend>Gas price trend</legend><svg class="spark" id="sparkGas" viewBox="0 0 300 38" preserveAspectRatio="none"></svg></fieldset>
+      <fieldset style="margin-top:9px"><legend>&#128200; Then vs now</legend>
+        <div id="econThenNow"></div></fieldset>
+      <fieldset><legend>&#129534; The same basket</legend>
+        <div id="econReceipt"></div></fieldset>
+      <fieldset id="fsSparkGas" hidden><legend>Gas price trend</legend>
+        <svg class="spark" id="sparkGas" viewBox="0 0 300 38" preserveAspectRatio="none"></svg></fieldset>
       <p class="note">Gas: AAA daily national average. Eggs: BLS average price, Grade A large. CPI: BLS year-over-year. Tariff: Penn Wharton effective rate. Monthly series are labeled with their reference month rather than dressed up as live.</p>
     </div>
     <div class="status"><span id="stEcon" class="freshness fresh-ok">&mdash;</span></div>
@@ -1072,6 +1150,7 @@ body.mobile .win.popup{left:8px!important;right:8px;width:auto!important;
 <script src="/supabase.js"></script>
 <script src="/app.js"></script>
 <script src="/chat.js"></script>
+<script src="/charts.js"></script>
 <script src="/community.js"></script>
 <script src="/ads.js"></script>
 </body>

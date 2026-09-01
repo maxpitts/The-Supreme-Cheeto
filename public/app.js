@@ -758,6 +758,14 @@ function spark(svgEl, values, color) {
 
 function renderSparks() {
   const h = D.history || [];
+  // An empty chart that says "collecting history…" reads as broken. Show
+  // nothing until there are enough points for the shape to mean something.
+  const enough = h.length >= 12;
+  [["#fsSparkDebt"], ["#fsSparkApp"], ["#fsSparkGas"]].forEach(([id]) => {
+    const el = $(id); if (el) el.hidden = !enough;
+  });
+  const ch = $("#sparkCheeto"); if (ch) ch.hidden = !enough;
+  if (!enough) return;
   spark($("#sparkDebt"), h.map((x) => x.debt), "#0a7d0a");
   spark($("#sparkApp"), h.map((x) => x.approve), "#000080");
   spark($("#sparkGas"), h.map((x) => x.gas), "#a33f00");
@@ -809,6 +817,8 @@ function renderAll() {
   if (!debtAtLoad) debtAtLoad = liveDebt();
   tickDebt(); renderApproval(); renderEcon(); renderMeter();
   renderGolfEO(); renderFeed(); renderSparks(); renderFreshness(); tickWatch();
+  // modules that load after this file listen for this instead of being called
+  document.dispatchEvent(new CustomEvent("cheeto:data"));
 }
 
 /* =====================================================================
