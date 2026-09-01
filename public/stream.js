@@ -22,6 +22,73 @@ const KICK_LABELS = {
   benp90: "benp90",
 };
 
+/* =====================================================================
+   LIVE STATUS
+   Polled from our own /.netlify/functions/kick, which relays Kick's public
+   channel endpoint. Everything shown here — live or not, the title, the viewer
+   count — comes from Kick. Nothing is inferred, and when the poll fails the
+   badges disappear rather than freezing on the last thing we saw, because a
+   stale LIVE is exactly the badge that would embarrass someone.
+   ===================================================================== */
+const KickLive = {
+  state: {},           // slug -> { live, title, viewers }
+  timer: null,
+  failures: 0,
+
+  async poll() {
+    try {
+      const res = await fetch("/.netlify/functions/kick", { cache: "no-store" });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      const j = await res.json();
+      const next = {};
+      (j.channels || []).forEach((c) => { if (c.ok) next[c.name] = c; });
+
+      // Announce a channel that has just come on air, once.
+      Object.keys(next).forEach((k) => {
+        if (next[k].live && this.state[k] && !this.state[k].live) {
+          Cheetip?.react?.("live", { name: KICK_LABELS[k] || k, title: next[k].title });
+        }
+      });
+
+      this.state = next;
+      this.failures = 0;
+    } catch {
+      // Two consecutive failures and we stop claiming to know anything.
+      if (++this.failures >= 2) this.state = {};
+    }
+    this.paint();
+  },
+
+  isLive(slug) { return Boolean(this.state[slug]?.live); },
+  info(slug) { return this.state[slug] || null; },
+
+  paint() {
+    const anyone = Object.values(this.state).filter((c) => c.live);
+    const tray = document.getElementById("trayLive");
+    if (tray) {
+      tray.hidden = anyone.length === 0;
+      if (anyone.length) {
+        const who = anyone.map((c) => KICK_LABELS[c.name] || c.name).join(" & ");
+        tray.innerHTML = `<span class="lv-dot"></span>LIVE`;
+        tray.title = anyone.length === 1
+          ? `${who} is live${anyone[0].title ? ": " + anyone[0].title : ""}`
+          : `${who} are both live`;
+      }
+    }
+    StreamWindow.all.forEach((c) => c.paintLive());
+  },
+
+  start() {
+    if (this.timer) return;
+    this.poll();
+    // 60s is well inside the function's 30s cache, so most polls are free.
+    this.timer = setInterval(() => this.poll(), 60000);
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") this.poll();
+    });
+  },
+};
+
 const StreamWindow = {
   all: [],
 
@@ -54,20 +121,40 @@ const StreamWindow = {
                    <span class="st-play-s">loads the Kick player &mdash; nothing plays until you press this</span>
                  </button>`}
           </div>
+          <div class="st-live" data-live></div>
           <div class="st-bar">
             <span class="st-name">&#128250; ${esc(this.label)}</span>
             ${this.playing ? `<button class="b95 tiny" data-stop>Stop</button>` : ""}
             <a class="b95 tiny" href="https://kick.com/${encodeURIComponent(this.name)}"
                target="_blank" rel="noopener">Open on Kick</a>
           </div>
-          <p class="note">If the stream is offline the player says so. This window
-          doesn't poll Kick for live status, so there's no badge here that could be
-          telling you the wrong thing.</p>`;
+          <p class="note">Live status comes from Kick's own public channel data,
+          refreshed about once a minute. If it can't be reached the badge disappears
+          rather than showing you something stale.</p>`;
 
         this.root.querySelector("[data-play]")?.addEventListener("click",
           () => { this.playing = true; this.render(); });
         this.root.querySelector("[data-stop]")?.addEventListener("click",
           () => { this.playing = false; this.render(); });
+        this.paintLive();
+      },
+
+      /* Drawn separately from render() so a poll can update the badge without
+         rebuilding the iframe and restarting the stream underneath someone. */
+      paintLive() {
+        const box = this.root.querySelector("[data-live]");
+        if (!box) return;
+        const i = KickLive.info(this.name);
+        // Empty it as well as hiding it, so there is no stale "LIVE" text left
+        // in the node to flash on the next re-show.
+        if (!i) { box.hidden = true; box.innerHTML = ""; return; }
+        box.hidden = false;
+        box.className = "st-live" + (i.live ? " on" : "");
+        box.innerHTML = i.live
+          ? `<span class="lv-dot"></span><b>LIVE</b>
+             ${i.title ? `<span class="st-title">${esc(i.title)}</span>` : ""}
+             ${i.viewers != null ? `<span class="st-v">${i.viewers} watching</span>` : ""}`
+          : `<span class="st-off">Offline right now</span>`;
       },
 
       stop() { if (this.playing) { this.playing = false; this.render(); } },
@@ -92,8 +179,18 @@ const StreamWindow = {
   },
 };
 
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", () => StreamWindow.init());
-} else {
+function bootStreams() {
   StreamWindow.init();
+  KickLive.start();
+  document.getElementById("trayLive")?.addEventListener("click", () => {
+    const live = Object.values(KickLive.state).find((c) => c.live);
+    if (!live) return;
+    WM.open(live.name === "bobbyjayyy" ? "w-st-bobby" : "w-st-benp");
+  });
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", bootStreams);
+} else {
+  bootStreams();
 }

@@ -1727,6 +1727,7 @@ const Cheetip = {
     friend(p)   { return [`${p.name ? p.name + " is" : "That's"} on your buddy list now. It's 2003 in here.`, "delighted"]; },
     nudge(p)    { return [`${p.from || "Someone"} nudged you. I felt that too.`, "panic", 6500]; },
     record(p)   { return [`${p.n} people here at once — that's a new record. Everyone act natural.`, "delighted"]; },
+    live(p)     { return [`${p.name} just went live${p.title ? ` — "${p.title}"` : ""}.`, "delighted", 10000]; },
     newpost()   { return ["A new post just landed. I thought you should know immediately.", "panic", 9000]; },
 
     away(p) {

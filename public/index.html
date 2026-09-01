@@ -1148,7 +1148,42 @@ body.dark .bl-mini{border-color:var(--gray-l) #000 #000 var(--gray-l)}
 body.buzzing{animation:buzzshake .9s cubic-bezier(.36,.07,.19,.97)}
 @media (prefers-reduced-motion: reduce){ body.buzzing{animation:none;outline:4px solid var(--orange);outline-offset:-4px} }
 
+/* Irreversible actions get a visible boundary, not just wording. */
+fieldset.danger{border-color:#b3241c;margin-top:14px}
+fieldset.danger legend{color:#b3241c;font-weight:bold}
+body.dark fieldset.danger{border-color:#e0554c}
+body.dark fieldset.danger legend{color:#ff8a80}
+#pfDelete{border-color:#ff9d97 #6b0f0a #6b0f0a #ff9d97;background:linear-gradient(#e0453c,#a81a12);color:#fff;font-weight:bold}
+#pfDelete:active{border-color:#6b0f0a #ff9d97 #ff9d97 #6b0f0a}
+#delGo{border-color:#ff9d97 #6b0f0a #6b0f0a #ff9d97;background:linear-gradient(#e0453c,#a81a12);color:#fff;font-weight:bold}
+#delGo:disabled{background:var(--gray);color:var(--note-ink);
+  border-color:var(--hi) var(--gray-d) var(--gray-d) var(--hi);font-weight:normal;opacity:.65}
+
 /* ===================== THE STREAM ===================== */
+#trayLive{flex:0 0 auto;font:inherit;font-size:10.5px;font-weight:bold;letter-spacing:.7px;
+  padding:3px 8px;cursor:pointer;display:flex;align-items:center;gap:5px;min-height:24px;
+  color:#fff;background:linear-gradient(#e0332c,#a80d0d);
+  border:2px solid;border-color:#ff8a86 #5c0505 #5c0505 #ff8a86}
+#trayLive:active{border-color:#5c0505 #ff8a86 #ff8a86 #5c0505}
+.lv-dot{width:7px;height:7px;border-radius:50%;background:#fff;flex:none;
+  box-shadow:0 0 0 1px rgba(0,0,0,.35);animation:lv-pulse 1.4s ease-in-out infinite}
+@keyframes lv-pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.75)}}
+@media (prefers-reduced-motion: reduce){.lv-dot{animation:none}}
+
+.st-live{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:7px;
+  font-size:11px;padding:6px 8px;
+  background:var(--field);color:var(--field-ink);
+  border:1px solid;border-color:var(--gray-d) var(--hi) var(--hi) var(--gray-d)}
+.st-live.on{background:linear-gradient(#ffe3e1,#ffc9c5);color:#5c0505;border-color:#ff8a86 #a80d0d #a80d0d #ff8a86}
+body.dark .st-live.on{background:linear-gradient(#6b1512,#4a0d0b);color:#ffdedb;
+  border-color:#a8322c #2a0605 #2a0605 #a8322c}
+.st-live.on .lv-dot{background:#d81b0f}
+body.dark .st-live.on .lv-dot{background:#ff6b5e}
+.st-live b{letter-spacing:.8px}
+.st-title{flex:1;min-width:120px;font-style:italic;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.st-v{font-family:"Courier New",monospace;font-size:10.5px;opacity:.85}
+.st-off{color:var(--note-ink)}
+
 .st-tabs{display:flex;gap:3px;margin-bottom:7px;flex-wrap:wrap}
 .st-tab{font:inherit;font-size:11px;padding:5px 9px;cursor:pointer;flex:1 1 auto;
   background:var(--gray);color:var(--ink);
@@ -1248,6 +1283,8 @@ body.dark .st-tab.on{background:linear-gradient(#1d6b3f,#0f4326);color:#eaffea}
   .bl-away,.bl-fs-t,.bl-pend,.t8-name{font-size:11px}
   .bl-grp{font-size:10.5px}
   .st-play-s{font-size:11px}
+  .st-live{font-size:11.5px}
+  #trayLive{min-height:38px;padding:4px 10px;font-size:11px}
 }
 </style>
 </head>
@@ -1646,6 +1683,38 @@ body.dark .st-tab.on{background:linear-gradient(#1d6b3f,#0f4326);color:#eaffea}
       <fieldset><legend>Data freshness</legend><div id="freshAll" style="font-size:11px"></div></fieldset>
       <fieldset><legend>Sources</legend><div style="font-size:11px;line-height:1.9" id="srcList"></div></fieldset>
       <p class="note">Refreshed every 15 minutes by a scheduled job. If a source can't be reached, the previous value is kept and marked stale rather than replaced with a guess.</p>
+
+      <fieldset><legend>&#128274; Your data</legend>
+        <div style="font-size:11.5px;line-height:1.65">
+          <p style="margin-top:0">Reading this site needs no account and sets no tracking cookies.
+          There are no analytics and no advertising trackers &mdash; the sponsor slots are plain
+          links that don't report back.</p>
+          <p><b>If you sign in</b> with Google or Discord, we store only what the site needs:
+          your email address, a handle and display name, an avatar URL if you set one, plus
+          whatever you choose to post &mdash; chat messages, statuses, bulletin posts, reactions,
+          predictions and your friends list.</p>
+          <p>That data is never sold, never shared with advertisers, and isn't used for anything
+          beyond running the site. It lives in a Supabase database; sign-in is handled by Google
+          or Discord, who never pass us your password.</p>
+          <p><b>Deleting your account</b> removes all of it immediately &mdash; the button is in
+          My Profile. There's no grace period and no backup to restore from, so it really is gone.</p>
+          <p class="note" style="margin-bottom:0">Some things stay in your browser only and never
+          reach a server at all: your window layout, theme, household size, visit counter and
+          debt guesses. Clearing site data resets those.</p>
+        </div>
+      </fieldset>
+
+      <fieldset><legend>&#9878; Terms, briefly</legend>
+        <div style="font-size:11.5px;line-height:1.65">
+          <p style="margin-top:0">This is satire and commentary on a public figure, built on
+          publicly available data that's linked at every figure. Quotes are reproduced verbatim
+          and never invented. Not affiliated with, endorsed by, or connected to anyone mentioned.</p>
+          <p>Be civil in chat and on the board. Harassment, threats, slurs and spam get you
+          removed. Moderation is enforced by the database, not by argument.</p>
+          <p class="note" style="margin-bottom:0">Provided as-is, for entertainment. Don't make
+          financial or voting decisions based on a cartoon gauge named after a snack.</p>
+        </div>
+      </fieldset>
     </div>
     <div class="grip"></div>
   </section>
@@ -1657,7 +1726,7 @@ body.dark .st-tab.on{background:linear-gradient(#1d6b3f,#0f4326);color:#eaffea}
   <div id="tasks"></div>
   <button id="trayTheme" title="Toggle light / dark">&#127769;</button>
   <button id="trayAccount" title="Sign in to CheetoChat">&#128100; Sign in</button>
-  <div id="tray"><button id="trayOnline" type="button" hidden title="Who's online">&#128100; &mdash;</button><span id="trayWatch" title="Time since last post">&#128064; &mdash;</span><span id="trayClock">--:--</span></div>
+  <div id="tray"><button id="trayLive" type="button" hidden title="Someone is live"></button><button id="trayOnline" type="button" hidden title="Who's online">&#128100; &mdash;</button><span id="trayWatch" title="Time since last post">&#128064; &mdash;</span><span id="trayClock">--:--</span></div>
 </div>
 
 <div id="startMenu" hidden>

@@ -63,7 +63,16 @@ async function renderProfileEditor() {
     <div style="display:flex;gap:8px;align-items:center">
       <button class="b95" id="pfSave">Save profile</button>
       <span id="pfMsg" class="note" style="margin:0"></span>
-    </div>`;
+    </div>
+
+    <fieldset class="danger" style="margin-top:14px">
+      <legend>&#9888; Delete account</legend>
+      <p class="note" style="margin-top:0">This removes your profile, chat messages,
+      statuses, bulletin posts, friendships, predictions and reactions. It happens
+      immediately and can't be undone &mdash; there's no grace period and no backup
+      you can ask us to restore from.</p>
+      <button class="b95" id="pfDelete">Delete my account</button>
+    </fieldset>`;
 
   const linkBox = $("#pfLinks");
   const addRow = (l = { label: "", url: "" }) => {
@@ -93,6 +102,60 @@ async function renderProfileEditor() {
   $("#profPfp").addEventListener("error", () => { $("#profPfp").src = "/logo.svg"; });
 
   $("#pfSave").addEventListener("click", saveProfile);
+  $("#pfDelete").addEventListener("click", confirmDelete);
+}
+
+/* Two steps on purpose: an irreversible action shouldn't be one stray tap away,
+   and typing the word is the cheapest way to make sure the person meant it. */
+function confirmDelete() {
+  showModal("Delete your account?", "&#9888;", `
+    <div style="font-size:12px;line-height:1.6">
+      This deletes everything you've made here, permanently and immediately.
+      Other people's messages that replied to yours will stay, but yours will be gone.
+      <br><br>Type <b>DELETE</b> to confirm:
+      <input class="i95" id="delWord" style="width:100%;margin-top:7px" autocomplete="off">
+      <div style="display:flex;gap:7px;justify-content:flex-end;margin-top:11px;flex-wrap:wrap">
+        <button class="b95" id="delCancel">Keep my account</button>
+        <button class="b95" id="delGo" disabled>Delete permanently</button>
+      </div>
+    </div>`);
+  setTimeout(() => {
+    const ok = document.getElementById("modalOk");
+    if (ok) ok.style.display = "none";
+    const word = document.getElementById("delWord");
+    const go = document.getElementById("delGo");
+    word?.addEventListener("input", () => { go.disabled = word.value.trim().toUpperCase() !== "DELETE"; });
+    word?.focus();
+    document.getElementById("delCancel")?.addEventListener("click", () => {
+      if (ok) ok.style.display = "";
+      $("#modal").hidden = true;
+    });
+    go?.addEventListener("click", () => doDelete(go));
+  }, 0);
+}
+
+async function doDelete(btn) {
+  btn.disabled = true; btn.textContent = "Deleting…";
+  try {
+    const { data, error } = await sb.rpc("cheeto_delete_me");
+    if (error) throw error;
+    if (data && data.ok === false) throw new Error(data.error || "refused");
+    // Sign out locally too, or the browser keeps a token for an account that
+    // no longer exists and every later request fails confusingly.
+    try { await sb.auth.signOut(); } catch {}
+    try { localStorage.removeItem("cheeto_since_v1"); } catch {}
+    const ok = document.getElementById("modalOk");
+    if (ok) ok.style.display = "";
+    showModal("Account deleted", "&#128465;",
+      "Your account and everything in it is gone.<br><br>" +
+      "<span style='color:#555;font-size:11px'>The site still works &mdash; reading was never gated. " +
+      "Sign in again any time and you'll start fresh.</span>");
+    setTimeout(() => location.reload(), 2200);
+  } catch (err) {
+    btn.disabled = false; btn.textContent = "Delete permanently";
+    showModal("Couldn't delete", "&#9888;",
+      `<span style="font-size:11px;color:#555">${esc(err?.message || "unknown error")}</span>`);
+  }
 }
 
 async function saveProfile() {
