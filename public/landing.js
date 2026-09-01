@@ -60,6 +60,8 @@ const Landing = {
             <div class="ld-auth-n">Optional &mdash; everything is readable without an account.</div>
           </div>
 
+          <div id="ldFeed"></div>
+
           <div class="ld-grid">
             <div><b>&#128181; Debt clock</b><span>Ticking to the penny, from the Treasury</span></div>
             <div><b>&#128226; Truth feed</b><span>Every post, verbatim, with a source link</span></div>
@@ -79,6 +81,7 @@ const Landing = {
       b.addEventListener("click", () => this.signIn(b.dataset.ldIn, b)));
 
     this.paint();
+    this.loadFeed();
     document.addEventListener("cheeto:data", () => this.paint());
     // The debt is the whole pitch; let it move while they read.
     this.tick = setInterval(() => this.paintDebt(), 120);
@@ -105,6 +108,26 @@ const Landing = {
         <b>${esc(live.map((c) => (typeof KICK_LABELS === "object" ? KICK_LABELS[c.name] : null) || c.name).join(" & "))}
         ${live.length > 1 ? "are" : "is"} live right now</b></div>` : ""}`;
     this.paintDebt();
+  },
+
+  /* A few recent posts, so someone arriving cold sees the place is inhabited
+     rather than only reading a description of it. Silent on failure — an empty
+     gap is better than an error message on a front door. */
+  async loadFeed() {
+    const box = document.getElementById("ldFeed");
+    if (!box) return;
+    for (let i = 0; i < 24 && typeof sb === "undefined"; i++) await new Promise((r) => setTimeout(r, 250));
+    for (let i = 0; i < 24 && !sb; i++) await new Promise((r) => setTimeout(r, 250));
+    if (!sb) return;
+    try {
+      const { data, error } = await sb.rpc("cheeto_feed", { lim: 3 });
+      if (error || !data || !data.length) return;
+      box.innerHTML = `<div class="ld-grp">LATEST FROM THE FEED</div>
+        ${data.map((p) => `<div class="ld-post">
+          <b>${esc(p.display_name || p.handle || "someone")}</b>
+          <span>${esc((p.body || p.title || "").slice(0, 110))}${(p.body || "").length > 110 ? "…" : ""}</span>
+        </div>`).join("")}`;
+    } catch {}
   },
 
   paintDebt() {

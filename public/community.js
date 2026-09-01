@@ -215,69 +215,194 @@ async function saveProfile() {
   setTimeout(() => { const m = $("#pfMsg"); if (m) m.textContent = ""; }, 2500);
 }
 
-/* ------------------------------------------------------------- BULLETIN */
+/* ----------------------------------------------------------------- THE FEED
+   Formerly the bulletin board. Same table, different shape: reverse
+   chronological by ACTIVITY, titles optional, images allowed, reactions reused
+   from the Truth feed.
+
+   IMAGES: every upload is re-encoded through a canvas before it leaves the
+   browser. That does three useful things at once — it caps the dimensions, it
+   cuts the file size, and it strips EXIF. That last one matters most: photos
+   off a phone carry GPS coordinates, and someone posting a screenshot has no
+   idea their camera roll image would publish where they live. Re-encoding
+   produces fresh bytes with none of that metadata.
+
+   Every limit is ALSO enforced in Postgres — folder ownership, 20 uploads a
+   day, MIME type, file size. What follows is convenience, not security.
+   =========================================================================== */
+const IMG_MAX_DIM = 1600;          // plenty for a chart screenshot
+const IMG_QUALITY = 0.82;
+const IMG_MAX_INPUT = 25 * 1024 * 1024;   // refuse absurd files before decoding
+
 let boardOpenPost = null;
+let pendingImage = null;           // { blob, url } waiting to be posted
+
+function imgUrl(path) {
+  if (!path || !sb) return null;
+  const { data } = sb.storage.from("post-images").getPublicUrl(path);
+  return data?.publicUrl || null;
+}
+
+/* Decode, downscale, re-encode. Returns a Blob or throws with a human reason. */
+async function prepImage(file) {
+  if (!file) throw new Error("No file.");
+  if (!/^image\/(jpeg|png|webp|gif|avif)$/.test(file.type)) {
+    throw new Error("That's not an image I can post. JPEG, PNG or WebP.");
+  }
+  if (file.size > IMG_MAX_INPUT) throw new Error("That image is enormous. Under 25MB, please.");
+
+  const bitmap = await createImageBitmap(file).catch(() => { throw new Error("Couldn't read that image."); });
+  const scale = Math.min(1, IMG_MAX_DIM / Math.max(bitmap.width, bitmap.height));
+  const w = Math.max(1, Math.round(bitmap.width * scale));
+  const h = Math.max(1, Math.round(bitmap.height * scale));
+
+  const canvas = document.createElement("canvas");
+  canvas.width = w; canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  ctx.imageSmoothingQuality = "high";
+  // A white base, so a transparent PNG doesn't become black once flattened.
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, w, h);
+  ctx.drawImage(bitmap, 0, 0, w, h);
+  bitmap.close?.();
+
+  const blob = await new Promise((res) => canvas.toBlob(res, "image/webp", IMG_QUALITY))
+    || await new Promise((res) => canvas.toBlob(res, "image/jpeg", IMG_QUALITY));
+  if (!blob) throw new Error("Couldn't process that image.");
+  if (blob.size > 3 * 1024 * 1024) throw new Error("Still too big after compression — try a smaller image.");
+  return blob;
+}
+
+async function attachImage(file) {
+  const note = $("#bpImgNote");
+  try {
+    if (note) note.textContent = "Processing…";
+    const blob = await prepImage(file);
+    if (pendingImage?.url) URL.revokeObjectURL(pendingImage.url);
+    pendingImage = { blob, url: URL.createObjectURL(blob) };
+    renderImagePreview();
+    if (note) note.textContent = `Ready — ${(blob.size / 1024).toFixed(0)}KB, metadata removed.`;
+  } catch (err) {
+    if (note) note.innerHTML = `<span style="color:#900">${esc(err.message)}</span>`;
+  }
+}
+
+function renderImagePreview() {
+  const box = $("#bpImgPreview");
+  if (!box) return;
+  box.innerHTML = pendingImage
+    ? `<div class="bp-thumb"><img src="${pendingImage.url}" alt="attached image preview">
+         <button class="b95 tiny" id="bpImgClear">Remove</button></div>`
+    : "";
+  $("#bpImgClear")?.addEventListener("click", () => {
+    if (pendingImage?.url) URL.revokeObjectURL(pendingImage.url);
+    pendingImage = null;
+    renderImagePreview();
+    const n = $("#bpImgNote"); if (n) n.textContent = "";
+  });
+}
 
 async function loadBoard() {
   const box = $("#boardBody");
   if (!box || !sb) return;
   box.innerHTML = `<div class="note">Loading…</div>`;
 
-  const { data, error } = await sb
-    .from("cheeto_posts")
-    .select("id, title, body, created_at, pinned, user_id, author:cheeto_profiles!cheeto_posts_user_id_fkey ( handle, display_name, avatar_url, is_admin )")
-    .is("deleted_at", null)
-    .order("pinned", { ascending: false })
-    .order("created_at", { ascending: false })
-    .limit(40);
-
+  const { data, error } = await sb.rpc("cheeto_feed", { lim: 40 });
   if (error) {
-    box.innerHTML = `<div class="sunken" style="color:#900">Couldn't load the board.<br>
+    box.innerHTML = `<div class="sunken" style="color:#900">Couldn't load the feed.<br>
       <span class="note">${esc(error.message)}</span></div>`;
     return;
   }
 
   const composer = me
     ? `<fieldset><legend>New post</legend>
-         <input class="i95" id="bpTitle" maxlength="120" placeholder="Title">
-         <textarea class="i95" id="bpBody" rows="3" maxlength="4000" placeholder="Say your piece…" style="margin-top:6px"></textarea>
-         <div style="display:flex;gap:8px;align-items:center;margin-top:6px">
-           <button class="b95" id="bpPost">Post to board</button>
+         <textarea class="i95" id="bpBody" rows="3" maxlength="4000" placeholder="What are you looking at?"></textarea>
+         <input class="i95" id="bpTitle" maxlength="120" placeholder="Title (optional)" style="margin-top:6px">
+         <div class="bp-drop" id="bpDrop" tabindex="0" role="button"
+              aria-label="Add an image: drop one here, paste, or click to choose">
+           <span>&#128247; Drop an image here, paste it, or <u>choose a file</u></span>
+           <input type="file" id="bpFile" accept="image/*" hidden>
+         </div>
+         <div id="bpImgPreview"></div>
+         <div class="note" id="bpImgNote" style="margin:4px 0 0"></div>
+         <div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap">
+           <button class="b95" id="bpPost">Post</button>
            <span class="note" id="bpMsg" style="margin:0"></span>
          </div>
        </fieldset>`
     : `<div class="sunken" style="margin-bottom:9px">Sign in to post. Reading is open to everyone.
          <button class="b95 tiny" id="bpSignin" style="margin-left:6px">Sign in</button></div>`;
 
-  box.innerHTML = composer + (data.length
+  box.innerHTML = composer + (data && data.length
     ? `<div id="boardList">${data.map(boardRow).join("")}</div>`
-    : `<div class="note">Nothing on the board yet. Be the first.</div>`);
+    : `<div class="note">Nothing here yet. Be the first.</div>`);
 
-  if (me) $("#bpPost").addEventListener("click", submitBoardPost);
-  else $("#bpSignin").addEventListener("click", () => WM.open("w-chat"));
+  if (me) {
+    $("#bpPost").addEventListener("click", submitBoardPost);
+    wireDropZone();
+    renderImagePreview();
+  } else {
+    $("#bpSignin").addEventListener("click", () => WM.open("w-chat"));
+  }
 
   $$("[data-open-post]").forEach((b) =>
     b.addEventListener("click", () => openThread(+b.dataset.openPost)));
   $$("[data-del-post]").forEach((b) =>
     b.addEventListener("click", () => adminDeletePost(+b.dataset.delPost)));
+
+  // Reactions are the same component the Truth feed uses; board ids are
+  // namespaced so the two can never collide.
+  if (typeof Rx === "object") Rx.load(true);
+}
+
+function wireDropZone() {
+  const zone = $("#bpDrop"), input = $("#bpFile");
+  if (!zone || !input) return;
+
+  zone.addEventListener("click", () => input.click());
+  zone.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); input.click(); } });
+  input.addEventListener("change", () => { if (input.files?.[0]) attachImage(input.files[0]); });
+
+  ["dragenter", "dragover"].forEach((ev) =>
+    zone.addEventListener(ev, (e) => { e.preventDefault(); zone.classList.add("over"); }));
+  ["dragleave", "drop"].forEach((ev) =>
+    zone.addEventListener(ev, (e) => { e.preventDefault(); zone.classList.remove("over"); }));
+  zone.addEventListener("drop", (e) => {
+    const f = e.dataTransfer?.files?.[0];
+    if (f) attachImage(f);
+  });
+
+  // Paste straight from a screenshot tool, which is how most of these will arrive.
+  const body = $("#bpBody");
+  body?.addEventListener("paste", (e) => {
+    const item = [...(e.clipboardData?.items || [])].find((i) => i.type.startsWith("image/"));
+    if (!item) return;
+    const f = item.getAsFile();
+    if (f) { e.preventDefault(); attachImage(f); }
+  });
 }
 
 function boardRow(p) {
-  const who = p.author?.display_name || p.author?.handle || "someone";
+  const who = p.display_name || p.handle || "someone";
   const when = new Date(p.created_at).toLocaleString("en-US",
     { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
-  const snippet = p.body.length > 150 ? p.body.slice(0, 150) + "…" : p.body;
+  const url = imgUrl(p.image_path);
+  const body = p.body.length > 600 ? p.body.slice(0, 600) + "…" : p.body;
   return `<div class="bpost">
-    <div class="bpost-head">
+    <div class="bpost-top">
+      ${p.avatar_url ? `<img class="bp-av" src="${esc(p.avatar_url)}" alt="" width="22" height="22" loading="lazy">` : ""}
+      <b>${esc(who)}</b>${p.is_admin ? ' <span class="adm">ADMIN</span>' : ""}
+      <span class="bp-when">${esc(when)}</span>
       ${p.pinned ? '<span class="pin">PINNED</span>' : ""}
-      <b>${esc(p.title)}</b>
     </div>
-    <div class="note" style="margin:2px 0">
-      by <b>${esc(who)}</b>${p.author?.is_admin ? ' <span class="adm">ADMIN</span>' : ""} · ${esc(when)}
-    </div>
-    <div class="bpost-body">${esc(snippet)}</div>
-    <div style="margin-top:5px;display:flex;gap:6px">
-      <button class="b95 tiny" data-open-post="${p.id}">Open</button>
+    ${p.title ? `<div class="bpost-head"><b>${esc(p.title)}</b></div>` : ""}
+    <div class="bpost-body">${esc(body)}</div>
+    ${url ? `<a class="bp-img" href="${esc(url)}" target="_blank" rel="noopener">
+       <img src="${esc(url)}" alt="Image posted by ${esc(who)}" loading="lazy"></a>` : ""}
+    <div class="rx" data-rx="board:${p.id}"></div>
+    <div class="bpost-acts">
+      <button class="b95 tiny" data-open-post="${p.id}">
+        ${p.reply_count > 0 ? `${p.reply_count} repl${p.reply_count === 1 ? "y" : "ies"}` : "Reply"}</button>
       ${myProfile?.is_admin ? `<button class="b95 tiny" data-del-post="${p.id}">Delete</button>` : ""}
     </div>
   </div>`;
@@ -286,19 +411,51 @@ function boardRow(p) {
 async function submitBoardPost() {
   const t = $("#bpTitle").value.trim(), b = $("#bpBody").value.trim();
   const msg = $("#bpMsg");
-  if (t.length < 3) { msg.innerHTML = '<span style="color:#900">Title needs 3+ characters.</span>'; return; }
-  if (!b) { msg.innerHTML = '<span style="color:#900">Write something.</span>'; return; }
+  if (!b && !pendingImage) { msg.innerHTML = '<span style="color:#900">Write something, or add an image.</span>'; return; }
+
+  const btn = $("#bpPost");
+  btn.disabled = true;
+  msg.textContent = pendingImage ? "Uploading image…" : "Posting…";
+
+  let image_path = null;
+  try {
+    if (pendingImage) {
+      const id = (crypto.randomUUID?.() || String(Date.now()) + Math.random().toString(36).slice(2));
+      image_path = `${me.id}/${id}.webp`;
+      const { error: upErr } = await sb.storage
+        .from("post-images")
+        .upload(image_path, pendingImage.blob, { contentType: "image/webp", cacheControl: "31536000" });
+      if (upErr) throw upErr;
+    }
+  } catch (err) {
+    btn.disabled = false;
+    const why = /row-level security|Unauthorized/i.test(err.message || "")
+      ? "Upload refused — new accounts wait 10 minutes, and there's a 20-image daily limit."
+      : (err.message || "Upload failed.");
+    msg.innerHTML = `<span style="color:#900">${esc(why)}</span>`;
+    return;
+  }
+
   msg.textContent = "Posting…";
-  const { error } = await sb.from("cheeto_posts").insert({ user_id: me.id, title: t, body: b });
+  const { error } = await sb.from("cheeto_posts")
+    .insert({ user_id: me.id, title: t || null, body: b || "", image_path });
+
   if (error) {
+    btn.disabled = false;
+    // The post failed but the image is already uploaded — clean it up rather
+    // than leaving an orphan sitting in storage costing money forever.
+    if (image_path) { try { await sb.storage.from("post-images").remove([image_path]); } catch {} }
     const why = /blocked_word|check_violation/i.test(error.message)
       ? "That post contains a blocked word."
       : /row-level security/i.test(error.message)
-        ? "You can't post to the board right now — new accounts wait 10 minutes, and there's a 5-per-hour limit."
+        ? "You can't post right now — new accounts wait 10 minutes, and there's a 5-per-hour limit."
         : error.message;
     msg.innerHTML = `<span style="color:#900">${esc(why)}</span>`;
     return;
   }
+
+  if (pendingImage?.url) URL.revokeObjectURL(pendingImage.url);
+  pendingImage = null;
   await loadBoard();
 }
 
@@ -371,7 +528,55 @@ async function openAdmin() {
   }
   WM.open("w-admin");
   await loadHealth();
+  await loadImages();
   await loadUsers();
+}
+
+/* The image review queue. Hosting user images means a word filter protects
+   nothing — this is the tool that does. Deleting takes two calls because
+   Supabase blocks SQL deletes on storage.objects: the function clears the
+   reference (so it leaves the feed at once) and the Storage API removes the
+   file itself. */
+async function loadImages() {
+  const box = $("#admImages");
+  if (!box || !sb) return;
+  const { data, error } = await sb.rpc("cheeto_recent_images", { lim: 60 });
+  if (error) { box.innerHTML = `<span style="color:#900">${esc(error.message)}</span>`; return; }
+  if (!data || !data.length) { box.innerHTML = `<div class="note">No images uploaded yet.</div>`; return; }
+
+  box.innerHTML = `<div class="admimgs">${data.map((i) => {
+    const url = imgUrl(i.path);
+    const when = new Date(i.uploaded_at).toLocaleString("en-US",
+      { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+    return `<div class="admimg">
+      <a href="${esc(url || "#")}" target="_blank" rel="noopener">
+        <img src="${esc(url || "")}" alt="uploaded image" loading="lazy"></a>
+      <div class="admimg-m">
+        <b>${esc(i.handle || "unknown")}</b><br>
+        <span class="note">${esc(when)}</span>
+        ${i.post_body ? `<div class="note">${esc(i.post_body.slice(0, 60))}</div>` : ""}
+      </div>
+      <button class="b95 tiny" data-nukeimg="${esc(i.path)}">Delete</button>
+    </div>`;
+  }).join("")}</div>`;
+
+  $$("[data-nukeimg]", box).forEach((b) => b.addEventListener("click", async () => {
+    b.disabled = true; b.textContent = "…";
+    const path = b.dataset.nukeimg;
+    try {
+      const { data: r, error: e1 } = await sb.rpc("cheeto_admin_delete_image", { p_path: path });
+      if (e1) throw e1;
+      if (r && r.ok === false) throw new Error(r.error || "refused");
+      const { error: e2 } = await sb.storage.from("post-images").remove([path]);
+      if (e2) throw e2;
+      await loadImages();
+      if (!$("#w-board")?.hidden) await loadBoard();
+    } catch (err) {
+      b.disabled = false; b.textContent = "Delete";
+      showModal("Couldn't delete", "&#9888;",
+        `<span style="font-size:11px;color:#555">${esc(err?.message || "unknown")}</span>`);
+    }
+  }));
 }
 
 async function loadHealth() {

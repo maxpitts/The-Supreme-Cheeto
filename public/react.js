@@ -26,9 +26,12 @@ const Rx = {
   loaded: 0,
   busy: new Set(),
 
+  /* Scoped to any [data-rx] on the page, not just the Truth feed, so the same
+     component serves user posts too. Board ids are namespaced "board:<id>" and
+     Truth ids are the raw post id, so the two can never collide. */
   ids() {
-    return [...document.querySelectorAll("#feed [data-rx]")]
-      .map((el) => el.dataset.rx).filter(Boolean).slice(0, 40);
+    return [...document.querySelectorAll("[data-rx]")]
+      .map((el) => el.dataset.rx).filter(Boolean).slice(0, 60);
   },
 
   async load(force) {
@@ -54,7 +57,7 @@ const Rx = {
   },
 
   paint() {
-    document.querySelectorAll("#feed [data-rx]").forEach((box) => {
+    document.querySelectorAll("[data-rx]").forEach((box) => {
       const id = box.dataset.rx;
       const c = this.counts[id] || {};
       const m = this.mine[id] || new Set();
@@ -120,7 +123,7 @@ const Rx = {
 /* One delegated listener on the feed, so it survives every re-render rather
    than needing rebinding each time the feed repaints. */
 document.addEventListener("click", (ev) => {
-  const b = ev.target.closest?.("#feed .rx-b");
+  const b = ev.target.closest?.(".rx-b");
   if (!b) return;
   ev.preventDefault();
   Rx.tap(b.dataset.rxid, b.dataset.emoji, b);

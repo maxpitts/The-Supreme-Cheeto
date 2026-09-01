@@ -1007,6 +1007,43 @@ body.dark .rx-b.on{background:linear-gradient(#7a4c10,#a3660f);color:#fff;border
 .rx-n{font-family:"Courier New",monospace;font-variant-numeric:tabular-nums;font-size:11px}
 .rx-tot{font-size:10px;color:var(--note-ink);margin-left:3px}
 
+.admimgs{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px}
+.admimg{padding:5px;background:var(--field);color:var(--field-ink);font-size:10.5px;
+  border:1px solid;border-color:var(--gray-d) var(--hi) var(--hi) var(--gray-d)}
+.admimg img{display:block;width:100%;height:90px;object-fit:cover;margin-bottom:4px;background:#000}
+.admimg-m{margin-bottom:4px;line-height:1.35;word-break:break-word}
+
+.ld-grp{font-size:10px;font-weight:bold;letter-spacing:1.1px;color:#8fb0e0;
+  margin:20px 0 6px;text-align:left}
+.ld-post{text-align:left;font-size:11.5px;line-height:1.5;padding:7px 9px;margin-bottom:5px;
+  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.14)}
+.ld-post b{display:block;color:#ffd08a;font-size:11px}
+.ld-post span{color:#c2d6f5}
+
+/* ===================== THE FEED ===================== */
+.bpost{padding:9px;margin-bottom:8px;background:var(--gray);
+  border:2px solid;border-color:var(--hi) var(--gray-d) var(--gray-d) var(--hi)}
+.bpost-top{display:flex;align-items:center;gap:6px;font-size:11.5px;flex-wrap:wrap}
+.bp-av{border-radius:2px;flex:none}
+.bp-when{color:var(--note-ink);font-size:10.5px;margin-left:auto}
+.bpost-head{margin-top:4px;font-size:13px}
+.bpost-body{font-size:12px;line-height:1.55;margin-top:5px;white-space:pre-wrap;word-break:break-word}
+.bp-img{display:block;margin-top:8px;max-width:100%}
+.bp-img img{display:block;max-width:100%;height:auto;
+  border:2px solid;border-color:var(--gray-d) var(--hi) var(--hi) var(--gray-d)}
+.bpost-acts{margin-top:7px;display:flex;gap:6px;flex-wrap:wrap}
+
+.bp-drop{margin-top:7px;padding:14px 10px;text-align:center;cursor:pointer;font-size:11.5px;
+  color:var(--note-ink);background:var(--field);
+  border:2px dashed var(--gray-d)}
+.bp-drop.over{border-color:var(--orange);color:var(--ink);
+  background:linear-gradient(#fff4e2,#ffe6c6)}
+body.dark .bp-drop.over{background:linear-gradient(#4a3512,#5f4517);color:var(--ink)}
+.bp-drop u{cursor:pointer}
+.bp-thumb{margin-top:7px;display:flex;gap:8px;align-items:flex-start}
+.bp-thumb img{max-width:150px;max-height:110px;
+  border:2px solid;border-color:var(--gray-d) var(--hi) var(--hi) var(--gray-d)}
+
 /* ===================== SINCE YOU STARTED ===================== */
 .ty-head{text-align:center;padding:9px;background:var(--field);color:var(--field-ink);
   border:2px solid;border-color:var(--gray-d) var(--hi) var(--hi) var(--gray-d)}
@@ -1336,6 +1373,9 @@ body.dark .st-tab.on{background:linear-gradient(#1d6b3f,#0f4326);color:#eaffea}
   .t8-slot .bl-mini{min-width:34px;min-height:34px}
   .bl-away,.bl-fs-t,.bl-pend,.t8-name{font-size:11px}
   .bl-grp{font-size:10.5px}
+  .bp-drop{padding:18px 10px;font-size:12px}
+  .bpost-body{font-size:12.5px}
+  .bp-when{font-size:11px}
   .st-play-s{font-size:11px}
   .st-live{font-size:11.5px}
   .ld-k{font-size:10px}
@@ -1695,13 +1735,13 @@ body.dark .st-tab.on{background:linear-gradient(#1d6b3f,#0f4326);color:#eaffea}
   </section>
 
   <!-- ---------------- BULLETIN BOARD ---------------- -->
-  <section class="win" id="w-board" data-title="BULLETIN" data-icon="&#128204;"
+  <section class="win" id="w-board" data-title="FYP" data-icon="&#128240;"
            data-x="300" data-y="100" data-w="520" data-h="540">
-    <div class="tb"><span class="ico">&#128204;</span><span class="t">The Bulletin Board</span>
+    <div class="tb"><span class="ico">&#128240;</span><span class="t">FYP &mdash; the feed</span>
       <span class="btns"><button data-min>_</button><button data-max>&#9633;</button><button data-close>&times;</button></span></div>
     <div class="body">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <b style="font-size:12px">&#128204; COMMUNITY BULLETIN</b>
+        <b style="font-size:12px">&#128240; FOR YOU</b>
         <button class="b95 tiny" id="boardRefresh">Refresh</button>
       </div>
       <div id="boardBody"><div class="note">Open to load&hellip;</div></div>
@@ -1720,6 +1760,11 @@ body.dark .st-tab.on{background:linear-gradient(#1d6b3f,#0f4326);color:#eaffea}
         <button class="b95 tiny" id="admQueue">Report queue</button>
       </div>
       <fieldset><legend>&#128202; Site health</legend><div id="admHealth"></div></fieldset>
+      <fieldset><legend>&#128247; Recent images</legend>
+        <div class="note" style="margin-top:0">Images can't be word-filtered. This is
+        every upload, newest first &mdash; the only real check is a person looking.</div>
+        <div id="admImages"><div class="note">Loading&hellip;</div></div>
+      </fieldset>
       <fieldset><legend>&#128101; Users</legend>
         <input class="i95" id="admSearch" placeholder="Search handle, name or email&hellip;" style="margin-bottom:7px">
         <div id="admUsers"></div>
