@@ -1,0 +1,17 @@
+# Normalise line endings in the repo to LF.
+#
+# Without this, files committed from Windows carry CRLF and every checkout on
+# macOS/Linux shows the entire file as modified — 2932 changed lines that are
+# purely invisible whitespace. That buries real diffs and makes review useless.
+# Now working across a PC and a Mac, so this matters.
+* text=auto eol=lf
+
+# Binary — never touch these.
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.woff binary
+*.woff2 binary
+*.zip  binary
