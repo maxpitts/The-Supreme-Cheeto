@@ -2,6 +2,19 @@
   publish = "public"
   command = "echo 'static site — nothing to build'"
 
+  [build.environment]
+    # SUPABASE_URL is the project's public REST endpoint, not a credential. The
+    # browser has to know it — it sits in public/chat.js next to the publishable
+    # key — so the secrets scanner finds it in the build output every time and
+    # fails the deploy.
+    #
+    # Exempt that ONE key by name. Deliberately not SECRETS_SCAN_ENABLED=false
+    # and deliberately not an OMIT_PATHS entry: both would also stop the scanner
+    # watching SUPABASE_SERVICE_ROLE_KEY, which bypasses every RLS policy on the
+    # database and must never reach a public file. Keeping the scanner armed on
+    # that key is worth more than the convenience of a blanket switch.
+    SECRETS_SCAN_OMIT_KEYS = "SUPABASE_URL"
+
 [functions]
   directory = "netlify/functions"
   node_bundler = "esbuild"
