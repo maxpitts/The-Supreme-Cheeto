@@ -50,6 +50,11 @@ const Notify = {
   async poll() {
     if (!sb || !me || this.loading) return;
     if (document.visibilityState === "hidden" && !this.wantsDesktop()) return;
+    // This flag was declared and checked but never actually set, so the guard
+    // did nothing: a slow request meant the 45s timer, the visibility handler
+    // and the auth handler all stacked more requests on top of it. When auth
+    // stalled, that is what turned one wedged call into a queue of thirty-nine.
+    this.loading = true;
     try {
       // The full list, not just the count: the desktop alert needs to know
       // WHAT happened, and one request is cheaper than a count plus a fetch.
@@ -64,6 +69,7 @@ const Notify = {
       this.paint();
       if (this.opened && !document.getElementById("w-notif")?.hidden) this.render();
     } catch { /* a missing badge must never break the desktop */ }
+    finally { this.loading = false; }
   },
 
   /* ------------------------------------------------------------ paint */

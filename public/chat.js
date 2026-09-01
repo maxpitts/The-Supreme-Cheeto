@@ -11,6 +11,59 @@
 const SB_URL = "https://omtnzapftxdtynqwoitc.supabase.co";
 const SB_KEY = "sb_publishable_h8IJNtbwrSABwwx5v30M5Q_E7kahAeT";
 
+/* ---------------------------------------------------------------------
+   THE AUTH LOCK
+
+   supabase-js takes an exclusive, browser-wide Web Lock before every auth
+   call, so that two tabs can't refresh the same token at once. Web Locks have
+   no timeout: a request queues until the holder releases, forever if it never
+   does. A tab that wedges while holding it — suspended mid-refresh, a fetch
+   that never settles — therefore freezes auth in EVERY tab on the origin, and
+   each poll from each tab adds another queued request that will never run. We
+   watched this happen with 39 calls stacked behind one dead holder; the page
+   looks signed out, sign-in does nothing, and no amount of waiting recovers it.
+
+   The lock is worth having: without it two tabs can race a token refresh. But
+   that race costs one wasted refresh, and this costs the whole site. So: wait
+   a few seconds, and if the holder still hasn't let go, assume it is dead and
+   go ahead unlocked.
+
+   The AbortController matters. Racing a timer against the request would leave
+   the request queued, and it would fire later and run fn() a SECOND time —
+   two token refreshes, which is the exact thing the lock exists to prevent.
+   Aborting cancels the pending request outright, so fn runs exactly once.
+   --------------------------------------------------------------------- */
+const LOCK_WAIT_MS = 5000;        // how long a healthy holder is given
+const LOCK_COOLDOWN_MS = 60000;   // how long we skip the lock once it looks dead
+
+// Every PostgREST call asks the auth client for a token, so it takes this lock
+// too. Paying the 5s timeout on each one would turn a wedged tab from "site is
+// broken" into "site takes five seconds a click", which is barely better. Once
+// a holder has proved unresponsive, stop asking for a while — then re-probe,
+// because the wedged tab may simply have been closed.
+let lockWedgedUntil = 0;
+
+async function boundedAuthLock(name, _acquireTimeout, fn) {
+  const locks = globalThis.navigator?.locks;
+  if (!locks?.request) return await fn();       // no Web Locks: nothing to wait on
+  if (Date.now() < lockWedgedUntil) return await fn();
+
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), LOCK_WAIT_MS);
+  try {
+    return await locks.request(name, { mode: "exclusive", signal: ctl.signal },
+      async () => await fn());
+  } catch (err) {
+    if (err?.name === "AbortError") {
+      lockWedgedUntil = Date.now() + LOCK_COOLDOWN_MS;
+      return await fn();
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 let sb = null, me = null, myProfile = null, chatChannel = null, postStatus = null;
 let lastSeenId = 0;          // highest message id already on screen
 let chatPoll = null;         // fallback timer, see startChatPoll()
@@ -22,7 +75,8 @@ async function initChat() {
 
   try {
     sb = window.supabase.createClient(SB_URL, SB_KEY, {
-      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
+      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true,
+              lock: boundedAuthLock },
     });
   } catch (err) { chatUnavailable(err.message); return; }
 
@@ -37,9 +91,18 @@ async function initChat() {
     me = data?.session?.user || null;
   } catch { me = null; }
 
-  sb.auth.onAuthStateChange(async (_evt, session) => {
+  /* This callback runs while the auth lock is HELD. afterAuthChange() reads
+     the profile, calls an RPC, and fires cheeto:auth — which wakes notify,
+     presence, people and profile, each making Supabase calls of their own.
+     Every one of those queues behind the lock this callback is holding, and
+     the callback is waiting on them: a deadlock we built ourselves.
+
+     Supabase's own guidance is to make no Supabase call from in here. Take the
+     one cheap synchronous line, and hand the rest to a fresh task so this
+     returns and the lock is released first. */
+  sb.auth.onAuthStateChange((_evt, session) => {
     me = session?.user || null;
-    await afterAuthChange();
+    setTimeout(() => { afterAuthChange().catch(() => {}); }, 0);
   });
 
   try {
