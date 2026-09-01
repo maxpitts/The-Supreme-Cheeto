@@ -240,7 +240,9 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible,
 #startMenu hr{border:0;border-top:1px solid var(--gray-d);border-bottom:1px solid #fff;margin:4px 2px}
 
 /* ============================== MODAL ============================== */
-.modal{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9500;display:grid;place-items:center;padding:14px}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:12500;display:grid;place-items:center;padding:14px}
+/* Above #landing (12000): the landing page offers sign-in, and a modal
+   rendered behind the thing that opened it reads as a dead button. */
 .modal .win{position:relative;max-width:430px;width:100%;inset:auto}
 .modal .row{display:flex;gap:12px;align-items:flex-start}
 .modal .glyph{font-size:30px;line-height:1;flex:0 0 auto}
@@ -467,6 +469,7 @@ body.mobile .tip-bubble{max-width:200px;font-size:11px}
 .b95.oauth span{display:inline-grid;place-items:center;width:17px;height:17px;color:#fff;font-size:11px}
 .b95.oauth.google span{background:#4285f4}
 .b95.oauth.discord span{background:#5865f2}
+.b95.oauth.email span{background:#6b6b6b}
 .who{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;
   background:var(--gray);border:2px groove var(--gray-l);padding:6px 8px}
 .who .adm{background:#a33f00;color:#fff;font-size:9px;padding:1px 4px}
@@ -1087,6 +1090,18 @@ body.dark .gs{background:linear-gradient(#4a3a10,#5f4a12);color:#ffeec4;
 body.dark .gs-off.good{color:#5fd35f}
 .gs-streak{margin-left:auto;font-weight:bold}
 .gs-rank{font-weight:bold}
+
+/* ===================== SIGN IN ===================== */
+.si{font-size:12px}
+.si-lead{margin:0 0 10px;font-size:12px;line-height:1.5}
+.si-oauth{display:flex;flex-direction:column;gap:6px}
+.si-or{display:flex;align-items:center;gap:8px;margin:11px 0;
+  font-size:10px;letter-spacing:.8px;text-transform:uppercase;color:var(--note-ink)}
+.si-or::before,.si-or::after{content:"";flex:1;height:1px;background:var(--gray-d)}
+.si-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.si-row input{flex:1 1 150px;min-width:0}
+.si-code{font-family:"Courier New",monospace;font-size:19px;letter-spacing:6px;text-align:center}
+.si-msg{font-size:11px;margin-top:7px;min-height:14px;color:var(--note-ink)}
 
 /* ===================== SOMEBODY ELSE'S PROFILE ===================== */
 .linky{background:none;border:0;padding:0;font:inherit;font-weight:bold;color:inherit;
@@ -1963,6 +1978,7 @@ body.dark .st-tab.on{background:linear-gradient(#1d6b3f,#0f4326);color:#eaffea}
 <script src="/supabase.js"></script>
 <script src="/app.js"></script>
 <script src="/chat.js"></script>
+<script src="/signin.js"></script>
 <script src="/charts.js"></script>
 <script src="/community.js"></script>
 <script src="/profile.js"></script>

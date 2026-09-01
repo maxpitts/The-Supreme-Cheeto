@@ -181,6 +181,8 @@ const Guess = {
       }));
     box.querySelectorAll("[data-gb-in]").forEach((b) =>
       b.addEventListener("click", () => { if (typeof signIn === "function") signIn(b.dataset.gbIn); }));
+    box.querySelector("[data-gb-email]")?.addEventListener("click",
+      () => promptSignIn("Sign in to put your guesses on the board."));
   },
 
   boardRowsHTML() {
@@ -235,6 +237,7 @@ const Guess = {
         <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
           <button class="b95 tiny" data-gb-in="google">Google</button>
           <button class="b95 tiny" data-gb-in="discord">Discord</button>
+          <button class="b95 tiny" data-gb-email>Email</button>
         </div>
         <div class="note" style="margin-top:5px">Your guesses on this device still work and still keep a streak
         &mdash; they just can't be ranked against anyone, because nothing about them ever leaves this browser.</div>

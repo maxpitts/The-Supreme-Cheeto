@@ -54,8 +54,9 @@ const Landing = {
           <div class="ld-auth">
             <div class="ld-auth-h">&#128100; Sign in to chat, post statuses and play</div>
             <div class="ld-auth-b">
-              <button class="b95" data-ld-in="google">Sign in with Google</button>
-              <button class="b95" data-ld-in="discord">Sign in with Discord</button>
+              <button class="b95" data-ld-in="google">Google</button>
+              <button class="b95" data-ld-in="discord">Discord</button>
+              <button class="b95" id="ldEmailIn">Email</button>
             </div>
             <div class="ld-auth-n">Optional &mdash; everything is readable without an account.</div>
           </div>
@@ -79,6 +80,10 @@ const Landing = {
     document.getElementById("ldEnter").addEventListener("click", () => this.enter());
     this.el.querySelectorAll("[data-ld-in]").forEach((b) =>
       b.addEventListener("click", () => this.signIn(b.dataset.ldIn, b)));
+    // The modal renders above the landing overlay, so this works before the
+    // desktop has booted.
+    document.getElementById("ldEmailIn")?.addEventListener("click",
+      () => { if (typeof promptSignIn === "function") promptSignIn(); });
 
     this.paint();
     this.loadFeed();

@@ -127,9 +127,11 @@ function renderAuthBar() {
         <div class="login-btns">
           <button class="b95 oauth google" data-p="google"><span>G</span> Sign in with Google</button>
           <button class="b95 oauth discord" data-p="discord"><span>&#9679;</span> Sign in with Discord</button>
+          <button class="b95 oauth email" id="chatEmailIn"><span>&#9993;</span> Sign in with email</button>
         </div>
       </div>`;
-    $$(".oauth", bar).forEach((b) => b.addEventListener("click", () => signIn(b.dataset.p)));
+    $$(".oauth[data-p]", bar).forEach((b) => b.addEventListener("click", () => signIn(b.dataset.p)));
+    $("#chatEmailIn", bar)?.addEventListener("click", () => promptSignIn());
   } else {
     const h = myProfile?.handle || me.email || "…";
     bar.innerHTML = `<div class="who">

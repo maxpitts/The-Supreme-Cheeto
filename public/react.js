@@ -78,9 +78,9 @@ const Rx = {
   async tap(id, emoji, btn) {
     if (!sb) return;
     if (!me) {
-      showModal("Sign in to react", "&#128100;",
-        "Reactions need an account &mdash; it's how the rate limit and ban list work.<br><br>" +
-        "<span style='color:#555;font-size:11px'>Reading and counting are open to everyone.</span>");
+      // Telling someone they need an account and then not offering one is
+      // the most annoying possible response to a tap.
+      promptSignIn("Reactions need an account — it's how the rate limit and ban list work. Reading and counting are open to everyone.");
       return;
     }
     const key = id + emoji;

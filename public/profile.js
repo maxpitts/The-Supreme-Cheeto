@@ -176,7 +176,8 @@ const Profile = {
     if (!me) {
       return `<span class="note" style="margin:0">Sign in to add friends, nudge and write on walls.</span>
         <button class="b95 tiny" data-up-in="google">Google</button>
-        <button class="b95 tiny" data-up-in="discord">Discord</button>`;
+        <button class="b95 tiny" data-up-in="discord">Discord</button>
+        <button class="b95 tiny" data-up-email>Email</button>`;
     }
     if (p.friendship === "self") {
       return `<button class="b95" data-up-edit>Edit my profile</button>
@@ -295,6 +296,7 @@ const Profile = {
     const on = (sel, fn) => box.querySelectorAll(sel).forEach((b) => b.addEventListener("click", fn));
 
     on("[data-up-in]", (e) => { if (typeof signIn === "function") signIn(e.currentTarget.dataset.upIn); });
+    on("[data-up-email]", () => promptSignIn("Sign in to add friends, nudge and write on walls."));
     on("[data-up-edit]", () => { if (typeof openProfile === "function") openProfile(); });
     on("[data-up-buddies]", () => WM.open("w-buddies"));
     on("[data-up-post]", (e) => { WM.open("w-board"); });
