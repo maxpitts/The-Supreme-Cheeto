@@ -364,6 +364,8 @@ const WM = {
     rows.push({ label: "Install to home screen", icon: "&#128229;", id: "installItem", act: () => promptInstall() });
     rows.push({ label: "Refresh data now", icon: "&#128260;", act: () => loadLive(true) });
     rows.push({ label: "Show Cheetip", icon: "&#129472;", act: () => Cheetip.show() });
+    rows.push({ label: "Block pop-ups", icon: "&#128683;", id: "popupItem",
+                act: () => Popups.setBlocked(!Popups.blocked()) });
     rows.push({ label: "Reset window layout", icon: "&#129704;",
                 act: () => { localStorage.removeItem(this.KEY); location.reload(); } });
     rows.push({ label: "Admin panel", icon: "&#128737;", id: "adminItem", act: () => openAdmin() });
