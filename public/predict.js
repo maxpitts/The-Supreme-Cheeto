@@ -121,6 +121,7 @@ function recordHTML() {
     <div class="pg-stat"><b>${r.resolved}</b><span>scored</span></div>
     <div class="pg-stat"><b>${pct == null ? "&mdash;" : pct + "%"}</b><span>hit rate</span></div>
     <div class="pg-stat"><b>${r.pending}</b><span>pending</span></div>
+    ${r.resolved > 0 ? `<button class="b95 tiny" id="pgShare" title="Share your record">&#128247;</button>` : ""}
   </div>`;
 }
 
@@ -191,6 +192,12 @@ function wirePredict() {
 
   document.querySelectorAll("#predictBody [data-pick]").forEach((b) =>
     b.addEventListener("click", () => makePick(+b.dataset.pick, b.dataset.choice, b)));
+
+  document.getElementById("pgShare")?.addEventListener("click", () => {
+    const r = PG.record || {};
+    Share.open("record", { correct: r.correct, resolved: r.resolved,
+      pct: r.resolved ? Math.round((r.correct / r.resolved) * 100) : null });
+  });
 }
 
 async function makePick(id, choice, btn) {

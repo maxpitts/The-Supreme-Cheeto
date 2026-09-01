@@ -181,6 +181,7 @@ const Profile = {
     }
     if (p.friendship === "self") {
       return `<button class="b95" data-up-edit>Edit my profile</button>
+        <button class="b95" data-up-share>&#128247; Share my page</button>
         <span class="note" style="margin:0">This is how everyone else sees you.</span>`;
     }
     const bits = [];
@@ -298,6 +299,11 @@ const Profile = {
     on("[data-up-in]", (e) => { if (typeof signIn === "function") signIn(e.currentTarget.dataset.upIn); });
     on("[data-up-email]", () => promptSignIn("Sign in to add friends, nudge and write on walls."));
     on("[data-up-edit]", () => { if (typeof openProfile === "function") openProfile(); });
+    on("[data-up-share]", () => Share.open("profile", {
+      handle: this.data.handle, bio: this.data.bio, friends: this.data.friend_count,
+      since: this.data.created_at ? new Date(this.data.created_at).toLocaleDateString("en-US",
+        { month: "long", year: "numeric" }) : null,
+    }));
     on("[data-up-buddies]", () => WM.open("w-buddies"));
     on("[data-up-post]", (e) => { WM.open("w-board"); });
 

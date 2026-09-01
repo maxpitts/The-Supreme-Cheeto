@@ -355,7 +355,12 @@ const Guess = {
         ${streak > 1 ? `&#128293; <b>${streak}-day streak.</b> ` : ""}
         Best ever: ${best != null ? this.pctText(best) : "—"}.
         Come back tomorrow for another.
+        <br><br><button class="b95" id="gsShare">&#128247; Share this</button>
       </div>`);
+
+    document.getElementById("gsShare")?.addEventListener("click", () => Share.open("guess", {
+      pct, guessText: money(g, 0), actualText: money(actual, 0), rank, field, streak,
+    }));
   },
 };
 
@@ -424,6 +429,7 @@ const MyMeter = {
            </div>`).join("")}
       <div class="mm-foot">
         <button class="b95 tiny" id="mmReset">Back to equal weights</button>
+        <button class="b95 tiny" id="mmShare">&#128247; Share</button>
         <button class="b95 tiny" id="mmCopy">Copy my reading</button>
       </div>
       <p class="note">Sliders change only how the five are averaged. Each component's own
@@ -445,6 +451,8 @@ const MyMeter = {
       this.clear(); this.mount();
       if (typeof renderMeter === "function") renderMeter();
     });
+    document.getElementById("mmShare")?.addEventListener("click", () =>
+      Share.open("meter", { value: mine }));
     document.getElementById("mmCopy")?.addEventListener("click", async () => {
       const txt = `My Cheeto-meter reads ${mine.toFixed(1)}/100 (the site's own reading is ${official.toFixed(1)}). `
         + this.NAMES.map((n, i) => p[i] == null ? null : `${n} ${p[i].toFixed(0)}×${w[i]}`)
