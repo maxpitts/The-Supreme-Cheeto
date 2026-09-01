@@ -9,6 +9,25 @@
 # The function sets its own Cache-Control; a rule here would override it and
 # reintroduce the stale-data bug. Left intentionally unset.
 
+# A cached service worker is a service worker that never updates. Browsers
+# mostly force-revalidate these now, but being explicit costs nothing and
+# guarantees people actually receive new builds.
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+
+# The manifest and the entry HTML shouldn't be pinned either.
+[[headers]]
+  for = "/manifest.webmanifest"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
 [[headers]]
   for = "/*"
   [headers.values]

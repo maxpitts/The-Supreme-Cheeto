@@ -342,29 +342,54 @@ const WM = {
 
   buildStart() {
     const ul = $("#startList");
-    const items = this.wins.map((w) => ({ label: w.title, icon: w.icon, act: () => this.open(w.id) }));
-    const extras = [
-      { sep: true },
-      { label: "Install to home screen", icon: "&#128229;", id: "installItem", act: () => promptInstall() },
-      { label: "Refresh data now", icon: "&#128260;", act: () => loadLive(true) },
-      { label: "Show Cheetip", icon: "&#129472;", act: () => Cheetip.show() },
-      { label: "Dark mode", icon: "&#127761;", id: "themeItem", act: () => Theme.toggle() },
-      { sep: true },
-      { label: "My profile", icon: "&#128100;", act: () => openProfile() },
-      { label: "Admin panel", icon: "&#128737;", id: "adminItem", act: () => openAdmin() },
-      { label: "Reset window layout", icon: "&#129704;", act: () => { localStorage.removeItem(this.KEY); location.reload(); } },
-      { sep: true },
-      { label: "Shut Down…", icon: "&#9211;", act: () => showModal("Shut Down", "&#9211;",
-          "It is now safe to turn off your computer.<br><br><span style='color:#555;font-size:11px'>(It is not. This is a webpage.)</span>") },
+    const win = (id) => { const w = this.byId(id); return w ? { label: w.title, icon: w.icon, act: () => this.open(id) } : null; };
+
+    // Grouped rather than one flat list of everything. The old build listed
+    // every window AND repeated some of them again below, which is the
+    // duplication you spotted.
+    const groups = [
+      { head: "Trackers", items: ["w-debt", "w-truth", "w-polls", "w-meter", "w-econ", "w-count", "w-golf", "w-eo"] },
+      { head: "Games",    items: ["w-sol", "w-bj", "w-mine", "w-ball"] },
+      { head: "Community",items: ["w-chat", "w-board", "w-profile"] },
     ];
+
+    const rows = [];
+    groups.forEach((g) => {
+      rows.push({ head: g.head });
+      g.items.map(win).filter(Boolean).forEach((r) => rows.push(r));
+    });
+
+    rows.push({ head: "Settings" });
+    rows.push({ label: "Light / dark mode", icon: "&#127761;", id: "themeItem", act: () => Theme.toggle() });
+    rows.push({ label: "Install to home screen", icon: "&#128229;", id: "installItem", act: () => promptInstall() });
+    rows.push({ label: "Refresh data now", icon: "&#128260;", act: () => loadLive(true) });
+    rows.push({ label: "Show Cheetip", icon: "&#129472;", act: () => Cheetip.show() });
+    rows.push({ label: "Reset window layout", icon: "&#129704;",
+                act: () => { localStorage.removeItem(this.KEY); location.reload(); } });
+    rows.push({ label: "Admin panel", icon: "&#128737;", id: "adminItem", act: () => openAdmin() });
+    rows.push({ head: "" });
+    rows.push({ label: "About", icon: "&#8505;", act: () => this.open("w-about") });
+    rows.push({ label: "Shut Down…", icon: "&#9211;", act: () => showModal("Shut Down", "&#9211;",
+        "It is now safe to turn off your computer.<br><br><span style='color:#555;font-size:11px'>(It is not. This is a webpage.)</span>") });
+
     ul.innerHTML = "";
-    [...items, ...extras].forEach((it) => {
-      if (it.sep) { ul.appendChild(document.createElement("hr")); return; }
+    rows.forEach((it) => {
+      if (it.head !== undefined) {
+        if (it.head === "") { ul.appendChild(document.createElement("hr")); return; }
+        const h = document.createElement("li");
+        h.className = "menu-head";
+        h.textContent = it.head;
+        ul.appendChild(h);
+        return;
+      }
       const li = document.createElement("li");
       if (it.id) li.id = it.id;
       if (it.id === "installItem") li.hidden = !deferredInstall;
+      if (it.id === "adminItem") li.hidden = true;         // revealed for admins only
       li.innerHTML = `<span>${it.icon}</span><span class="lbl">${esc(it.label)}</span>`;
-      li.addEventListener("click", () => { $("#startMenu").hidden = true; $("#startBtn").classList.remove("on"); it.act(); });
+      li.addEventListener("click", () => {
+        $("#startMenu").hidden = true; $("#startBtn").classList.remove("on"); it.act();
+      });
       ul.appendChild(li);
     });
   },
@@ -442,6 +467,7 @@ const WM = {
    RENDERERS
    ===================================================================== */
 let debtAtLoad = 0, seedMs = 0;
+const pageLoadedAt = Date.now();
 
 function liveDebt() {
   return D.debt.amount + ((Date.now() - seedMs) / 1000) * (D.debt.perSecond || 89380);
@@ -449,12 +475,114 @@ function liveDebt() {
 
 function tickDebt() {
   if (!D.debt?.amount) return;
+  renderDebtPanel();
+}
+
+/* =====================================================================
+   DEBT PANEL
+   The Treasury publishes once per business day, so polling harder buys
+   nothing. What makes this legible isn't more data — it's showing the same
+   number four ways: a mechanical odometer for the speed, real-world
+   conversions for the scale, your own slice for the personal bit, and a rate
+   table for the arithmetic. Everything below derives from one seeded figure
+   plus the trailing-average rate; nothing here is invented.
+   ===================================================================== */
+
+/* Rough, deliberately round reference prices. These are order-of-magnitude
+   comparisons, labelled as estimates in the UI — not claims to the dollar. */
+const BUYS = [
+  { n: "Big Macs",                    v: 5.99,        e: "🍔" },
+  { n: "iPhones",                     v: 999,         e: "📱" },
+  { n: "median US homes",             v: 420000,      e: "🏠" },
+  { n: "Rivian gigafactories",        v: 5e9,         e: "🏭" },
+  { n: "years of NASA",               v: 25.4e9,      e: "🚀" },
+  { n: "Nimitz-class carriers",       v: 13e9,        e: "🚢" },
+  { n: "entire NFLs (all 32 teams)",  v: 163e9,       e: "🏈" },
+];
+
+function fmtCount(n) {
+  if (n >= 1e12) return (n / 1e12).toFixed(1) + " trillion";
+  if (n >= 1e9)  return (n / 1e9).toFixed(1)  + " billion";
+  if (n >= 1e6)  return (n / 1e6).toFixed(1)  + " million";
+  if (n >= 1e3)  return Math.round(n).toLocaleString();
+  return n.toFixed(n < 10 ? 1 : 0);
+}
+
+/* ---------- mechanical odometer ---------- */
+const Odo = {
+  el: null, chars: [],
+
+  mount(el) {
+    this.el = el;
+    this.chars = [];
+    el.classList.add("odo-mech");
+    el.innerHTML = "";
+  },
+
+  /* Build only when the character layout changes (e.g. the number gains a
+     digit); otherwise just move existing strips, which is what makes it roll. */
+  render(str) {
+    if (!this.el) return;
+    if (this.chars.length !== str.length) {
+      this.el.innerHTML = "";
+      this.chars = [...str].map((ch) => {
+        if (/\d/.test(ch)) {
+          const d = document.createElement("span");
+          d.className = "odo-d";
+          const strip = document.createElement("span");
+          strip.className = "odo-strip";
+          strip.innerHTML = "0123456789".split("").map((n) => `<i>${n}</i>`).join("");
+          d.appendChild(strip);
+          this.el.appendChild(d);
+          return { type: "d", strip, last: -1 };
+        }
+        const s = document.createElement("span");
+        s.className = "odo-sep";
+        s.textContent = ch;
+        this.el.appendChild(s);
+        return { type: "s", el: s, ch };
+      });
+    }
+    [...str].forEach((ch, i) => {
+      const c = this.chars[i];
+      if (!c) return;
+      if (c.type === "d") {
+        const v = +ch;
+        if (v !== c.last) { c.strip.style.transform = `translateY(${-v * 10}%)`; c.last = v; }
+      } else if (c.ch !== ch) { c.el.textContent = ch; c.ch = ch; }
+    });
+  },
+};
+
+function renderDebtPanel() {
   const now = liveDebt();
-  $("#debtClock").textContent = money(now);
-  $("#perCitizen").textContent = money(now / POPULATION, 0);
-  $("#debtSince").textContent = money((now - DEBT_AT_INAUG) / 1e12, 3) + "T";
-  $("#perSec").textContent = money(D.debt.perSecond || 0, 0);
-  $("#sessionDebt").textContent = money(now - debtAtLoad, 0);
+  const perSec = D.debt?.perSecond || 89380;
+
+  Odo.render("$" + Math.floor(now).toLocaleString("en-US"));
+
+  const share = now / POPULATION;
+  const el = (id, v) => { const n = $(id); if (n) n.textContent = v; };
+
+  el("#perCitizen", money(share, 2));
+  el("#shareSince", money((Date.now() - pageLoadedAt) / 1000 * (perSec / POPULATION), 4));
+  el("#debtSince", money((now - DEBT_AT_INAUG) / 1e12, 3) + "T");
+  el("#sessionDebt", money(now - debtAtLoad, 0));
+
+  el("#rateSec",  money(perSec, 0));
+  el("#rateMin",  money(perSec * 60, 0));
+  el("#rateHour", money(perSec * 3600, 0));
+  el("#rateDay",  money(perSec * 86400, 0));
+  el("#rateYear", money(perSec * 31557600 / 1e12, 2) + "T");
+
+  const buysEl = $("#debtBuys");
+  if (buysEl) {
+    buysEl.innerHTML = BUYS.map((b) => `
+      <div class="buy">
+        <span class="buy-e" aria-hidden="true">${b.e}</span>
+        <b>${esc(fmtCount(now / b.v))}</b>
+        <span class="buy-n">${esc(b.n)}</span>
+      </div>`).join("");
+  }
 }
 
 function renderApproval() {
@@ -893,6 +1021,7 @@ function initChrome() {
   menu.addEventListener("click", (e) => e.stopPropagation());
 
   $("#trayWatch").addEventListener("click", () => WM.open("w-truth"));
+  $("#trayTheme")?.addEventListener("click", () => Theme.toggle());
 
   const clock = () => { $("#trayClock").textContent = new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }); };
   clock(); setInterval(clock, 15000);
@@ -1550,7 +1679,12 @@ const Theme = {
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.setAttribute("content", dark ? "#062626" : "#008080");
     const item = $("#themeItem");
-    if (item) item.querySelector(".lbl").textContent = dark ? "Light mode" : "Dark mode";
+    if (item) item.querySelector(".lbl").textContent = dark ? "Switch to light mode" : "Switch to dark mode";
+    const tray = $("#trayTheme");
+    if (tray) {
+      tray.textContent = dark ? "\u2600\uFE0F" : "\u{1F319}";
+      tray.title = dark ? "Switch to light mode" : "Switch to dark mode";
+    }
   },
   toggle() { this.set(this.isDark() ? "light" : "dark"); },
   init() {
@@ -1630,6 +1764,7 @@ function openFromQuery() {
 function start() {
   Theme.init();
   WM.init();
+  Odo.mount($("#debtClock"));
   initChrome();
   initBall();
   initMines();

@@ -35,8 +35,13 @@ async function renderProfileEditor() {
       </div>
     </div>
 
+    <fieldset><legend>Username (@handle)</legend>
+      <input class="i95" id="pfHandle" maxlength="20" value="${esc(p?.handle || "")}" placeholder="3-20 chars: letters, numbers, underscore">
+      <p class="note">This is your unique @name. Letters, numbers and underscores only.</p>
+    </fieldset>
+
     <fieldset><legend>Display name</legend>
-      <input class="i95" id="pfName" maxlength="40" value="${esc(p?.display_name || "")}" placeholder="Shown instead of your handle">
+      <input class="i95" id="pfName" maxlength="40" value="${esc(p?.display_name || "")}" placeholder="Optional — shown instead of your @handle">
     </fieldset>
 
     <fieldset><legend>Profile picture (URL)</legend>
@@ -106,21 +111,45 @@ async function saveProfile() {
     msg.innerHTML = `<span style="color:#900">Profile picture must be an http(s) URL.</span>`; return;
   }
 
+  const handle = ($("#pfHandle").value || "").trim();
+  if (!/^[a-zA-Z0-9_]{3,20}$/.test(handle)) {
+    msg.innerHTML = `<span style="color:#900">Username must be 3-20 characters: letters, numbers or underscore.</span>`;
+    return;
+  }
+
   msg.textContent = "Saving…";
-  const { error } = await sb.from("cheeto_profiles").update({
+  const { data, error } = await sb.from("cheeto_profiles").update({
+    handle,
     display_name: $("#pfName").value.trim() || null,
     bio: $("#pfBio").value.trim() || null,
     avatar_url: avatar || null,
     links,
-  }).eq("id", me.id);
+  }).eq("id", me.id).select().maybeSingle();
 
   if (error) {
-    msg.innerHTML = `<span style="color:#900">${esc(error.message)}</span>`;
+    // The most likely failure by far is someone already having that @name,
+    // and "duplicate key value violates unique constraint" helps nobody.
+    const why = /duplicate key|unique/i.test(error.message)
+      ? `That username is taken. Try another.`
+      : /violates check constraint|handle_check/i.test(error.message)
+        ? `Username must be 3-20 characters: letters, numbers or underscore.`
+        : /row-level security/i.test(error.message)
+          ? `You can only edit your own profile.`
+          : error.message;
+    msg.innerHTML = `<span style="color:#900">${esc(why)}</span>`;
     return;
   }
+  if (!data) {
+    // update matched nothing — almost always a missing profile row
+    msg.innerHTML = `<span style="color:#900">Couldn't find your profile to update. Try signing out and back in.</span>`;
+    return;
+  }
+
+  myProfile = data;
   msg.innerHTML = `<span style="color:#060">Saved.</span>`;
   await afterAuthChange();
-  setTimeout(() => { if (msg) msg.textContent = ""; }, 2500);
+  await renderProfileEditor();
+  setTimeout(() => { const m = $("#pfMsg"); if (m) m.textContent = ""; }, 2500);
 }
 
 /* ------------------------------------------------------------- BULLETIN */

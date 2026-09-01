@@ -116,7 +116,7 @@ button{font-family:inherit}
 .tb .btns{display:flex;gap:2px;flex:0 0 auto}
 .tb .btns button{
   width:18px;height:16px;padding:0;line-height:14px;font-size:10px;font-weight:bold;
-  background:var(--gray);color:#000;cursor:pointer;
+  background:var(--gray);color:var(--ink);cursor:pointer;
   border:1px solid;border-color:#fff var(--gray-d) var(--gray-d) #fff;
 }
 .tb .btns button:active{border-color:var(--gray-d) #fff #fff var(--gray-d)}
@@ -135,7 +135,8 @@ button{font-family:inherit}
 fieldset{border:2px groove var(--gray-l);margin:0 0 9px;padding:7px}
 legend{font-weight:bold;padding:0 4px;font-size:11px}
 .sunken{background:var(--field);color:var(--field-ink);border:2px solid;border-color:var(--gray-d) var(--hi) var(--hi) var(--gray-d);padding:7px}
-.b95{font-size:12px;padding:4px 12px;background:var(--gray);cursor:pointer;
+button,.b95{color:var(--ink)}
+.b95{font-size:12px;padding:4px 12px;background:var(--gray);color:var(--ink);cursor:pointer;
   border:2px solid;border-color:#fff var(--gray-d) var(--gray-d) #fff;
   box-shadow:inset -1px -1px 0 #000,inset 1px 1px 0 var(--gray-l)}
 .b95:active{border-color:var(--gray-d) #fff #fff var(--gray-d);box-shadow:none}
@@ -180,8 +181,8 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible,
 .post .txt{font-size:12.5px;line-height:1.5;white-space:pre-wrap;word-break:break-word}
 .post .img-only{color:var(--field-dim);font-style:italic}
 .post .acts{margin-top:5px;display:flex;gap:6px;flex-wrap:wrap}
-.post .acts button{font-size:10px;padding:2px 7px;background:var(--gray);cursor:pointer;
-  border:2px solid;border-color:#fff var(--gray-d) var(--gray-d) #fff}
+.post .acts button{font-size:10px;padding:2px 7px;background:var(--gray);color:var(--ink);cursor:pointer;
+  border:2px solid;border-color:var(--hi) var(--gray-d) var(--gray-d) var(--hi)}
 .newbadge{background:#c00;color:#fff;font-size:9px;padding:1px 5px;font-weight:bold}
 .caps{background:#ffe;border:1px dashed #a80;padding:6px;margin-top:8px;font-size:11px}
 
@@ -209,7 +210,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible,
 #tasks::-webkit-scrollbar{display:none}
 #tasks button{font-size:11px;padding:4px 8px;min-width:96px;max-width:150px;flex:0 0 auto;
   text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;
-  background:var(--gray);border:2px solid;border-color:#fff var(--gray-d) var(--gray-d) #fff}
+  color:var(--ink);background:var(--gray);border:2px solid;border-color:var(--hi) var(--gray-d) var(--gray-d) var(--hi)}
 #tasks button.on{border-color:var(--gray-d) #fff #fff var(--gray-d);font-weight:bold;
   background:repeating-linear-gradient(45deg,#d4d0c8 0 2px,#c0c0c0 2px 4px)}
 #tray{flex:0 0 auto;display:flex;align-items:center;gap:7px;font-size:11px;padding:4px 8px;
@@ -249,7 +250,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible,
 /* ============================== MINESWEEPER ============================== */
 #msGrid{display:grid;gap:0;background:var(--gray-d);width:max-content;margin:0 auto}
 .cell{width:20px;height:20px;font-size:12px;font-weight:bold;line-height:20px;text-align:center;
-  background:var(--gray);cursor:pointer;padding:0;
+  background:var(--gray);color:var(--ink);cursor:pointer;padding:0;
   border:2px solid;border-color:#fff var(--gray-d) var(--gray-d) #fff;font-family:"Courier New",monospace}
 .cell.open{border:1px solid #9a9a9a;background:#c8c8c8;cursor:default}
 .cell.mine{background:#c00}
@@ -372,8 +373,8 @@ body.mobile .tip-bubble{max-width:200px;font-size:11px}
 .msg-t{color:var(--field-dim);font-family:"Courier New",monospace}
 .msg-acts{margin-left:auto;display:flex;gap:3px;opacity:0;transition:opacity .12s}
 .msg:hover .msg-acts,.msg:focus-within .msg-acts{opacity:1}
-.msg-acts button{font-size:10px;padding:0 4px;cursor:pointer;background:var(--gray);
-  border:1px solid;border-color:#fff var(--gray-d) var(--gray-d) #fff}
+.msg-acts button{font-size:10px;padding:0 4px;cursor:pointer;background:var(--gray);color:var(--ink);
+  border:1px solid;border-color:var(--hi) var(--gray-d) var(--gray-d) var(--hi)}
 .msg-body{word-break:break-word;line-height:1.45;margin-top:2px}
 .login-box{background:var(--gray);border:2px groove var(--gray-l);padding:10px}
 .login-title{font-weight:bold;margin-bottom:5px}
@@ -585,6 +586,74 @@ body.mobile .urow-acts{width:100%}
   .sol-slot:has(.card:not(.back):not(.empty)){margin-top:-34px}
 }
 
+
+/* ---------- mechanical odometer ---------- */
+.odo-mech{display:flex;justify-content:center;align-items:center;gap:1px;
+  font-family:"Courier New",monospace;font-weight:bold;line-height:1}
+.odo-d{display:inline-block;height:1.15em;overflow:hidden;width:.62em;position:relative}
+.odo-strip{display:block;transition:transform .28s cubic-bezier(.3,1.4,.5,1)}
+.odo-strip i{display:block;height:1.15em;font-style:normal;text-align:center}
+.odo-sep{opacity:.75}
+
+#startMenu{width:auto;min-width:250px}
+#startMenu ul{max-height:min(74vh,560px);overflow-y:auto}
+#startMenu li.menu-head{font-size:10px;font-weight:bold;letter-spacing:.9px;text-transform:uppercase;
+  color:var(--gray-d);padding:7px 9px 3px;cursor:default;pointer-events:none}
+body.dark #startMenu li.menu-head{color:#9a9a9a}
+#startMenu li.menu-head:hover{background:none}
+/* theme toggle in the tray */
+#trayTheme{flex:0 0 auto;font-size:13px;padding:4px 8px;cursor:pointer;line-height:1;
+  background:var(--gray);border:2px solid;border-color:#fff var(--gray-d) var(--gray-d) #fff}
+#trayTheme:active{border-color:var(--gray-d) #fff #fff var(--gray-d)}
+body.dark #trayTheme{background:var(--gray);border-color:var(--gray-l) #000 #000 var(--gray-l)}
+
+
+/* Window content reflows to the WINDOW, not the screen. A 260px-wide panel on
+   a 4K monitor was still being laid out with desktop assumptions, because
+   media queries only ever see the viewport. Container queries see the window. */
+.win .body{container-type:inline-size;container-name:winbody}
+
+@container winbody (max-width: 360px){
+  .rategrid,.buygrid,.statgrid{grid-template-columns:1fr}
+  .kv{flex-direction:column;align-items:flex-start;gap:1px}
+  .kv b{font-size:12px}
+  .rate,.buy,.stat{flex-wrap:wrap}
+  fieldset{padding:6px}
+  .odo{font-size:clamp(13px,7cqw,22px)}
+  .odo.small{font-size:clamp(12px,5.5cqw,17px)}
+  .compose{flex-direction:column}
+  .compose button{width:100%}
+  .link-row{flex-wrap:wrap}
+  .link-row .lk-label,.link-row .lk-url{flex:1 1 100%}
+  .urow-acts{width:100%}
+  .sol-bar{flex-direction:column;align-items:stretch;gap:6px}
+}
+@container winbody (max-width: 300px){
+  .card{width:34px;height:48px}
+  .card .cr{font-size:12px}.card .cs{font-size:13px}
+  .sol-col{min-width:34px}
+  .sol-slot{margin-top:-36px}
+  .sol-slot:has(.card:not(.back):not(.empty)){margin-top:-26px}
+  .buy-n{display:block;width:100%}
+}
+
+@media (prefers-reduced-motion: reduce){ .odo-strip{transition:none} }
+
+.rategrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:5px}
+.rate{display:flex;justify-content:space-between;gap:8px;font-size:11px;padding:5px 7px;
+  background:var(--field);color:var(--field-ink);
+  border:1px solid;border-color:var(--gray-d) var(--hi) var(--hi) var(--gray-d)}
+.rate.wide{grid-column:1/-1}
+.rate b{font-family:"Courier New",monospace;font-variant-numeric:tabular-nums}
+
+.buygrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:5px}
+.buy{display:flex;align-items:baseline;gap:6px;font-size:11px;padding:5px 7px;
+  background:var(--field);color:var(--field-ink);
+  border:1px solid;border-color:var(--gray-d) var(--hi) var(--hi) var(--gray-d)}
+.buy-e{font-size:14px;line-height:1}
+.buy b{font-family:"Courier New",monospace;font-variant-numeric:tabular-nums}
+.buy-n{opacity:.75}
+
 @media (prefers-reduced-motion: reduce){
   #splash::before,.sp-pop,.sp-bar i{animation:none!important}
 }
@@ -613,19 +682,43 @@ body.mobile .urow-acts{width:100%}
 
   <!-- ---------------- DEBT ---------------- -->
   <section class="win" id="w-debt" data-title="NATIONAL_DEBT.EXE" data-icon="&#128181;"
-           data-x="240" data-y="30" data-w="520" data-h="330">
+           data-x="230" data-y="26" data-w="560" data-h="470">
     <div class="tb"><span class="ico">&#128181;</span><span class="t">C:\GOV\NATIONAL_DEBT.EXE</span>
-      <span class="btns"><button data-min title="Minimize">_</button><button data-max title="Maximize">&#9633;</button><button data-close title="Close">&times;</button></span></div>
+      <span class="btns"><button data-min>_</button><button data-max>&#9633;</button><button data-close>&times;</button></span></div>
     <div class="body">
-      <div class="odo" id="debtClock">$00,000,000,000,000.00</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:9px">
-        <fieldset><legend>Per citizen</legend><div class="kv"><span>Your share</span><b id="perCitizen">&mdash;</b></div></fieldset>
-        <fieldset><legend>Since Jan 20 2025</legend><div class="kv"><span>Added</span><b id="debtSince">&mdash;</b></div></fieldset>
-        <fieldset><legend>Burn rate</legend><div class="kv"><span>Per second</span><b id="perSec">&mdash;</b></div></fieldset>
-        <fieldset><legend>This visit</legend><div class="kv"><span>New debt</span><b id="sessionDebt">$0</b></div></fieldset>
-      </div>
-      <fieldset><legend>Last 30 days</legend><svg class="spark" id="sparkDebt" viewBox="0 0 300 38" preserveAspectRatio="none"></svg></fieldset>
-      <p class="note">Seed from the U.S. Treasury <a href="https://fiscaldata.treasury.gov/datasets/debt-to-the-penny/debt-to-the-penny" target="_blank" rel="noopener">Debt to the Penny</a> API (<span data-f="debtDate"></span>), extrapolated at the trailing 12-month average. <b>The ticking is an estimate; only the seed is exact.</b> Per-citizen assumes a ~342.5M population.</p>
+      <div class="odo" id="debtClock">$0</div>
+
+      <fieldset><legend>&#128100; Your share of it</legend>
+        <div class="odo amber small" id="perCitizen">&mdash;</div>
+        <div class="kv"><span>Grown since you opened this</span><b id="shareSince">&mdash;</b></div>
+        <div class="kv"><span>Total added since Jan 20 2025</span><b id="debtSince">&mdash;</b></div>
+        <div class="kv"><span>Added during this visit</span><b id="sessionDebt">$0</b></div>
+      </fieldset>
+
+      <fieldset><legend>&#9201; How fast</legend>
+        <div class="rategrid">
+          <div class="rate"><span>per second</span><b id="rateSec">&mdash;</b></div>
+          <div class="rate"><span>per minute</span><b id="rateMin">&mdash;</b></div>
+          <div class="rate"><span>per hour</span><b id="rateHour">&mdash;</b></div>
+          <div class="rate"><span>per day</span><b id="rateDay">&mdash;</b></div>
+          <div class="rate wide"><span>per year (at this rate)</span><b id="rateYear">&mdash;</b></div>
+        </div>
+      </fieldset>
+
+      <fieldset><legend>&#128722; What that could buy, right now</legend>
+        <div id="debtBuys" class="buygrid"></div>
+        <p class="note" style="margin-top:6px">Order-of-magnitude comparisons using round reference prices.
+        Illustrative, not accountancy.</p>
+      </fieldset>
+
+      <fieldset><legend>Last 30 days</legend>
+        <svg class="spark" id="sparkDebt" viewBox="0 0 300 38" preserveAspectRatio="none"></svg></fieldset>
+
+      <p class="note">Seeded from the U.S. Treasury
+        <a href="https://fiscaldata.treasury.gov/datasets/debt-to-the-penny/debt-to-the-penny" target="_blank" rel="noopener">Debt to the Penny</a>
+        API (<span data-f="debtDate"></span>) and extrapolated at the trailing 12&#8209;month average.
+        <b>The Treasury publishes once per business day</b> &mdash; the seed is exact, the ticking between
+        readings is honest estimation, not live data. Per-person uses a ~342.5M population estimate.</p>
     </div>
     <div class="status"><span id="stDebt" class="freshness fresh-ok">&mdash;</span></div>
     <div class="grip"></div>
@@ -892,6 +985,7 @@ body.mobile .urow-acts{width:100%}
 <div id="taskbar">
   <div id="startBtn" role="button" tabindex="0"><span class="flag"></span> Start</div>
   <div id="tasks"></div>
+  <button id="trayTheme" title="Toggle light / dark">&#127769;</button>
   <button id="trayAccount" title="Sign in to CheetoChat">&#128100; Sign in</button>
   <div id="tray"><span id="trayWatch" title="Time since last post">&#128064; &mdash;</span><span id="trayClock">--:--</span></div>
 </div>
