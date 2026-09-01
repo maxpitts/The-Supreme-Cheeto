@@ -181,6 +181,11 @@ const Landing = {
     // Anything that wanted to greet the visitor but held off while the front
     // door was up can go now.
     if (typeof Setup === "object") Setup.offerAfterEntry?.();
+    // A failed sign-in explains itself here rather than over the front door.
+    // The household prompt already had to learn this lesson: a modal on top of
+    // the landing page hides the ENTER button, so the first thing a stranger
+    // meets is a dialog about something they have not done yet.
+    if (typeof flushOAuthError === "function") flushOAuthError();
   },
 };
 

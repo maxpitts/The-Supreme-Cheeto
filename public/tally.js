@@ -203,6 +203,13 @@ const Setup = {
       const landing = document.getElementById("landing");
       if (landing && !landing.hidden) { this.pending = true; return; }
 
+      /* Same rule, different obstacle. Somebody who has just been bounced out
+         of a sign-in needs to read why; being asked their household size
+         instead — in the same single modal, replacing the explanation — is how
+         a failed login becomes a person who never finds out what went wrong.
+         There is only one modal, so whoever has worse news gets it. */
+      if (typeof OAUTH_ERR === "object" && OAUTH_ERR) { this.pending = true; return; }
+
       this.open(false);
     }, 2600);
   },
@@ -212,7 +219,16 @@ const Setup = {
   offerAfterEntry() {
     if (!this.pending || this.done()) return;
     this.pending = false;
-    setTimeout(() => { if (!this.done()) this.open(false); }, 2200);
+    setTimeout(() => {
+      if (this.done()) return;
+      // Don't shove anything aside on the way in. There is one modal element,
+      // so opening this while something else is up silently replaces it — and
+      // the thing most likely to be up right now is the explanation of why
+      // their sign-in failed. It can wait for their next visit.
+      const m = document.getElementById("modal");
+      if (m && !m.hidden) return;
+      this.open(false);
+    }, 2200);
   },
 
   open(manual) {

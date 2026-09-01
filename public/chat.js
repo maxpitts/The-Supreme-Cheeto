@@ -64,6 +64,36 @@ async function boundedAuthLock(name, _acquireTimeout, fn) {
   }
 }
 
+/* ---------------------------------------------------------------------
+   WHAT THE PROVIDER SAID ON THE WAY BACK
+
+   When an OAuth provider refuses, it sends the person back here with the
+   reason in the URL — in the query string for PKCE, in the hash for implicit,
+   so both are read. Until now nothing read either. landing.js checked for
+   "error=" only to decide whether to skip the splash, and then the desktop
+   painted itself signed-out and said nothing at all.
+
+   That is the whole of the "Discord asked me to verify" report: four Discord
+   authorize requests in three minutes with no callback for any of them, then
+   somebody arriving back at a site that behaved as though they had never
+   clicked anything. The failure is Discord's to enforce, but the silence was
+   ours.
+
+   Captured at parse time, because detectSessionInUrl lets supabase-js strip
+   the URL as soon as the client is constructed. --------------------------- */
+const OAUTH_ERR = (() => {
+  const grab = (s) => {
+    const q = new URLSearchParams(s);
+    return q.get("error") || q.get("error_code")
+      ? { code: q.get("error_code") || q.get("error") || "",
+          desc: q.get("error_description") || "" }
+      : null;
+  };
+  try {
+    return grab(location.search.slice(1)) || grab(location.hash.slice(1));
+  } catch { return null; }
+})();
+
 let sb = null, me = null, myProfile = null, chatChannel = null, postStatus = null;
 let lastSeenId = 0;          // highest message id already on screen
 let chatPoll = null;         // fallback timer, see startChatPoll()
@@ -85,6 +115,7 @@ async function initChat() {
   // than sitting on "Connecting…" forever.
   renderAuthBar();
   renderTrayAccount();
+  flushOAuthError();
 
   try {
     const { data } = await sb.auth.getSession();
@@ -177,6 +208,66 @@ async function signIn(provider) {
 }
 
 async function signOut() { await sb.auth.signOut(); }
+
+/* Say what happened, once, and then get the wreckage out of the address bar so
+   a refresh does not replay it. Deliberately not written as a joke: somebody
+   who just failed to get in is not in the mood, and the useful thing here is
+   the next step, not the bit. */
+/* Shown once, and only once the landing page is out of the way. Landing calls
+   this on entry; initChat calls it too, for the visitors who never see a
+   landing page at all (returning, or launched from the installed app). */
+let oauthErrShown = false;
+let oauthErrTries = 0;
+function flushOAuthError() {
+  if (oauthErrShown || !OAUTH_ERR) return;
+  /* The landing page goes away by two different routes — dismissed by the
+     ENTER button, or removed outright for someone who has already entered —
+     and initChat can run before either has happened. Rather than hooking
+     every one of those paths and hoping none is added later, wait for the
+     door to actually be gone. Capped, so a landing page that never leaves
+     doesn't leave a timer running for the life of the session. */
+  if (document.getElementById("landing")) {
+    if (oauthErrTries++ < 40) setTimeout(flushOAuthError, 300);
+    return;
+  }
+  oauthErrShown = true;
+  reportOAuthError(OAUTH_ERR);
+}
+
+function reportOAuthError(e) {
+  const raw = ((e.code || "") + " " + (e.desc || "")).toLowerCase();
+  const denied = /access_denied|cancel/.test(raw);
+  // Discord blocks the consent screen outright until the account's own email
+  // is verified, because we ask for the email scope. The person never reaches
+  // a button to press, so from their side the site simply did nothing.
+  const verify = /verif|unverified|not.*confirm/.test(raw);
+
+  let body;
+  if (verify) {
+    body = `Discord wouldn't let the sign-in finish because <b>your Discord account
+      itself still needs verifying</b> &mdash; that's Discord's rule, not ours, and it
+      happens before you ever see an &ldquo;Authorise&rdquo; button.<br><br>
+      Check for a verification email from Discord, confirm it, then come back and
+      try again. Or just use Google below &mdash; it takes two seconds.`;
+  } else if (denied) {
+    body = `No problem &mdash; nothing was shared and no account was made.<br><br>
+      If that wasn't deliberate, you can try again, or use a different provider below.`;
+  } else {
+    body = `The sign-in didn't complete.<br><br>
+      Trying the other provider usually works. If it keeps happening, it's worth
+      telling us &mdash; that's a bug on our side, not yours.`;
+  }
+
+  showModal("Sign-in didn't finish", "&#9888;",
+    `${body}${e.desc ? `<br><br><span style="color:#555;font-size:11px">${esc(e.desc)}</span>` : ""}`);
+
+  try {
+    const u = new URL(location.href);
+    ["error", "error_code", "error_description", "state"].forEach((k) => u.searchParams.delete(k));
+    u.hash = "";
+    history.replaceState(null, "", u.pathname + u.search);
+  } catch {}
+}
 
 function renderAuthBar() {
   const bar = $("#chatAuth");
