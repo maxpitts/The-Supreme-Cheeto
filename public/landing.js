@@ -178,6 +178,9 @@ const Landing = {
       setTimeout(() => { this.el?.remove(); this.el = null; }, 380);
     }
     if (typeof afterLanding === "function") afterLanding();
+    // Anything that wanted to greet the visitor but held off while the front
+    // door was up can go now.
+    if (typeof Setup === "object") Setup.offerAfterEntry?.();
   },
 };
 

@@ -192,7 +192,27 @@ const Setup = {
 
   maybeOffer() {
     if (this.done()) return;
-    setTimeout(() => { if (!this.done()) this.open(false); }, 2600);
+    setTimeout(() => {
+      if (this.done()) return;
+
+      /* Never over the landing page. This modal fired on a timer from the
+         first data load, which on a cold visit lands while somebody is still
+         reading what the site IS — so the first thing a stranger saw was a
+         box asking how many people live in their house, sitting on top of the
+         ENTER button. Wait until they're actually on the desktop. */
+      const landing = document.getElementById("landing");
+      if (landing && !landing.hidden) { this.pending = true; return; }
+
+      this.open(false);
+    }, 2600);
+  },
+
+  /* Called when the landing page is dismissed, so the offer someone deferred
+     by not having entered yet still reaches them. */
+  offerAfterEntry() {
+    if (!this.pending || this.done()) return;
+    this.pending = false;
+    setTimeout(() => { if (!this.done()) this.open(false); }, 2200);
   },
 
   open(manual) {
