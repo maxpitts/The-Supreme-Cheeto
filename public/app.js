@@ -346,8 +346,8 @@ const WM = {
     box.innerHTML = "";
     const SHORT = { "w-truth": "Truth Feed", "w-debt": "Debt Clock", "w-chat": "CheetoChat",
                     "w-board": "Bulletin", "w-meter": "Cheeto-Meter", "w-sol": "Solitaire",
-                    "w-mine": "Minesweeper", "w-about": "About", "w-predict": "Call It", "w-tally": "Since You", "w-buddies": "Buddy List", "w-web": "Navigator", "w-stream": "The Stream" };
-    ["w-truth", "w-stream", "w-web", "w-buddies", "w-predict", "w-tally", "w-chat", "w-debt", "w-about"].forEach((id) => {
+                    "w-mine": "Minesweeper", "w-about": "About", "w-predict": "Call It", "w-tally": "Since You", "w-buddies": "Buddy List", "w-st-bobby": "BOBBYjayyy", "w-st-benp": "benp90" };
+    ["w-truth", "w-st-bobby", "w-st-benp", "w-buddies", "w-predict", "w-tally", "w-chat", "w-debt", "w-about"].forEach((id) => {
       const w = this.byId(id); if (!w) return;
       const b = document.createElement("button");
       b.className = "dicon"; b.type = "button";
@@ -368,7 +368,7 @@ const WM = {
     // duplication you spotted.
     const groups = [
       { head: "Trackers", items: ["w-debt", "w-truth", "w-polls", "w-meter", "w-econ", "w-tally", "w-count", "w-golf", "w-eo"] },
-      { head: "Internet",  items: ["w-web", "w-stream"] },
+      { head: "Internet",  items: ["w-st-bobby", "w-st-benp"] },
       { head: "Games",    items: ["w-predict", "w-sol", "w-bj", "w-mine", "w-ball"] },
       { head: "Community",items: ["w-buddies", "w-chat", "w-board", "w-profile", "w-live"] },
     ];

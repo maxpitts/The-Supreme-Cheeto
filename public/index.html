@@ -1148,73 +1148,6 @@ body.dark .bl-mini{border-color:var(--gray-l) #000 #000 var(--gray-l)}
 body.buzzing{animation:buzzshake .9s cubic-bezier(.36,.07,.19,.97)}
 @media (prefers-reduced-motion: reduce){ body.buzzing{animation:none;outline:4px solid var(--orange);outline-offset:-4px} }
 
-/* ===================== CHEETO NAVIGATOR ===================== */
-.nv-body{display:flex;flex-direction:column;padding:0;overflow:hidden}
-.nv-chrome{flex:none;padding:5px;background:var(--gray);
-  border-bottom:1px solid var(--gray-d);box-shadow:inset 0 -1px 0 #fff}
-.nv-row1{display:flex;gap:3px;align-items:center;margin-bottom:4px}
-.nv-b{font:inherit;font-size:13px;line-height:1;min-width:30px;padding:5px 8px;cursor:pointer;
-  background:var(--gray);color:var(--ink);
-  border:2px solid;border-color:var(--hi) var(--gray-d) var(--gray-d) var(--hi)}
-.nv-b:active{border-color:var(--gray-d) var(--hi) var(--hi) var(--gray-d)}
-.nv-b:disabled{opacity:.4;cursor:default}
-body.dark .nv-b{border-color:var(--gray-l) #000 #000 var(--gray-l)}
-.nv-throb{margin-left:auto;width:30px;height:30px;display:flex;align-items:center;justify-content:center;
-  background:#0b1b3a;border:2px solid;border-color:var(--gray-d) var(--hi) var(--hi) var(--gray-d);
-  overflow:hidden;flex:none}
-.nv-throb img{display:block}
-.nv-throb.spin img{animation:nv-spin 1.1s linear infinite}
-@keyframes nv-spin{to{transform:rotate(360deg)}}
-@media (prefers-reduced-motion: reduce){.nv-throb.spin img{animation:none;opacity:.6}}
-.nv-row2{display:flex;gap:5px;align-items:center}
-.nv-row2 label{font-size:11px;flex:none}
-.nv-row2 input{flex:1;min-width:0;font:inherit;font-size:12px;padding:5px 6px;
-  font-family:"Courier New",monospace;background:var(--field);color:var(--field-ink);
-  border:2px solid;border-color:var(--gray-d) var(--hi) var(--hi) var(--gray-d)}
-
-.nv-notice{flex:none;display:flex;gap:8px;align-items:center;flex-wrap:wrap;
-  font-size:11px;line-height:1.45;padding:6px 8px;
-  background:linear-gradient(#fff8d6,#ffeda6);color:#3a2c00;
-  border-bottom:1px solid #b8960b}
-body.dark .nv-notice{background:linear-gradient(#4a3f12,#5f5117);color:#ffeec4;border-bottom-color:#8a7420}
-.nv-notice span{flex:1;min-width:140px}
-.nv-notice .b95{text-decoration:none;display:inline-flex;align-items:center;flex:none}
-
-.nv-view{flex:1;min-height:0;position:relative;background:#fff}
-body.dark .nv-view{background:#1c1c1c}
-.nv-view iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#fff}
-.nv-page{position:absolute;inset:0;overflow:auto;background:var(--field);color:var(--field-ink)}
-.nv-status{flex:none;font-size:11px;padding:4px 7px;
-  background:var(--gray);border-top:2px solid;border-top-color:var(--gray-d);
-  box-shadow:inset 0 1px 0 #fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-body.dark .nv-status{box-shadow:inset 0 1px 0 var(--gray-l)}
-
-.nv-home{padding:14px 16px;max-width:640px}
-.nv-hero{text-align:center;padding:16px 10px;margin-bottom:12px;
-  background:linear-gradient(135deg,#06131f,#123a63 55%,#1f7fc4);color:#eaf6ff;
-  border:2px solid;border-color:#3ea3e8 #041019 #041019 #3ea3e8}
-.nv-hero-t{font-family:Impact,"Arial Black",sans-serif;font-size:28px;letter-spacing:1px;line-height:1}
-.nv-hero-s{font-size:11px;margin-top:5px;opacity:.85}
-.nv-intro{font-size:12px;line-height:1.55;margin:0 0 12px}
-.nv-grp{font-size:10px;font-weight:bold;letter-spacing:1.1px;text-transform:uppercase;
-  color:var(--note-ink);margin:12px 0 5px;padding-bottom:3px;border-bottom:1px solid var(--gray-d)}
-.nv-list{list-style:none;margin:0;padding:0}
-.nv-list li{display:flex;gap:8px;align-items:baseline;padding:4px 2px;font-size:12px;flex-wrap:wrap}
-.nv-list a{font-weight:bold}
-.nv-u{font-family:"Courier New",monospace;font-size:10.5px;color:var(--note-ink);
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.nv-foot{margin-top:16px;padding-top:9px;border-top:1px solid var(--gray-d);
-  font-size:11px;color:var(--note-ink);text-align:center}
-
-.nv-err{padding:18px;max-width:560px;font-size:12px;line-height:1.6}
-.nv-err-h{display:flex;gap:8px;align-items:center;font-size:15px;font-weight:bold;margin-bottom:10px}
-.nv-err-h span{font-size:22px}
-.nv-err code{font-family:"Courier New",monospace;font-size:11px;
-  background:rgba(128,128,128,.2);padding:1px 4px}
-.nv-why{color:var(--note-ink);font-size:11.5px}
-.nv-err-acts{display:flex;gap:7px;flex-wrap:wrap;margin-top:14px}
-.nv-err-acts .b95{text-decoration:none;display:inline-flex;align-items:center}
-
 /* ===================== THE STREAM ===================== */
 .st-tabs{display:flex;gap:3px;margin-bottom:7px;flex-wrap:wrap}
 .st-tab{font:inherit;font-size:11px;padding:5px 9px;cursor:pointer;flex:1 1 auto;
@@ -1314,11 +1247,7 @@ body.dark .st-tab.on{background:linear-gradient(#1d6b3f,#0f4326);color:#eaffea}
   .t8-slot .bl-mini{min-width:34px;min-height:34px}
   .bl-away,.bl-fs-t,.bl-pend,.t8-name{font-size:11px}
   .bl-grp{font-size:10.5px}
-  .nv-b{min-width:40px;min-height:40px}
-  .nv-row2 input,#nvGo{min-height:40px;font-size:16px}
-  .nv-list li{padding:8px 2px}
-  .st-tab{min-height:38px;font-size:12px}
-  .nv-u,.nv-foot,.st-play-s{font-size:11px}
+  .st-play-s{font-size:11px}
 }
 </style>
 </head>
@@ -1624,21 +1553,22 @@ body.dark .st-tab.on{background:linear-gradient(#1d6b3f,#0f4326);color:#eaffea}
     <div class="grip"></div>
   </section>
 
-  <!-- ---------------- CHEETO NAVIGATOR ---------------- -->
-  <section class="win" id="w-web" data-title="NAVIGATOR" data-icon="&#127758;"
-           data-x="120" data-y="40" data-w="720" data-h="600">
-    <div class="tb navy"><span class="ico">&#127758;</span><span class="t">Cheeto Navigator 4.0</span>
+  <!-- ---------------- THE STREAMS ----------------
+       One window per channel so both can be open at once. The data-ch value
+       is the Kick username; stream.js binds a player to each. -->
+  <section class="win" id="w-st-bobby" data-title="BOBBYJAYYY" data-icon="&#128250;"
+           data-x="120" data-y="60" data-w="520" data-h="440">
+    <div class="tb navy"><span class="ico">&#128250;</span><span class="t">BOBBYjayyy &mdash; live on Kick</span>
       <span class="btns"><button data-min>_</button><button data-max>&#9633;</button><button data-close>&times;</button></span></div>
-    <div class="body nv-body" id="navRoot"><div class="note">Starting&hellip;</div></div>
+    <div class="body st-root" data-ch="bobbyjayyy"><div class="note">Loading&hellip;</div></div>
     <div class="grip"></div>
   </section>
 
-  <!-- ---------------- THE STREAM ---------------- -->
-  <section class="win" id="w-stream" data-title="THE_STREAM" data-icon="&#128250;"
-           data-x="220" data-y="70" data-w="560" data-h="470">
-    <div class="tb navy"><span class="ico">&#128250;</span><span class="t">The Stream &mdash; live on Kick</span>
+  <section class="win" id="w-st-benp" data-title="BENP90" data-icon="&#128250;"
+           data-x="670" data-y="60" data-w="520" data-h="440">
+    <div class="tb navy"><span class="ico">&#128250;</span><span class="t">benp90 &mdash; live on Kick</span>
       <span class="btns"><button data-min>_</button><button data-max>&#9633;</button><button data-close>&times;</button></span></div>
-    <div class="body" id="streamRoot"><div class="note">Loading&hellip;</div></div>
+    <div class="body st-root" data-ch="benp90"><div class="note">Loading&hellip;</div></div>
     <div class="grip"></div>
   </section>
 
@@ -1766,7 +1696,6 @@ body.dark .st-tab.on{background:linear-gradient(#1d6b3f,#0f4326);color:#eaffea}
 <script src="/live.js"></script>
 <script src="/react.js"></script>
 <script src="/friends.js"></script>
-<script src="/navigator.js"></script>
 <script src="/stream.js"></script>
 <script src="/tally.js"></script>
 <script src="/poke.js"></script>
