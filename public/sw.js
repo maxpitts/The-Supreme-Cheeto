@@ -12,7 +12,7 @@
  *
  * Bump VERSION on any shell change to roll the cache over.
  */
-const VERSION = "cheeto-v3.6.0";
+const VERSION = "cheeto-v3.9.0";
 const SHELL = `${VERSION}-shell`;
 const DATA = `${VERSION}-data`;
 
@@ -28,6 +28,8 @@ const PRECACHE = [
   "/live.js",
   "/react.js",
   "/friends.js",
+  "/navigator.js",
+  "/stream.js",
   "/tally.js",
   "/poke.js",
   "/digest.js",
@@ -44,7 +46,12 @@ self.addEventListener("install", (e) => {
       // addAll is all-or-nothing; one 404 would abort the whole install,
       // so add individually and tolerate misses.
       .then((c) => Promise.allSettled(PRECACHE.map((u) => c.add(u))))
-      .then(() => self.skipWaiting())
+      // Deliberately NOT skipWaiting() here. Activating immediately swaps the
+      // asset cache under a page that has already executed the OLD scripts, so
+      // the tab keeps running stale code while the cache says it's current —
+      // which is exactly how a corrected ad URL kept pointing at the old site.
+      // The new worker waits until the page tells it to take over, and the page
+      // then reloads, so code and cache always change together.
   );
 });
 
@@ -68,6 +75,23 @@ self.addEventListener("fetch", (e) => {
 
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;   // never touch third-party requests
+
+  /* ---- our own scripts: network first ----
+     Stale-while-revalidate on JS means a deploy is always one visit late: the
+     page runs yesterday's code and only fetches today's in the background.
+     For a handful of small files that is not worth the millisecond it saves. */
+  if (url.pathname.endsWith(".js")) {
+    e.respondWith((async () => {
+      try {
+        const fresh = await fetch(request);
+        if (fresh.ok) { const c = await caches.open(SHELL); c.put(request, fresh.clone()); }
+        return fresh;
+      } catch {
+        return (await caches.match(request)) || new Response("", { status: 504 });
+      }
+    })());
+    return;
+  }
 
   /* ---- live data: network first, cache only as an offline fallback ---- */
   if (url.pathname.startsWith("/.netlify/functions/")) {

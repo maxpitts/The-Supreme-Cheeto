@@ -346,8 +346,8 @@ const WM = {
     box.innerHTML = "";
     const SHORT = { "w-truth": "Truth Feed", "w-debt": "Debt Clock", "w-chat": "CheetoChat",
                     "w-board": "Bulletin", "w-meter": "Cheeto-Meter", "w-sol": "Solitaire",
-                    "w-mine": "Minesweeper", "w-about": "About", "w-predict": "Call It", "w-tally": "Since You", "w-buddies": "Buddy List" };
-    ["w-truth", "w-buddies", "w-predict", "w-tally", "w-chat", "w-debt", "w-meter", "w-sol", "w-about"].forEach((id) => {
+                    "w-mine": "Minesweeper", "w-about": "About", "w-predict": "Call It", "w-tally": "Since You", "w-buddies": "Buddy List", "w-web": "Navigator", "w-stream": "The Stream" };
+    ["w-truth", "w-stream", "w-web", "w-buddies", "w-predict", "w-tally", "w-chat", "w-debt", "w-about"].forEach((id) => {
       const w = this.byId(id); if (!w) return;
       const b = document.createElement("button");
       b.className = "dicon"; b.type = "button";
@@ -368,6 +368,7 @@ const WM = {
     // duplication you spotted.
     const groups = [
       { head: "Trackers", items: ["w-debt", "w-truth", "w-polls", "w-meter", "w-econ", "w-tally", "w-count", "w-golf", "w-eo"] },
+      { head: "Internet",  items: ["w-web", "w-stream"] },
       { head: "Games",    items: ["w-predict", "w-sol", "w-bj", "w-mine", "w-ball"] },
       { head: "Community",items: ["w-buddies", "w-chat", "w-board", "w-profile", "w-live"] },
     ];
@@ -1145,11 +1146,17 @@ function shuffle(d) {
   }
   return d;
 }
+/* A real playing card reads at a glance from its CORNER — rank over suit,
+   repeated upside down bottom-right — because that is what you can see when
+   cards are fanned or overlapped in a tableau. The old single centred
+   rank+suit was unreadable the moment cards stacked. */
 function cardHTML(c, extra = "") {
   if (!c) return `<div class="card empty ${extra}"></div>`;
   if (!c.up) return `<div class="card back ${extra}"></div>`;
-  return `<div class="card ${c.red ? "red" : ""} ${extra}">
-    <span class="cr">${c.r}</span><span class="cs">${c.s}</span></div>`;
+  const idx = `<span class="c-i"><b>${c.r}</b><i>${c.s}</i></span>`;
+  return `<div class="card ${c.red ? "red" : "blk"} ${extra}" data-r="${esc(c.r)}" data-s="${esc(c.s)}">
+    ${idx}<span class="c-mid">${c.s}</span><span class="c-i c-br"><b>${c.r}</b><i>${c.s}</i></span>
+  </div>`;
 }
 
 /* ===================================================================== */
@@ -1946,6 +1953,17 @@ window.addEventListener("appinstalled", () => { deferredInstall = null; });
 
 function initSW() {
   if (!("serviceWorker" in navigator)) return;
+
+  // When the waiting worker takes over, the page is running code that no longer
+  // matches the cache — reload once so they line up. The guard stops the
+  // classic reload loop where each reload triggers another controllerchange.
+  let reloading = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (reloading) return;
+    reloading = true;
+    location.reload();
+  });
+
   // file:// and localhost-without-https will reject registration; ignore quietly.
   navigator.serviceWorker.register("/sw.js").then((reg) => {
     reg.addEventListener("updatefound", () => {
@@ -1959,7 +1977,9 @@ function initSW() {
             "<button class='b95' id='swReload'>Reload now</button>");
           setTimeout(() => {
             const btn = $("#swReload");
-            if (btn) btn.addEventListener("click", () => { sw.postMessage("skip-waiting"); location.reload(); });
+            // Just tell it to take over; controllerchange above does the reload,
+            // so we never reload before the new worker is actually in control.
+            if (btn) btn.addEventListener("click", () => sw.postMessage("skip-waiting"));
           }, 0);
         }
       });

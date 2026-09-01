@@ -19,11 +19,14 @@ const AD_SLOTS = [
     id: "stax",
     weight: 3,
     advertiser: "STAX AI",
-    url: "https://staxai.app",
+    url: "https://staxai.app/",
     headline: "STAX&nbsp;AI",
     sub: "Follow the smart money in real time.",
     body: "Options flow, dark pool prints and congressional trades — the institutional tape, on one screen.",
-    cta: "ENTER SITE",
+    cta: "START FREE TRIAL",
+    // Any slot can carry a flashing badge; it's part of the ad format, not a
+    // one-off, so a future advertiser gets it by adding this one field.
+    flash: "5-DAY FREE TRIAL",
     skin: "stax",
   },
   {
@@ -103,12 +106,19 @@ const Popups = {
     const link = s.url
       ? `<a class="ad-cta" href="${esc(s.url)}" target="_blank" rel="noopener sponsored">${s.cta} &raquo;</a>`
       : `<span class="ad-cta">${s.cta} &raquo;</span>`;
+    // The blink is the single most 1997 thing on this website. It honours
+    // prefers-reduced-motion in CSS — a badge that strobes at someone who has
+    // asked their OS for less motion is a genuine accessibility problem, not
+    // a stylistic one.
+    const flash = s.flash
+      ? `<span class="ad-flash" role="note">${s.flash}</span>` : "";
     return {
       title: "Advertisement",
       navy: false,
       body: `
         <div class="ad ad-${s.skin}">
           <div class="ad-banner">
+            ${flash}
             <div class="ad-head">${s.headline}</div>
             <div class="ad-sub">${s.sub}</div>
             <span class="ad-shine" aria-hidden="true"></span>
