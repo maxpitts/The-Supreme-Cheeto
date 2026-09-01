@@ -223,7 +223,7 @@ const WM = {
       });
       const endR = (e) => {
         if (e.pointerId !== rp) return;
-        rp = null; el.classList.remove("resizing"); this.save();
+        rp = null; el.classList.remove("resizing"); this.remember(w); this.save();
         try { grip.releasePointerCapture(e.pointerId); } catch {}
       };
       grip.addEventListener("pointerup", endR);
@@ -251,6 +251,15 @@ const WM = {
   open(id) {
     const w = this.byId(id); if (!w) return;
     w.open = true; w.min = false; w.touched = true; w.el.hidden = false;
+    w.rolled = false; w.el.classList.remove("rolled");
+    if (!this.mobile) {
+      // Force a real size on open. A window that was hidden has no measurable
+      // box, so without this it appears at the CSS minimum.
+      const g = this.goodSize(w);
+      const cw = parseInt(w.el.style.width) || 0, ch = parseInt(w.el.style.height) || 0;
+      if (cw < 200) w.el.style.width = g.w + "px";
+      if (ch < 90)  w.el.style.height = g.h + "px";
+    }
     this.focus(w); this.clampIntoView(w); this.save();
   },
 
@@ -340,15 +349,33 @@ const WM = {
     });
   },
 
+  // Record the last geometry a window had while it was actually visible and
+  // un-rolled. offsetWidth/offsetHeight are 0 when hidden and tiny when rolled,
+  // so reading them blindly is what made reopened windows collapse.
+  remember(w) {
+    if (this.mobile || w.el.hidden || w.rolled || w.max) return;
+    const ow = w.el.offsetWidth, oh = w.el.offsetHeight;
+    if (ow > 40 && oh > 40) { w.lastW = ow; w.lastH = oh; }
+  },
+
+  goodSize(w) {
+    return {
+      w: w.lastW || w.def.w,
+      h: w.lastH || w.def.h,
+    };
+  },
+
   save() {
     if (this.mobile) return;
     try {
       const state = {};
-      this.wins.forEach((w) => {
-        state[w.id] = {
-          x: parseInt(w.el.style.left) || 0, y: parseInt(w.el.style.top) || 0,
-          w: w.el.offsetWidth, h: w.el.offsetHeight,
-          open: w.open, min: w.min, rolled: w.rolled, touched: !!w.touched,
+      this.wins.forEach((x) => {
+        this.remember(x);
+        const g = this.goodSize(x);
+        state[x.id] = {
+          x: parseInt(x.el.style.left) || 0, y: parseInt(x.el.style.top) || 0,
+          w: g.w, h: g.h,
+          open: x.open, min: x.min, rolled: x.rolled, touched: !!x.touched,
         };
       });
       localStorage.setItem(this.KEY, JSON.stringify(state));
@@ -361,8 +388,13 @@ const WM = {
     if (!state) return;
     this.wins.forEach((w) => {
       const s = state[w.id]; if (!s) return;
+      // Saves written before the sizing fix can contain 0x0 or a rolled-up
+      // height. Anything implausible falls back to the window's design size.
+      const width  = (s.w && s.w >= 200) ? s.w : w.def.w;
+      const height = (s.h && s.h >= 90)  ? s.h : w.def.h;
       w.saved = true; w.open = s.open; w.min = s.min; w.rolled = s.rolled; w.touched = s.touched;
-      Object.assign(w.el.style, { left: s.x + "px", top: s.y + "px", width: s.w + "px", height: s.h + "px" });
+      w.lastW = width; w.lastH = height;
+      Object.assign(w.el.style, { left: s.x + "px", top: s.y + "px", width: width + "px", height: height + "px" });
       w.el.classList.toggle("rolled", !!s.rolled);
       w.el.hidden = !s.open || s.min;
     });
