@@ -1086,6 +1086,34 @@ body.dark .gs{background:linear-gradient(#4a3a10,#5f4a12);color:#ffeec4;
 .gs-off.good{color:#0a6b0a;font-weight:bold}
 body.dark .gs-off.good{color:#5fd35f}
 .gs-streak{margin-left:auto;font-weight:bold}
+.gs-rank{font-weight:bold}
+
+/* ===================== THE GUESS BOARD ===================== */
+.gb-tabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:7px}
+.gb-tab.on{font-weight:bold;border-color:var(--gray-d) var(--hi) var(--hi) var(--gray-d)}
+.gb-board{width:100%;border-collapse:collapse;font-size:11px}
+.gb-board th{text-align:left;font-size:9px;letter-spacing:.7px;text-transform:uppercase;
+  color:var(--note-ink);padding:3px 5px;border-bottom:1px solid var(--gray-d)}
+.gb-board td{padding:4px 5px;border-bottom:1px solid var(--gray-d)}
+/* The name column absorbs the slack so the two number columns sit together
+   at the right, instead of stranding the streak halfway across the window. */
+.gb-board th:nth-child(2),.gb-board td:nth-child(2){width:100%}
+.gb-board th:nth-child(1),.gb-board td:nth-child(1),
+.gb-board th:nth-child(3),.gb-board td:nth-child(3),
+.gb-board th:nth-child(4),.gb-board td:nth-child(4){white-space:nowrap}
+.gb-board th:nth-child(3),.gb-board td:nth-child(3),
+.gb-board th:nth-child(4),.gb-board td:nth-child(4){text-align:right}
+.gb-board tr.me{background:var(--field);color:var(--field-ink);font-weight:bold}
+.gb-who{display:flex;align-items:center;gap:5px}
+.gb-who img{border-radius:2px;flex:none}
+.gb-pct{font-family:"Courier New",monospace}
+.gb-hid{font-family:inherit;color:var(--note-ink)}
+.gb-you{margin-top:8px;padding:7px;background:var(--field);color:var(--field-ink);
+  border:1px solid;border-color:var(--gray-d) var(--hi) var(--hi) var(--gray-d)}
+.gb-mine{display:flex;gap:9px;flex-wrap:wrap;margin-top:5px}
+.gb-mine>div{text-align:center;flex:1 1 60px}
+.gb-mine b{display:block;font-family:"Courier New",monospace;font-size:14px;line-height:1.2}
+.gb-mine span{font-size:9px;letter-spacing:.6px;text-transform:uppercase;color:var(--note-ink)}
 
 /* ===================== BUILD YOUR OWN METER ===================== */
 .mm-top{display:flex;align-items:center;gap:9px;justify-content:center;margin-bottom:9px;
@@ -1409,6 +1437,10 @@ body.dark .st-tab.on{background:linear-gradient(#1d6b3f,#0f4326);color:#eaffea}
       <div class="odo" id="debtClock">$0</div>
 
       <div id="guessBox"></div>
+
+      <fieldset><legend>&#127942; Closest guesses</legend>
+        <div id="guessBoard"></div>
+      </fieldset>
 
       <fieldset><legend>&#128100; <span id="shareLegend">Your share of it</span></legend>
         <div class="odo amber small" id="perCitizen">&mdash;</div>

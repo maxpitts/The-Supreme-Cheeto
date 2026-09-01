@@ -225,6 +225,38 @@ const KINDS = [
   },
 ];
 
+/* =====================================================================
+   THE DEBT BASELINE
+   The guess game is scored in Postgres, by a trigger, against these three
+   numbers — the same three the browser's ticker runs on. Pushing them here
+   every refresh is what lets the server work out the live figure itself at
+   the instant a guess lands, instead of believing whatever accuracy the
+   client claims to have achieved.
+
+   It is a separate export from runPredictions because it must not be gated
+   behind the prediction game's success: if question-opening breaks, guesses
+   should still score.
+   ===================================================================== */
+export async function syncDebtBaseline(state) {
+  if (!configured()) return { ok: false, skipped: "supabase not configured" };
+  const d = state?.debt;
+  if (!d?.ok || !Number.isFinite(d.amount) || !d.asOf) {
+    return { ok: false, skipped: "no healthy debt read this cycle" };
+  }
+  // A bad baseline scores everyone wrong, so it is checked before it is sent.
+  if (d.amount < 1e12 || d.amount > 1e15) return { ok: false, skipped: "debt out of plausible range" };
+  const perSecond = Number.isFinite(d.perSecond) && d.perSecond > 0 && d.perSecond < 1e7
+    ? Math.round(d.perSecond) : 89380;
+
+  await sb("cheeto_debt_baseline", {
+    method: "POST",
+    prefer: "return=minimal,resolution=merge-duplicates",
+    body: [{ id: 1, amount: d.amount, as_of: d.asOf, per_second: perSecond,
+             updated_at: new Date().toISOString() }],
+  });
+  return { ok: true, amount: d.amount, asOf: d.asOf, perSecond };
+}
+
 export async function runPredictions(state) {
   if (!configured()) {
     return { ok: false, skipped: "SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY not set" };

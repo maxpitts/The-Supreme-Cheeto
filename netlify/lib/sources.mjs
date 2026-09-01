@@ -13,7 +13,7 @@
  *   4. Nothing is ever fabricated. If we can't read it, we say so.
  */
 import { getStore } from "@netlify/blobs";
-import { runPredictions } from "./predictions.mjs";
+import { runPredictions, syncDebtBaseline } from "./predictions.mjs";
 
 const STORE = "cheeto";
 const KEY = "state";
@@ -346,6 +346,15 @@ export async function runRefresh() {
 
   await store.setJSON(KEY, state);
 
+  /* The debt baseline the guess game scores against. Pushed separately, and
+     first, so a broken question never stops guesses from being scoreable. */
+  let baseline = { ok: false, error: "not run" };
+  try {
+    baseline = await syncDebtBaseline(state);
+  } catch (e) {
+    baseline = { ok: false, error: e.message };
+  }
+
   /* The prediction game rides on this schedule: it opens questions against the
      figures we just fetched and resolves any whose window has closed. It runs
      AFTER the blob is written so a Supabase outage can never cost us a data
@@ -359,7 +368,7 @@ export async function runRefresh() {
 
   const failed = ["debt", "posts", "approval", "gas", "eo", "golf"].filter((k) => !state[k]?.ok);
   return { ok: true, updatedAt: state.updatedAt, failed, postsVia: p.via ?? null,
-           posts: p.list?.length ?? 0, predictions };
+           posts: p.list?.length ?? 0, predictions, baseline };
 }
 
 export { STORE, KEY };
