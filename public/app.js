@@ -1955,12 +1955,16 @@ window.addEventListener("appinstalled", () => { deferredInstall = null; });
 function initSW() {
   if (!("serviceWorker" in navigator)) return;
 
-  // When the waiting worker takes over, the page is running code that no longer
-  // matches the cache — reload once so they line up. The guard stops the
-  // classic reload loop where each reload triggers another controllerchange.
+  // When a new worker takes over, this page is running code that no longer
+  // matches the cache — reload once so they line up. Two guards matter here:
+  // `reloading` stops the classic loop where each reload triggers another
+  // controllerchange, and `hadController` skips the reload on a visitor's very
+  // first load, where the worker is arriving for the first time and there is
+  // nothing stale to replace.
+  const hadController = Boolean(navigator.serviceWorker.controller);
   let reloading = false;
   navigator.serviceWorker.addEventListener("controllerchange", () => {
-    if (reloading) return;
+    if (!hadController || reloading) return;
     reloading = true;
     location.reload();
   });
@@ -1972,16 +1976,11 @@ function initSW() {
       if (!sw) return;
       sw.addEventListener("statechange", () => {
         if (sw.state === "installed" && navigator.serviceWorker.controller) {
-          // A new build is ready. Don't reload under them mid-read — offer it.
-          showModal("Update available", "&#128260;",
-            "A newer version of the site is ready.<br><br>" +
-            "<button class='b95' id='swReload'>Reload now</button>");
-          setTimeout(() => {
-            const btn = $("#swReload");
-            // Just tell it to take over; controllerchange above does the reload,
-            // so we never reload before the new worker is actually in control.
-            if (btn) btn.addEventListener("click", () => sw.postMessage("skip-waiting"));
-          }, 0);
+          // The worker now skips waiting on its own, so this is a courtesy
+          // notice rather than a required action — the reload is coming either
+          // way. Kept short so it doesn't look like something to decide about.
+          const note = $("#chatNote");
+          if (note) note.innerHTML = '<span style="color:#555">A new version just landed — reloading…</span>';
         }
       });
     });

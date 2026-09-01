@@ -12,7 +12,7 @@
  *
  * Bump VERSION on any shell change to roll the cache over.
  */
-const VERSION = "cheeto-v4.2.0";
+const VERSION = "cheeto-v4.3.0";
 const SHELL = `${VERSION}-shell`;
 const DATA = `${VERSION}-data`;
 
@@ -46,12 +46,14 @@ self.addEventListener("install", (e) => {
       // addAll is all-or-nothing; one 404 would abort the whole install,
       // so add individually and tolerate misses.
       .then((c) => Promise.allSettled(PRECACHE.map((u) => c.add(u))))
-      // Deliberately NOT skipWaiting() here. Activating immediately swaps the
-      // asset cache under a page that has already executed the OLD scripts, so
-      // the tab keeps running stale code while the cache says it's current —
-      // which is exactly how a corrected ad URL kept pointing at the old site.
-      // The new worker waits until the page tells it to take over, and the page
-      // then reloads, so code and cache always change together.
+      // Take over immediately. This is only safe BECAUSE the page reloads on
+      // controllerchange (see initSW) — the two go together. Waiting politely
+      // for a click, as this did briefly, meant anyone who ignored the prompt
+      // kept running stale JavaScript indefinitely: chat messages that never
+      // appeared, a friend request that wouldn't accept, and a site that only
+      // behaved after a manual refresh. Making the user responsible for
+      // noticing a deploy was the wrong trade.
+      .then(() => self.skipWaiting())
   );
 });
 

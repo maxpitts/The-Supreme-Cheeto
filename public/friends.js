@@ -30,7 +30,11 @@ const Buddies = {
   /* ---------------- data ---------------- */
   async load(force) {
     if (!sb || !me) { this.paint(); return; }
-    if (this.loading) return;
+    // A load requested while another is in flight used to return silently —
+    // taking its repaint with it. Presence syncs trigger loads constantly, so
+    // an accept landing during one would update the database and leave the
+    // window showing the old state: "I clicked accept and nothing happened".
+    if (this.loading) { this.again = true; return; }
     if (!force && Date.now() - this.loaded < 10000) { this.paint(); return; }
     this.loading = true;
     try {
@@ -53,6 +57,7 @@ const Buddies = {
       this.chime();
     } catch {}
     this.loading = false;
+    if (this.again) { this.again = false; return this.load(true); }
     this.paint();
   },
 
@@ -304,15 +309,29 @@ const Buddies = {
   },
 
   async respond(id, accept) {
+    const who = this.reqs.find((x) => x.id === id);
     const r = await this.rpc("cheeto_friend_respond", { req_id: id, accept });
-    if (r) {
-      if (accept) {
-        Snd.doorOpen();
-        const who = this.reqs.find((x) => x.id === id);
-        Cheetip?.react?.("friend", { name: who?.display_name || who?.handle });
+    if (!r) return;
+
+    // The database has already said yes. Reflect that immediately rather than
+    // depending on a refetch that can be skipped, slow, or fail — the same
+    // mistake that made a sent chat message look like it hadn't sent.
+    this.reqs = this.reqs.filter((x) => x.id !== id);
+    if (accept && who) {
+      if (!this.list.some((b) => b.id === who.other_id)) {
+        this.list.push({
+          id: who.other_id, handle: who.handle, display_name: who.display_name,
+          avatar_url: who.avatar_url, aim_state: "available", aim_text: null,
+          status_body: null, status_at: null, friends_since: new Date().toISOString(),
+        });
       }
-      this.load(true);
+      Snd.doorOpen();
+      Cheetip?.react?.("friend", { name: who.display_name || who.handle });
+      this.tab = "buddies";          // show them the thing that just happened
     }
+    this.paint();
+    this.loaded = 0;                 // and reconcile with the server
+    this.load(true);
   },
 
   async request(target) {
