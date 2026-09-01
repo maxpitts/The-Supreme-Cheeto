@@ -261,6 +261,10 @@ const WM = {
       if (ch < 90)  w.el.style.height = g.h + "px";
     }
     this.focus(w); this.clampIntoView(w); this.save();
+    // windows that fetch their own data populate on first open
+    if (id === "w-board" && typeof loadBoard === "function") loadBoard();
+    if (id === "w-profile" && typeof renderProfileEditor === "function") renderProfileEditor();
+    if (id === "w-admin" && typeof loadHealth === "function") { loadHealth(); loadUsers(); }
   },
 
   close(w) {
@@ -294,9 +298,9 @@ const WM = {
     const box = $("#icons");
     box.innerHTML = "";
     const SHORT = { "w-truth": "Truth Feed", "w-debt": "Debt Clock", "w-chat": "CheetoChat",
-                    "w-meter": "Cheeto-Meter", "w-sol": "Solitaire", "w-mine": "Minesweeper",
-                    "w-about": "About" };
-    ["w-truth", "w-chat", "w-debt", "w-meter", "w-sol", "w-mine", "w-about"].forEach((id) => {
+                    "w-board": "Bulletin", "w-meter": "Cheeto-Meter", "w-sol": "Solitaire",
+                    "w-mine": "Minesweeper", "w-about": "About" };
+    ["w-truth", "w-chat", "w-board", "w-debt", "w-meter", "w-sol", "w-mine", "w-about"].forEach((id) => {
       const w = this.byId(id); if (!w) return;
       const b = document.createElement("button");
       b.className = "dicon"; b.type = "button";
@@ -317,6 +321,9 @@ const WM = {
       { label: "Refresh data now", icon: "&#128260;", act: () => loadLive(true) },
       { label: "Show Cheetip", icon: "&#129472;", act: () => Cheetip.show() },
       { label: "Dark mode", icon: "&#127761;", id: "themeItem", act: () => Theme.toggle() },
+      { sep: true },
+      { label: "My profile", icon: "&#128100;", act: () => openProfile() },
+      { label: "Admin panel", icon: "&#128737;", id: "adminItem", act: () => openAdmin() },
       { label: "Reset window layout", icon: "&#129704;", act: () => { localStorage.removeItem(this.KEY); location.reload(); } },
       { sep: true },
       { label: "Shut Down…", icon: "&#9211;", act: () => showModal("Shut Down", "&#9211;",
@@ -524,7 +531,7 @@ function renderFeed() {
       ${p.text ? `<div class="acts"><button data-share="${esc(p.id)}">🖼 Save as error dialog</button>
                    <button data-copy="${esc(p.id)}">📋 Copy</button></div>` : ""}
     </div>`;
-  }).join("") || '<div style="color:#777">No posts available.</div>';
+  }).join("") || '<div style="color:var(--field-dim)">No posts available.</div>';
 
   // shout analysis
   const all = withText.map((p) => p.text).join(" ");
@@ -574,7 +581,7 @@ function spark(svgEl, values, color) {
   if (!svgEl) return;
   const pts = values.filter((v) => v != null && isFinite(v));
   if (pts.length < 2) {
-    svgEl.innerHTML = `<text x="150" y="22" text-anchor="middle" font-size="9" fill="#888">collecting history…</text>`;
+    svgEl.innerHTML = `<text x="150" y="22" text-anchor="middle" font-size="9" fill="currentColor" opacity=".55">collecting history…</text>`;
     return;
   }
   const min = Math.min(...pts), max = Math.max(...pts), span = max - min || 1;

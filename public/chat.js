@@ -79,6 +79,11 @@ async function afterAuthChange() {
   renderComposer();
   renderAdminTools();
   renderTrayAccount();
+  const ai = document.getElementById("adminItem");
+  if (ai) ai.hidden = !myProfile?.is_admin;
+  if (typeof renderProfileEditor === "function" && !document.getElementById("w-profile")?.hidden) {
+    renderProfileEditor();
+  }
 }
 
 async function refreshPostStatus() {
@@ -167,7 +172,7 @@ function renderMessages(rows) {
   const box = $("#chatLog");
   if (!box) return;
   if (!rows.length) {
-    box.innerHTML = `<div style="color:#777;padding:10px">Nobody has said anything yet. The silence is deafening.</div>`;
+    box.innerHTML = `<div style="color:var(--field-dim);padding:10px">Nobody has said anything yet. The silence is deafening.</div>`;
     return;
   }
   box.innerHTML = rows.map(msgHTML).join("");
