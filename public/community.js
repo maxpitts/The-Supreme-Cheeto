@@ -141,9 +141,10 @@ async function renderProfileEditor() {
 
   box.innerHTML = `
     <div class="prof-head">
-      <img class="prof-pfp" id="profPfp" src="${esc(p?.avatar_url || "/logo.svg")}" alt="" width="64" height="64">
+      <img class="prof-pfp" id="profPfp" src="${esc(p?.avatar_url || "/logo.svg")}" alt=""
+           width="64" height="64" data-open-user="${esc(me.id)}" title="View my page">
       <div>
-        <div class="prof-handle">@${esc(p?.handle || "…")}</div>
+        <div class="prof-handle" data-open-user="${esc(me.id)}" title="View my page">@${esc(p?.handle || "…")}</div>
         <div class="note" style="margin:2px 0 0">Joined ${p ? new Date(p.created_at).toLocaleDateString() : "—"}
           ${p?.is_admin ? '· <span class="adm">ADMIN</span>' : ""}</div>
       </div>
@@ -184,6 +185,8 @@ async function renderProfileEditor() {
         Let people leave comments on my profile</label>
       <p class="note">Unticking this hides the comment box on your page. Comments already
       there stay, and you can delete any of them whenever you like.</p>
+      <button class="b95 tiny" id="pfViewWall" type="button" style="margin-top:6px">Read my wall</button>
+      <span class="note" id="pfWallCount" style="margin-left:7px"></span>
     </fieldset>
 
     <fieldset><legend>Bio</legend>
@@ -199,6 +202,7 @@ async function renderProfileEditor() {
 
     <div style="display:flex;gap:8px;align-items:center">
       <button class="b95" id="pfSave">Save profile</button>
+      <button class="b95" id="pfViewPage" type="button">View my page</button>
       <span id="pfMsg" class="note" style="margin:0"></span>
     </div>
 
@@ -238,6 +242,23 @@ async function renderProfileEditor() {
   $("#profPfp")?.addEventListener("error", () => { $("#profPfp").src = "/logo.svg"; });
 
   wireAvatar();
+  // Both go to the same place. Two buttons because "how does my page look"
+  // and "what has anyone written on it" are two different questions, and
+  // the second one is the reason people used to check MySpace hourly.
+  $("#pfViewPage")?.addEventListener("click", () => Profile.openMine());
+  $("#pfViewWall")?.addEventListener("click", () => Profile.openMine());
+
+  /* A head-only count, so the button says whether there is anything to read
+     without pulling every comment into a window that isn't showing them.
+     Silent on failure: a missing number must not break the editor. */
+  sb.from("cheeto_wall")
+    .select("id", { count: "exact", head: true })
+    .eq("owner_id", me.id).is("deleted_at", null)
+    .then(({ count, error }) => {
+      const el = $("#pfWallCount");
+      if (!el || error) return;
+      el.textContent = count ? `${count} comment${count === 1 ? "" : "s"}` : "No comments yet.";
+    }, () => {});
   $("#pfSave").addEventListener("click", saveProfile);
   $("#pfDelete").addEventListener("click", confirmDelete);
 }

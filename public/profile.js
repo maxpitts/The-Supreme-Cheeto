@@ -52,6 +52,14 @@ const Profile = {
     await this.load();
   },
 
+  /* Your own page, as everyone else sees it. Signed out there is nothing to
+     show, so this sends you to the one window that has the sign-in buttons
+     rather than opening an empty profile. */
+  openMine() {
+    if (!me) { WM.open("w-chat"); return; }
+    this.open(me.id);
+  },
+
   async load() {
     if (!this.who || !sb) return;
     try {
@@ -151,7 +159,8 @@ const Profile = {
       ${this.statusesHTML()}
       ${this.postsHTML()}
 
-      <fieldset><legend>&#128172; Wall</legend>${this.wallHTML()}</fieldset>`;
+      <fieldset><legend>&#128172; Wall${this.wall.length ? ` (${this.wall.length})` : ""}</legend>
+        ${this.wallHTML()}</fieldset>`;
 
     this.wire();
   },

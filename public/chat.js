@@ -133,7 +133,7 @@ function renderAuthBar() {
   } else {
     const h = myProfile?.handle || me.email || "…";
     bar.innerHTML = `<div class="who">
-      <span>Signed in as <b>${esc(h)}</b>${myProfile?.is_admin ? ' <span class="adm">ADMIN</span>' : ""}</span>
+      <span>Signed in as <b data-open-user="${esc(me.id)}" title="View my page">${esc(h)}</b>${myProfile?.is_admin ? ' <span class="adm">ADMIN</span>' : ""}</span>
       <button class="b95" id="chatOut" style="padding:2px 9px">Sign out</button></div>`;
     $("#chatOut").addEventListener("click", signOut);
   }

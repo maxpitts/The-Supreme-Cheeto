@@ -377,6 +377,12 @@ const WM = {
     groups.forEach((g) => {
       rows.push({ head: g.head });
       g.items.map(win).filter(Boolean).forEach((r) => rows.push(r));
+      // "My Page" isn't a window in its own right — it's the shared profile
+      // window pointed at you — so it can't come from the id list above.
+      if (g.head === "Community") {
+        rows.push({ label: "My Page", icon: "&#128100;",
+                    act: () => { if (typeof Profile === "object") Profile.openMine(); } });
+      }
     });
 
     rows.push({ head: "Settings" });
