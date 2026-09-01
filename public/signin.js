@@ -121,7 +121,9 @@ const SignIn = {
 
   msg(html, bad) {
     const el = document.getElementById("siMsg");
-    if (el) el.innerHTML = bad ? `<span style="color:#900">${html}</span>` : html;
+    // A class, not an inline colour: #900 on the dark theme's grey is almost
+    // unreadable, and an inline style can't be themed.
+    if (el) el.innerHTML = bad ? `<span class="si-bad">${html}</span>` : html;
   },
 
   /* ------------------------------------------------------------- send */
