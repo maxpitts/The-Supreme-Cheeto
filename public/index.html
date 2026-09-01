@@ -1159,6 +1159,60 @@ body.dark fieldset.danger legend{color:#ff8a80}
 #delGo:disabled{background:var(--gray);color:var(--note-ink);
   border-color:var(--hi) var(--gray-d) var(--gray-d) var(--hi);font-weight:normal;opacity:.65}
 
+/* ===================== LANDING PAGE ===================== */
+body.landing-on{overflow:hidden}
+#landing{position:fixed;inset:0;z-index:12000;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  background:
+    radial-gradient(90% 60% at 50% 0%,#2a5ea8 0%,transparent 60%),
+    linear-gradient(180deg,#0b1b3a 0%,#08122a 55%,#050b18 100%);
+  color:#e9f1ff;padding:24px 16px}
+.ld-wrap{min-height:100%;display:flex;align-items:flex-start;justify-content:center}
+.ld-card{width:100%;max-width:620px;text-align:center;padding-bottom:30px}
+.ld-logo img{filter:drop-shadow(4px 6px 0 rgba(0,0,0,.5))}
+.ld-title{font-family:Impact,"Arial Black",sans-serif;font-size:clamp(30px,7vw,52px);
+  line-height:1;margin:10px 0 6px;letter-spacing:1px;
+  background:linear-gradient(#fff3b0,#ff9d2e 55%,#d4560a);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(2px 3px 0 rgba(0,0,0,.55))}
+.ld-sub{font-size:13px;line-height:1.6;max-width:470px;margin:0 auto 18px;color:#c2d6f5}
+
+.ld-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:7px;margin-bottom:20px}
+.ld-stat{padding:9px 8px;background:rgba(255,255,255,.07);
+  border:2px solid;border-color:rgba(255,255,255,.22) rgba(0,0,0,.5) rgba(0,0,0,.5) rgba(255,255,255,.22)}
+.ld-stat.wide{grid-column:1/-1}
+.ld-k{display:block;font-size:9px;letter-spacing:1.1px;text-transform:uppercase;color:#8fb0e0}
+.ld-stat b{display:block;font-family:"Courier New",monospace;font-size:19px;margin-top:3px;
+  word-break:break-all}
+.ld-stat.wide b{font-size:clamp(19px,5.2vw,30px)}
+.ld-live{display:flex;align-items:center;justify-content:center;gap:8px;
+  background:linear-gradient(#8f1410,#5c0505);border-color:#ff8a86 #2a0202 #2a0202 #ff8a86}
+.ld-live b{font-size:13px;font-family:inherit;margin:0}
+
+.ld-enter{display:block;width:100%;max-width:320px;margin:0 auto 8px;cursor:pointer;
+  padding:14px 20px;font:inherit;color:#2a1500;
+  background:linear-gradient(#ffd98a,#ff9d2e 60%,#e8730c);
+  border:3px solid;border-color:#fff0c4 #7a3a00 #7a3a00 #fff0c4;
+  box-shadow:0 4px 0 rgba(0,0,0,.45)}
+.ld-enter:active{transform:translateY(2px);box-shadow:0 2px 0 rgba(0,0,0,.45);
+  border-color:#7a3a00 #fff0c4 #fff0c4 #7a3a00}
+.ld-enter-t{display:block;font-family:Impact,"Arial Black",sans-serif;font-size:25px;letter-spacing:2px}
+.ld-enter-s{display:block;font-size:11px;margin-top:2px;opacity:.8}
+
+.ld-auth{margin:20px auto 0;max-width:400px;padding:12px;
+  background:rgba(255,255,255,.06);
+  border:2px solid;border-color:rgba(255,255,255,.2) rgba(0,0,0,.5) rgba(0,0,0,.5) rgba(255,255,255,.2)}
+.ld-auth-h{font-size:12px;font-weight:bold;margin-bottom:9px}
+.ld-auth-b{display:flex;gap:7px;justify-content:center;flex-wrap:wrap}
+.ld-auth-n{font-size:10.5px;color:#8fb0e0;margin-top:8px}
+
+.ld-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:7px;margin-top:22px;text-align:left}
+.ld-grid>div{padding:9px;background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.14)}
+.ld-grid b{display:block;font-size:12px;margin-bottom:2px}
+.ld-grid span{font-size:10.5px;color:#adc4e8;line-height:1.4}
+.ld-foot{font-size:10.5px;color:#7f9ac4;margin-top:22px;line-height:1.6}
+@media (max-width:420px){ #landing{padding:16px 10px} }
+
 /* ===================== THE STREAM ===================== */
 #trayLive{flex:0 0 auto;font:inherit;font-size:10.5px;font-weight:bold;letter-spacing:.7px;
   padding:3px 8px;cursor:pointer;display:flex;align-items:center;gap:5px;min-height:24px;
@@ -1284,6 +1338,8 @@ body.dark .st-tab.on{background:linear-gradient(#1d6b3f,#0f4326);color:#eaffea}
   .bl-grp{font-size:10.5px}
   .st-play-s{font-size:11px}
   .st-live{font-size:11.5px}
+  .ld-k{font-size:10px}
+  .ld-auth-n,.ld-grid span,.ld-foot{font-size:11px}
   #trayLive{min-height:38px;padding:4px 10px;font-size:11px}
 }
 </style>
@@ -1291,6 +1347,8 @@ body.dark .st-tab.on{background:linear-gradient(#1d6b3f,#0f4326);color:#eaffea}
 <body>
 
 <!-- ===================== BOOT ===================== -->
+<div id="landing" hidden></div>
+
 <div id="boot" aria-hidden="true"><pre id="bootlog"></pre><div id="bootskip">click anywhere to skip</div></div>
 
 <!-- ===================== DESKTOP ===================== -->
@@ -1766,6 +1824,7 @@ body.dark .st-tab.on{background:linear-gradient(#1d6b3f,#0f4326);color:#eaffea}
 <script src="/react.js"></script>
 <script src="/friends.js"></script>
 <script src="/stream.js"></script>
+<script src="/landing.js"></script>
 <script src="/tally.js"></script>
 <script src="/poke.js"></script>
 <script src="/digest.js"></script>

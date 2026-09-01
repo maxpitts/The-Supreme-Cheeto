@@ -2027,6 +2027,24 @@ function start() {
 
 let booted = false;
 try { booted = sessionStorage.getItem("cheeto_booted") === "1"; } catch {}
-if (booted) { $("#boot")?.remove(); } else { boot(); }
+
+/* The landing page sits in front of all this. landing.js decides whether to
+   show it and calls afterLanding() either way — on mount-skip immediately, or
+   when someone presses ENTER. */
+let launched = false;
+function afterLanding() {
+  if (launched) return;
+  launched = true;
+  if (booted) { $("#boot")?.remove(); setTimeout(() => Cheetip.init(), 500); }
+  else boot();
+}
+
 start();
-if (booted) setTimeout(() => Cheetip.init(), 500);
+
+/* Safety net: if landing.js failed to load or threw, nobody would ever call
+   afterLanding() and the visitor would stare at a boot screen forever. If the
+   landing element is absent or still hidden shortly after load, go anyway. */
+setTimeout(() => {
+  const l = document.getElementById("landing");
+  if (!l || l.hidden) afterLanding();
+}, 1200);

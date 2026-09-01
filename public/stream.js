@@ -76,6 +76,10 @@ const KickLive = {
       }
     }
     StreamWindow.all.forEach((c) => c.paintLive());
+    // The landing page shows a LIVE banner too, and it is the most compelling
+    // thing on it — it has to update when the poll lands, not only when the
+    // dashboard data does.
+    if (typeof Landing === "object" && Landing.el) Landing.paint();
   },
 
   start() {
