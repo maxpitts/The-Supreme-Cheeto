@@ -293,6 +293,8 @@ body.mobile #tray{padding:4px 6px}
 body.mobile #startBtn span:last-child{display:none}
 body.mobile #startBtn{padding:5px 8px}
 
+}
+
 
 /* ============================== CARDS ============================== */
 .card{width:42px;height:58px;background:#fff;color:#111;border:1px solid #555;border-radius:3px;
@@ -695,8 +697,17 @@ body.dark #trayTheme{background:var(--gray);border-color:var(--gray-l) #000 #000
 .alert-meta a{color:var(--navy)}
 body.dark .alert-meta a{color:#8ec5ff}
 
-body.mobile .win.popup{left:8px!important;right:8px;width:auto!important;
-  top:auto!important;bottom:calc(var(--taskh) + var(--safe-b) + 10px)}
+/* `body.mobile .win{position:static}` out-specifies `.win.popup{position:fixed}`,
+   so without re-declaring position here the popup was laid out INLINE at the
+   bottom of the mobile window stack — offsets ignored, close button far below
+   the fold on a short screen. An ad nobody can dismiss. Restate position, and
+   cap the height so a long alert scrolls inside itself rather than pushing its
+   own buttons off the bottom of the phone. */
+body.mobile .win.popup{position:fixed!important;left:8px!important;right:8px;width:auto!important;
+  top:auto!important;bottom:calc(var(--taskh) + var(--safe-b) + 10px);
+  max-height:calc(100dvh - var(--taskh) - var(--safe-b) - 20px);
+  height:auto!important;display:flex;flex-direction:column}
+body.mobile .win.popup .body{overflow-y:auto;min-height:0}
 
 /* ============================== CHARTS ============================== */
 /* then vs now */
@@ -796,6 +807,40 @@ body.dark .pg-locked{color:#5fd35f}
 .pg-who{display:flex;align-items:center;gap:5px}
 .pg-who img{border-radius:2px;flex:none}
 
+/* ===================== WHO'S ONLINE ===================== */
+#trayOnline{flex:0 0 auto;font:inherit;font-size:11px;padding:2px 6px;cursor:pointer;
+  display:flex;align-items:center;gap:4px;background:none;border:0;color:inherit;
+  min-height:24px}
+#trayOnline.busy{font-weight:bold;color:#0a6b0a}
+body.dark #trayOnline.busy{color:#5fd35f}
+.live-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#12b312;
+  box-shadow:0 0 0 1px rgba(0,0,0,.35);animation:live-pulse 2.2s ease-in-out infinite;flex:none}
+.live-dot.big{width:11px;height:11px;vertical-align:1px;margin-right:7px}
+@keyframes live-pulse{0%,100%{opacity:1}50%{opacity:.35}}
+@media (prefers-reduced-motion: reduce){ .live-dot{animation:none} }
+
+.live-now{text-align:center;padding:12px 8px;background:var(--field);color:var(--field-ink);
+  border:2px solid;border-color:var(--gray-d) var(--hi) var(--hi) var(--gray-d)}
+.live-big{font-family:"Courier New",monospace;font-weight:bold;font-size:40px;line-height:1}
+.live-cap{font-size:11px;color:var(--note-ink);margin-top:3px}
+.live-rows{margin-top:9px}
+.live-row{display:flex;justify-content:space-between;gap:10px;font-size:11.5px;padding:5px 7px;
+  border:1px solid;border-color:var(--gray-d) var(--hi) var(--hi) var(--gray-d);margin-bottom:4px}
+.live-row b{font-family:"Courier New",monospace;font-variant-numeric:tabular-nums}
+.live-record{margin-top:9px;padding:7px 9px;font-size:11.5px;text-align:center;font-weight:bold;
+  background:linear-gradient(#fff3d0,#ffd98a);color:#4a3000;
+  border:2px solid;border-color:#fff #a37b1a #a37b1a #fff}
+body.dark .live-record{background:linear-gradient(#5a4413,#7a5c18);color:#ffe9b5;
+  border-color:#9a7a2a #2b1f06 #2b1f06 #9a7a2a}
+
+/* the obligatory odometer */
+.hitc{margin-top:12px;text-align:center}
+.hitc-lbl{font-size:8.5px;letter-spacing:1.2px;color:var(--note-ink);margin-bottom:4px}
+.hitc-box{display:inline-flex;gap:2px;padding:4px;background:#111;
+  border:2px solid;border-color:#000 #666 #666 #000}
+.hitc-box span{font-family:"Courier New",monospace;font-weight:bold;font-size:17px;
+  color:#2bff2b;background:#000;padding:2px 5px;min-width:15px;text-shadow:0 0 5px #2bff2b}
+
 /* ===================== WHILE YOU WERE OUT ===================== */
 .dg-head{display:flex;gap:10px;align-items:flex-start;margin-bottom:11px}
 .dg-glyph{font-size:30px;line-height:1;flex:none}
@@ -843,6 +888,53 @@ body.dark .pg-locked{color:#5fd35f}
 @media (prefers-reduced-motion: reduce){
   *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;
     transition-duration:.001ms!important}
+}
+/* ==================================================================
+   TOUCH TARGETS — deliberately the LAST rules in this stylesheet.
+   Everything here has to out-rank a base rule set earlier (#trayOnline's
+   own min-height, .pg-sec's font-size, and so on). At equal specificity
+   the later rule wins, so position is doing the work; moving this block
+   up the file silently re-breaks it.
+
+   Measured on real viewports: window buttons came in at 26x24, the feed's
+   "source" links at 36x11, taskbar items around 25px. A fingertip needs
+   roughly 40. The Windows-95 look is in the bevel, not the dimensions, so
+   these can grow without costing anything. Gated on a coarse pointer, so a
+   desktop mouse — which is precise — sees none of it.
+   ================================================================== */
+@media (hover: none) and (pointer: coarse) {
+  .tb .btns button{min-width:40px;min-height:38px;font-size:15px}
+  #startBtn{min-height:40px;padding:5px 12px}
+  #tasks button{min-height:38px}
+  #trayTheme,#trayAccount,#trayOnline{min-height:38px;padding-left:10px;padding-right:10px}
+  #startMenu li{min-height:42px;padding:9px 11px}
+  #startMenu li.menu-head{min-height:0;padding:7px 11px 3px}
+  .b95,.b95.tiny{min-height:38px;padding:7px 12px}
+  #cheetipClose{width:30px;height:30px;font-size:17px}
+
+  /* "source" links in the feed sat at 36x11 — a hairline. Pad them into a
+     real target without disturbing the line they sit on. */
+  .post .meta a,.alert-meta a{display:inline-block;min-height:32px;line-height:32px;padding:0 6px}
+
+  /* 16px is the threshold below which iOS Safari zooms the page on focus,
+     which then leaves the layout scrolled sideways. Not a style choice. */
+  input[type=text],input[type=url],input[type=search],textarea,select{min-height:40px;font-size:16px}
+
+  /* 9-10px is legible on a desktop monitor and not on a phone held at arm's
+     length. Nothing here is decorative — it's all labels and explanations. */
+  .post .meta{font-size:11.5px;line-height:1.7}
+  .newbadge{font-size:10.5px;padding:2px 6px}
+  .note{font-size:11.5px}
+  .tn-tag,.mp-why,.tug-legend,.r-foot,.r-small,.hitc-lbl,.live-cap,
+  .pg-meta,.pg-r-q,.dg-since{font-size:11px}
+  .pg-sec,.pg-r-badge,.mp-sum{font-size:10.5px}
+  .tug-legend{gap:9px}
+
+  /* Per-post share/copy buttons were 120x20 and 57x20 — the most-tapped
+     controls on the page, sitting right under the text people are reading. */
+  .post .acts button{min-height:38px;padding:6px 11px;font-size:11.5px}
+  .post .acts{gap:8px}
+  #cheetipClose{width:32px;height:32px}
 }
 </style>
 </head>
@@ -1124,6 +1216,15 @@ body.dark .pg-locked{color:#5fd35f}
     <div class="grip"></div>
   </section>
 
+  <!-- ---------------- WHO'S ONLINE ---------------- -->
+  <section class="win" id="w-live" data-title="WHO_IS_ON.EXE" data-icon="&#128100;"
+           data-x="360" data-y="120" data-w="330" data-h="420">
+    <div class="tb"><span class="ico">&#128100;</span><span class="t">Who's Online</span>
+      <span class="btns"><button data-min>_</button><button data-max>&#9633;</button><button data-close>&times;</button></span></div>
+    <div class="body" id="liveBody"><div class="note">Connecting&hellip;</div></div>
+    <div class="grip"></div>
+  </section>
+
   <!-- ---------------- WHILE YOU WERE OUT ---------------- -->
   <section class="win" id="w-digest" data-title="INBOX" data-icon="&#128231;" data-transient hidden
            data-x="330" data-y="130" data-w="400" data-h="380">
@@ -1200,7 +1301,7 @@ body.dark .pg-locked{color:#5fd35f}
   <div id="tasks"></div>
   <button id="trayTheme" title="Toggle light / dark">&#127769;</button>
   <button id="trayAccount" title="Sign in to CheetoChat">&#128100; Sign in</button>
-  <div id="tray"><span id="trayWatch" title="Time since last post">&#128064; &mdash;</span><span id="trayClock">--:--</span></div>
+  <div id="tray"><button id="trayOnline" type="button" hidden title="Who's online">&#128100; &mdash;</button><span id="trayWatch" title="Time since last post">&#128064; &mdash;</span><span id="trayClock">--:--</span></div>
 </div>
 
 <div id="startMenu" hidden>
@@ -1236,6 +1337,7 @@ body.dark .pg-locked{color:#5fd35f}
 <script src="/charts.js"></script>
 <script src="/community.js"></script>
 <script src="/predict.js"></script>
+<script src="/live.js"></script>
 <script src="/digest.js"></script>
 <script src="/ads.js"></script>
 </body>

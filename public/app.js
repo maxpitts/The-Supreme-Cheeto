@@ -366,7 +366,7 @@ const WM = {
     const groups = [
       { head: "Trackers", items: ["w-debt", "w-truth", "w-polls", "w-meter", "w-econ", "w-count", "w-golf", "w-eo"] },
       { head: "Games",    items: ["w-predict", "w-sol", "w-bj", "w-mine", "w-ball"] },
-      { head: "Community",items: ["w-chat", "w-board", "w-profile"] },
+      { head: "Community",items: ["w-chat", "w-board", "w-profile", "w-live"] },
     ];
 
     const rows = [];
@@ -1046,6 +1046,7 @@ function initChrome() {
 
   const menu = $("#startMenu"), btn = $("#startBtn");
   const toggle = (e) => { e.stopPropagation(); menu.hidden = !menu.hidden; btn.classList.toggle("on", !menu.hidden); };
+  $("#trayOnline")?.addEventListener("click", (e) => { e.stopPropagation(); WM.open("w-live"); });
   btn.addEventListener("click", toggle);
   btn.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") toggle(e); });
   document.addEventListener("click", () => { menu.hidden = true; btn.classList.remove("on"); });
