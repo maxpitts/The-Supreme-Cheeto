@@ -85,7 +85,18 @@ const AD_SLOTS = [
 const Popups = {
   KEY_BLOCK: "cheeto_popups_off",
   shown: 0,
-  MAX_PER_SESSION: 7,
+  /* Raised from 7. At 7 pop-ups — half of which are alerts rather than ads —
+     a session saw about three ads, so any one slot came up rarely: the Kick
+     ads were reaching well under half of full sessions, which is not much of a
+     promotion for the people they exist to promote.
+
+     This is the knob with the most downside, so it is worth saying where the
+     limit is: pop-ups are the single most blockable thing on a website, and
+     the Start-menu "Block pop-ups" switch is one click away. Turning these up
+     trades a bit of that goodwill for reach. 11 is roughly five ads across a
+     ~17-minute visit, which is still under the joke's own premise; going much
+     past it stops reading as a period detail and starts reading as adware. */
+  MAX_PER_SESSION: 11,
   live: null,
   timer: null,
   lastKind: null,
@@ -109,7 +120,10 @@ const Popups = {
   schedule(ms) {
     clearTimeout(this.timer);
     if (this.blocked() || this.shown >= this.MAX_PER_SESSION) return;
-    this.timer = setTimeout(() => this.fire(), ms ?? (85000 + Math.random() * 95000));
+    // Was 85–180s. The spread stays wide on purpose: a pop-up on a predictable
+    // metronome reads as a script, and the gag is that these arrive at the
+    // worst possible moment, not on schedule.
+    this.timer = setTimeout(() => this.fire(), ms ?? (60000 + Math.random() * 60000));
   },
 
   /* alternate ads and alerts so it never feels like pure advertising */
