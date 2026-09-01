@@ -343,8 +343,8 @@ const WM = {
     box.innerHTML = "";
     const SHORT = { "w-truth": "Truth Feed", "w-debt": "Debt Clock", "w-chat": "CheetoChat",
                     "w-board": "Bulletin", "w-meter": "Cheeto-Meter", "w-sol": "Solitaire",
-                    "w-mine": "Minesweeper", "w-about": "About", "w-predict": "Call It", "w-tally": "Since You" };
-    ["w-truth", "w-predict", "w-tally", "w-chat", "w-board", "w-debt", "w-meter", "w-sol", "w-about"].forEach((id) => {
+                    "w-mine": "Minesweeper", "w-about": "About", "w-predict": "Call It", "w-tally": "Since You", "w-buddies": "Buddy List" };
+    ["w-truth", "w-buddies", "w-predict", "w-tally", "w-chat", "w-debt", "w-meter", "w-sol", "w-about"].forEach((id) => {
       const w = this.byId(id); if (!w) return;
       const b = document.createElement("button");
       b.className = "dicon"; b.type = "button";
@@ -366,7 +366,7 @@ const WM = {
     const groups = [
       { head: "Trackers", items: ["w-debt", "w-truth", "w-polls", "w-meter", "w-econ", "w-tally", "w-count", "w-golf", "w-eo"] },
       { head: "Games",    items: ["w-predict", "w-sol", "w-bj", "w-mine", "w-ball"] },
-      { head: "Community",items: ["w-chat", "w-board", "w-profile", "w-live"] },
+      { head: "Community",items: ["w-buddies", "w-chat", "w-board", "w-profile", "w-live"] },
     ];
 
     const rows = [];
@@ -380,6 +380,8 @@ const WM = {
     rows.push({ label: "Install to home screen", icon: "&#128229;", id: "installItem", act: () => promptInstall() });
     rows.push({ label: "Refresh data now", icon: "&#128260;", act: () => loadLive(true) });
     rows.push({ label: "Show Cheetip", icon: "&#129472;", act: () => Cheetip.show() });
+    rows.push({ label: "Buddy sounds: off", icon: "&#128266;", id: "soundItem",
+                act: () => Snd.setOn(!Snd.on()) });
     rows.push({ label: "Block pop-ups", icon: "&#128683;", id: "popupItem",
                 act: () => Popups.setBlocked(!Popups.blocked()) });
     rows.push({ label: "Reset window layout", icon: "&#129704;",

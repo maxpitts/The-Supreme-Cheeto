@@ -83,6 +83,8 @@ const Live = {
       this.lastSync = Date.now();
       this.paint();
       this.reportSoon();
+      // The buddy list keys its online dots off this.
+      document.dispatchEvent(new CustomEvent("cheeto:presence"));
     };
 
     this.channel
@@ -107,9 +109,27 @@ const Live = {
   async trackSelf() {
     if (!this.channel) return;
     try {
-      await this.channel.track({ at: Date.now(), signed_in: typeof me !== "undefined" && Boolean(me) });
+      // The buddy list needs to know WHICH friends are on, so a signed-in tab
+      // publishes its user id. Presence state is readable by everyone on the
+      // channel, so this is genuinely public — which is exactly why Invisible
+      // withholds it rather than merely hiding a dot in the interface.
+      const invisible = typeof myProfile === "object" && myProfile?.aim_state === "invisible";
+      const uid = (typeof me !== "undefined" && me && !invisible) ? me.id : null;
+      await this.channel.track({ at: Date.now(), signed_in: Boolean(uid), uid });
       this.tracked = true;
     } catch {}
+  },
+
+  /* Which signed-in, non-invisible users are on the site right now. */
+  onlineUids() {
+    const out = new Set();
+    if (!this.channel || !this.connected) return out;
+    try {
+      Object.values(this.channel.presenceState() || {}).forEach((arr) => {
+        (arr || []).forEach((p) => { if (p?.uid) out.add(p.uid); });
+      });
+    } catch {}
+    return out;
   },
 
   async untrackSelf() {
