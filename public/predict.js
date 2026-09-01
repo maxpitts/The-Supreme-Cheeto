@@ -110,7 +110,7 @@ function recordHTML() {
       <div style="margin-top:7px;display:flex;gap:6px;flex-wrap:wrap">
         <button class="b95 tiny" data-pg-in="google">Google</button>
         <button class="b95 tiny" data-pg-in="discord">Discord</button>
-        <button class="b95 tiny" data-pg-email>Email</button>
+        ${EMAIL_SIGNIN ? `<button class="b95 tiny" data-pg-email>Email</button>` : ""}
       </div>
       <div class="note" style="margin-top:6px">Anyone can read the questions. An account is only needed to lock a pick.</div>
     </div>`;

@@ -24,15 +24,21 @@ const People = {
   loading: false,
 
   async open(mode) {
-    WM.open("w-people");
+    // Set the mode BEFORE opening. WM.open's hook calls load() immediately,
+    // so setting it afterwards meant that first load ran with the old mode —
+    // and the loading guard then swallowed the correct one. Asking for
+    // "Most active" quietly showed you whoever happened to be online.
     if (mode) this.mode = mode;
+    WM.open("w-people");
     await this.load();
   },
 
   async load() {
     const box = document.getElementById("peopleBody");
     if (!sb) { if (box) box.innerHTML = `<div class="note">The directory needs the database, which didn't load.</div>`; return; }
-    if (this.loading) return;
+    // A request arriving mid-flight is queued rather than dropped, so the last
+    // mode asked for is always the one on screen.
+    if (this.loading) { this.again = true; return; }
     this.loading = true;
     if (box && !this.rows.length) box.innerHTML = `<div class="note">Loading…</div>`;
     try {
@@ -40,6 +46,7 @@ const People = {
       this.rows = (error || !Array.isArray(data)) ? [] : data;
     } catch { this.rows = []; }
     this.loading = false;
+    if (this.again) { this.again = false; return this.load(); }
     this.render();
   },
 

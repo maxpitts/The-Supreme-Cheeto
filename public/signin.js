@@ -19,6 +19,15 @@
    to the other two.
    ===================================================================== */
 
+/* Emailed codes are switched OFF until the sending domain is verified with
+   the mail provider. Supabase accepts the request and then fails to send, so
+   the button would be visibly broken for every visitor who tried it — worse
+   than offering two doors instead of three.
+
+   Flip this to true once the DNS records are live and the send works. It is
+   the only thing that needs changing: every sign-in surface reads it. */
+let EMAIL_SIGNIN = false;   // let, not const: flipping it is the whole point
+
 const SignIn = {
   step: "choose",     // choose | code
   email: "",
@@ -70,6 +79,7 @@ const SignIn = {
           <button class="b95 oauth google" data-si-p="google"><span>G</span> Continue with Google</button>
           <button class="b95 oauth discord" data-si-p="discord"><span>&#9679;</span> Continue with Discord</button>
         </div>
+        ${EMAIL_SIGNIN ? `
         <div class="si-or"><span>or use your email</span></div>
         <div class="si-row">
           <input class="i95" id="siEmail" type="email" inputmode="email" autocomplete="email"
@@ -80,7 +90,10 @@ const SignIn = {
         <div class="si-msg" id="siMsg"></div>
         <p class="note" style="margin-top:9px">No password to invent or forget. We email you a
           six-digit code, you type it in, that's the whole account.
-          Your address is only ever used to sign you in &mdash; it is never shown on your profile.</p>
+          Your address is only ever used to sign you in &mdash; it is never shown on your profile.</p>`
+        : `<p class="note" style="margin-top:11px">Signing in with an email address is coming
+          shortly. Both of these create a normal account &mdash; nothing is posted anywhere on
+          your behalf, and your address is never shown on your profile.</p>`}
       </div>`;
   },
 

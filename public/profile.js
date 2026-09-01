@@ -178,7 +178,7 @@ const Profile = {
       return `<span class="note" style="margin:0">Sign in to add friends, nudge and write on walls.</span>
         <button class="b95 tiny" data-up-in="google">Google</button>
         <button class="b95 tiny" data-up-in="discord">Discord</button>
-        <button class="b95 tiny" data-up-email>Email</button>`;
+        ${EMAIL_SIGNIN ? `<button class="b95 tiny" data-up-email>Email</button>` : ""}`;
     }
     if (p.friendship === "self") {
       return `<button class="b95" data-up-edit>Edit my profile</button>

@@ -99,6 +99,15 @@ const WM = {
     if (first) this.focus(first, true);
     this.renderTasks();
 
+    /* A refresh restores windows straight to open without going through
+       open(), so nothing ever measured them and they came back at whatever
+       height they were designed at. Fit the visible ones once the panels have
+       had a chance to render into them. */
+    setTimeout(() => {
+      this.wins.filter((w) => w.open && !w.min && !w.el.hidden)
+        .forEach((w) => this.fitToContent(w));
+    }, 1400);
+
     // clicking bare desktop blurs
     $("#desktop").addEventListener("pointerdown", (e) => {
       if (e.target.id === "desktop" || e.target.closest("#wallpaper")) this.blurAll();
@@ -372,6 +381,10 @@ const WM = {
     // A few pixels either way is not worth a visible jump on every open.
     if (Math.abs(target - w.el.offsetHeight) < 24) return;
     w.el.style.height = target + "px";
+    // Persist it. Without this the fitted size lives only until the next
+    // reload, which restores the old oversized height and looks like the
+    // layout "went back".
+    this.save();
   },
 
   /* Panels fetch their contents, so one measurement at open time catches an

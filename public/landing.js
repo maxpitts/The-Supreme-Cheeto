@@ -66,7 +66,7 @@ const Landing = {
             <div class="ld-auth-b">
               <button class="b95" data-ld-in="google">Google</button>
               <button class="b95" data-ld-in="discord">Discord</button>
-              <button class="b95" id="ldEmailIn">Email</button>
+              ${typeof EMAIL_SIGNIN !== "undefined" && EMAIL_SIGNIN ? `<button class="b95" id="ldEmailIn">Email</button>` : ""}
             </div>
             <div class="ld-auth-n">Optional &mdash; everything is readable without an account.</div>
           </div>
