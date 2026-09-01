@@ -213,7 +213,7 @@ async function makePick(id, choice, btn) {
 
   PG.picks[id] = choice;
   paintPredict();
-  Cheetip?.say?.("Locked in. No takebacks after midnight.", 6000);
+  Cheetip?.react?.("pick");
   loadPredictions(true);
 }
 

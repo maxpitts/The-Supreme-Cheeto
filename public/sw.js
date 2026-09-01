@@ -12,7 +12,7 @@
  *
  * Bump VERSION on any shell change to roll the cache over.
  */
-const VERSION = "cheeto-v3.5.0";
+const VERSION = "cheeto-v3.6.0";
 const SHELL = `${VERSION}-shell`;
 const DATA = `${VERSION}-data`;
 

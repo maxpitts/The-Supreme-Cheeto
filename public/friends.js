@@ -294,12 +294,20 @@ const Buddies = {
     if (myProfile) { myProfile.aim_state = state; myProfile.aim_text = msg || null; }
     // Invisible has to actually leave the presence roster, not just look away.
     if (typeof Live === "object" && Live.trackSelf) Live.trackSelf();
+    Cheetip?.react?.("away", { state });
     this.load(true);
   },
 
   async respond(id, accept) {
     const r = await this.rpc("cheeto_friend_respond", { req_id: id, accept });
-    if (r) { if (accept) Snd.doorOpen(); this.load(true); }
+    if (r) {
+      if (accept) {
+        Snd.doorOpen();
+        const who = this.reqs.find((x) => x.id === id);
+        Cheetip?.react?.("friend", { name: who?.display_name || who?.handle });
+      }
+      this.load(true);
+    }
   },
 
   async request(target) {
@@ -394,7 +402,7 @@ const Buddies = {
           Snd.buzz();
           document.body.classList.add("buzzing");
           setTimeout(() => document.body.classList.remove("buzzing"), 900);
-          Cheetip?.say?.(`${from ? (from.display_name || from.handle) : "Someone"} nudged you.`, 6000);
+          Cheetip?.react?.("nudge", { from: from ? (from.display_name || from.handle) : null });
         })
       .subscribe();
   },

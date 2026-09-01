@@ -294,7 +294,10 @@ const WM = {
 
   open(id) {
     const w = this.byId(id); if (!w) return;
+    const wasClosed = !w.open;
     w.open = true; w.min = false; w.touched = true; w.el.hidden = false;
+    // Cheetip reacts to what you actually opened — that is the whole joke.
+    if (wasClosed) setTimeout(() => Cheetip?.react?.("window", { id: w.id }), 450);
     w.rolled = false; w.el.classList.remove("rolled");
     if (!this.mobile) {
       // Force a real size on open. A window that was hidden has no measurable
@@ -887,7 +890,7 @@ function flashNewPost(p) {
   const w = WM.byId("w-truth");
   if (w) { WM.open("w-truth"); }
   document.title = "🔴 NEW POST — The Supreme Cheeto";
-  Cheetip.say("It looks like a new post just landed. I thought you should know immediately.", 9000);
+  Cheetip.react("newpost");
   setTimeout(() => (document.title = "The Supreme Cheeto"), 30000);
 }
 
@@ -1558,25 +1561,82 @@ function initBlackjack() {
    with advice you didn't ask for, so this one does that too, but it only
    ever says things that are true about the data on screen.
    ===================================================================== */
+/* =====================================================================
+   CHEETIP — the assistant
+   Clippy's whole joke is "It looks like you're trying to ___", and it only
+   lands if you actually are. The old version fired on a blind timer, so it
+   told you that you were doomscrolling while you played Blackjack. This one
+   is event-driven: he speaks BECAUSE something happened, and the idle timer
+   is a rare fallback rather than the main event.
+
+   Every line is still derived from data actually on the page. He has no
+   opinions the site doesn't already show you, and he never invents a figure.
+   ===================================================================== */
 const Cheetip = {
-  el: null, bubble: null, hidden: false, timer: null, lastSaid: "",
+  el: null, bubble: null, char: null, svg: null,
+  hidden: false, timer: null, idleAt: 0, idleFired: false,
+  lastSaid: "", moodTimer: null,
 
   KEY: "cheeto_tip_hidden",
 
-  init() {
+  async init() {
     try { this.hidden = localStorage.getItem(this.KEY) === "1"; } catch {}
     this.el = $("#cheetip");
     this.bubble = $("#cheetipSay");
+    this.char = $("#cheetipChar");
     if (!this.el) return;
     this.el.hidden = this.hidden;
 
     $("#cheetipClose").addEventListener("click", (e) => { e.stopPropagation(); this.dismiss(); });
-    $("#cheetipChar").addEventListener("click", () => this.say(this.pick(), 9000));
+    this.char.addEventListener("click", () => this.say(this.pick(), 9000));
+
+    await this.inlineArt();
+    this.watchIdle();
 
     if (!this.hidden) {
-      setTimeout(() => this.say("It looks like you're trying to follow the news. Would you like help with that?", 8000), 2600);
+      setTimeout(() => this.say("It looks like you're trying to follow the news. Would you like help with that?", 8000, "smug"), 2600);
       this.schedule();
     }
+  },
+
+  /* The mood styles live inside logo.svg and key off data-mood on its root,
+     which only works if the SVG is part of the document. Fetch and inline it;
+     if that fails for any reason the existing <img> stays exactly as it was
+     and he simply keeps one face. */
+  async inlineArt() {
+    try {
+      const res = await fetch("/logo.svg", { cache: "force-cache" });
+      if (!res.ok) return;
+      const txt = await res.text();
+      const doc = new DOMParser().parseFromString(txt, "image/svg+xml");
+      const svg = doc.querySelector("svg");
+      if (!svg || doc.querySelector("parsererror")) return;
+      svg.setAttribute("width", "62");
+      svg.setAttribute("height", "62");
+      svg.setAttribute("aria-hidden", "true");
+      svg.style.display = "block";
+      const img = this.char.querySelector("img");
+      if (img) img.replaceWith(svg);
+      this.svg = svg;
+      this.setMood(this.restingMood());
+    } catch {}
+  },
+
+  /* What his face does when nothing in particular is happening: the meter. */
+  restingMood() {
+    const s = D.cheeto ?? 0;
+    if (s >= 78) return "panic";
+    if (s >= 55) return "alarmed";
+    return "smug";
+  },
+
+  setMood(m, ms) {
+    if (!this.svg) return;
+    this.svg.setAttribute("data-mood", m || "");
+    clearTimeout(this.moodTimer);
+    if (ms) this.moodTimer = setTimeout(() => {
+      if (this.svg) this.svg.setAttribute("data-mood", this.restingMood());
+    }, ms);
   },
 
   dismiss() {
@@ -1590,24 +1650,26 @@ const Cheetip = {
     this.hidden = false;
     this.el.hidden = false;
     try { localStorage.removeItem(this.KEY); } catch {}
-    this.say("I'm back. You can't get rid of me that easily.", 6000);
+    this.say("I'm back. You can't get rid of me that easily.", 6000, "delighted");
     this.schedule();
   },
 
+  /* Unprompted chatter is now the exception, not the rule — long, irregular
+     gaps, because the reactions below are what should be carrying him. */
   schedule() {
     clearTimeout(this.timer);
     if (this.hidden) return;
-    // long, irregular gaps — the joke dies if it nags
     this.timer = setTimeout(() => { this.say(this.pick(), 9000); this.schedule(); },
-      75000 + Math.random() * 120000);
+      150000 + Math.random() * 210000);
   },
 
-  say(text, ms = 7000) {
+  say(text, ms = 7000, mood) {
     if (this.hidden || !this.bubble) return;
     this.lastSaid = text;
     this.bubble.innerHTML = esc(text);
     this.bubble.hidden = false;
     this.el.classList.add("talking");
+    if (mood) this.setMood(mood, ms + 600);
     clearTimeout(this._hide);
     this._hide = setTimeout(() => {
       this.bubble.hidden = true;
@@ -1615,12 +1677,109 @@ const Cheetip = {
     }, ms);
   },
 
-  /* every line is derived from data actually on the page */
+  /* =====================================================================
+     REACTIONS — he speaks because you did something
+     Each entry returns [text, mood] or null to stay quiet. Keeping them in
+     one table makes it obvious what he can and can't react to.
+     ===================================================================== */
+  react(kind, p = {}) {
+    if (this.hidden) return;
+    this.wake();
+    const r = this.REACTIONS[kind];
+    if (!r) return;
+    const out = r.call(this, p);
+    if (!out) return;
+    const [text, mood, ms] = Array.isArray(out) ? out : [out, null, null];
+    this.say(text, ms || 8000, mood);
+    this.schedule();                       // reset idle chatter after a reaction
+  },
+
+  REACTIONS: {
+    window(p) {
+      const games = { "w-sol": "Solitaire", "w-bj": "Blackjack", "w-mine": "Minesweeper", "w-ball": "the 8-ball" };
+      if (games[p.id]) return [`It looks like you're trying to avoid the news by playing ${games[p.id]}. I respect it.`, "smug"];
+      if (p.id === "w-debt") return ["It looks like you're trying to watch a number get bigger. It will.", "smug"];
+      if (p.id === "w-truth") return ["It looks like you're trying to read every one of these. Pace yourself.", "smug"];
+      if (p.id === "w-predict") return ["It looks like you're trying to be right about something. Bold.", "delighted"];
+      if (p.id === "w-buddies") return ["It looks like you're trying to make friends on a debt tracker. Somehow that's working.", "delighted"];
+      if (p.id === "w-chat") return ["It looks like you're trying to talk to strangers. Be nice, they can see you.", "smug"];
+      if (p.id === "w-tally") return ["It looks like you're trying to see what all this has cost you. Brave.", "alarmed"];
+      if (p.id === "w-meter") return ["It looks like you're trying to audit my gauge. Go ahead, the formula's right there.", "smug"];
+      return null;
+    },
+
+    guess(p) {
+      if (p.pct == null) return null;
+      if (p.pct < 0.25) return ["That was within a quarter of a percent. I'm genuinely unsettled.", "alarmed"];
+      if (p.pct < 1)    return ["Within one percent. You've been paying attention.", "delighted"];
+      if (p.pct < 25)   return ["Not your finest guess, but the debt is a hard number to hold in your head.", "smug"];
+      return ["That wasn't the right neighbourhood. Or the right city.", "smug"];
+    },
+
+    pick()      { return ["Locked in. No takebacks after midnight.", "delighted"]; },
+    friend(p)   { return [`${p.name ? p.name + " is" : "That's"} on your buddy list now. It's 2003 in here.`, "delighted"]; },
+    nudge(p)    { return [`${p.from || "Someone"} nudged you. I felt that too.`, "panic", 6500]; },
+    record(p)   { return [`${p.n} people here at once — that's a new record. Everyone act natural.`, "delighted"]; },
+    newpost()   { return ["A new post just landed. I thought you should know immediately.", "panic", 9000]; },
+
+    away(p) {
+      const m = {
+        away: "Away message set. Very 2004 of you.",
+        busy: "Busy doing what, exactly? You're on a debt tracker.",
+        invisible: "Invisible. You're off the buddy list AND the visitor count. Genuinely gone.",
+        available: "Back to available. The buddy list rejoices.",
+      };
+      const face = { away: "smug", busy: "smug", invisible: "smug", available: "delighted" };
+      return m[p.state] ? [m[p.state], face[p.state]] : null;
+    },
+
+    meter()  { return ["Building your own meter, are we? The published number is still right there next to yours.", "smug"]; },
+    theme(p) { return p.dark
+      ? ["Dark mode. Easier on the eyes, same terrible numbers.", "smug"]
+      : ["Light mode. Bold choice at this hour.", "smug"]; },
+
+    idle() {
+      const s = D.cheeto ?? 0;
+      return [s >= 60
+        ? "You've gone quiet. The numbers haven't."
+        : "It looks like you're trying to stare into the middle distance. Understandable.", "asleep", 9000];
+    },
+  },
+
+  /* ---------------- idle ---------------- */
+  watchIdle() {
+    const bump = () => this.wake();
+    ["pointerdown", "keydown", "wheel", "touchstart"].forEach((e) =>
+      window.addEventListener(e, bump, { passive: true }));
+    this.idleAt = Date.now();
+    setInterval(() => {
+      if (this.hidden || this.idleFired) return;
+      if (Date.now() - this.idleAt > 4 * 60e3) {
+        this.idleFired = true;
+        this.react("idle");
+        this.setMood("asleep");           // stays asleep until you move
+      }
+    }, 15000);
+  },
+
+  wake() {
+    this.idleAt = Date.now();
+    if (this.idleFired) {
+      this.idleFired = false;
+      this.setMood(this.restingMood());
+    }
+  },
+
+  /* ---------------- unprompted lines ---------------- */
   pick() {
     const lines = [];
     const debt = liveDebt();
     lines.push(`The national debt has gone up about ${money(D.debt.perSecond * 60, 0)} since I started this sentence.`);
-    lines.push(`Your personal share of the debt is ${money(debt / POPULATION, 0)}. No, you can't pay it off.`);
+
+    const hh = (typeof Tally === "object" && Tally.household && Tally.household()) || null;
+    lines.push(hh
+      ? `Your household's share of the debt is ${money((debt / POPULATION) * hh, 0)}. No, you can't pay it off.`
+      : `Your share of the debt is ${money(debt / POPULATION, 0)}. No, you can't pay it off.`);
 
     if (D.approval?.approve != null) {
       const net = D.approval.approve - D.approval.disapprove;
@@ -1634,7 +1793,10 @@ const Cheetip = {
     if (D.eo?.orders) lines.push(`${D.eo.orders} executive orders signed. That's a lot of pens.`);
     if (D.eggs?.v) lines.push(`Eggs are $${D.eggs.v.toFixed(2)} a dozen. I remain a snack food, so I'm fine.`);
     if (typeof PG === "object" && PG.open?.length) {
-      lines.push(`There ${PG.open.length === 1 ? "is 1 open question" : `are ${PG.open.length} open questions`} in Call It. It looks like you're trying to be right about something.`);
+      lines.push(`There ${PG.open.length === 1 ? "is 1 open question" : `are ${PG.open.length} open questions`} in Call It, and you haven't been wrong yet today.`);
+    }
+    if (typeof Guess === "object" && Guess.due && Guess.due()) {
+      lines.push("You haven't guessed the debt today. It's in the debt window, and I won't tell you the answer first.");
     }
 
     const times = (D.posts?.list || []).map(postTime).filter(Boolean);
@@ -1646,14 +1808,17 @@ const Cheetip = {
     }
     if (D.cheeto != null) lines.push(`Cheeto-meter reads ${D.cheeto.toFixed(1)} out of 100. I don't make the rules, I just have a gauge.`);
 
-    lines.push("It looks like you're trying to doomscroll. Would you like me to open Solitaire instead?");
+    // He can't open windows for you, so he no longer offers to — he just says
+    // where the thing is. An assistant that offers help it can't give is worse
+    // than one that stays quiet.
+    lines.push("It looks like you're trying to doomscroll. Solitaire is in the Start menu, for whatever that's worth.");
     lines.push("Did you know? Every number on this page links to where it came from. Wild concept.");
 
-    // don't repeat the last thing said
     const fresh = lines.filter((l) => l !== this.lastSaid);
     return fresh[Math.floor(Math.random() * fresh.length)] || lines[0];
   },
 };
+
 
 /* ---------- Win95-style splash after the BIOS text ---------- */
 function splash() {
@@ -1738,7 +1903,7 @@ const Theme = {
       tray.title = dark ? "Switch to light mode" : "Switch to dark mode";
     }
   },
-  toggle() { this.set(this.isDark() ? "light" : "dark"); },
+  toggle() { this.set(this.isDark() ? "light" : "dark"); Cheetip?.react?.("theme", { dark: this.isDark() }); },
   init() {
     this.apply();
     // follow the OS only while the user hasn't picked for themselves

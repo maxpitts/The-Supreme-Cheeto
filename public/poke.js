@@ -85,6 +85,7 @@ const Guess = {
     if (best == null || pct < best) best = pct;
 
     this.put({ day: this.today(), guess: g, offBy: off, pct, streak, best });
+    Cheetip?.react?.("guess", { pct });
 
     const verdict =
       pct < 0.25 ? ["&#127942;", "Extremely close", "That's within a quarter of a percent. Genuinely impressive."]
@@ -187,6 +188,7 @@ const MyMeter = {
         nw[+sl.dataset.wi] = parseFloat(sl.value);
         this.save(nw);
         this.mount();
+        Cheetip?.react?.("meter");
         if (typeof renderMeter === "function") renderMeter();
       });
     });

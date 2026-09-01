@@ -169,7 +169,10 @@ const Live = {
       try {
         const { data, error } = await sb.rpc("cheeto_report_online", { n: this.count });
         if (!error && data) {
-          if (this.peak != null && data.peak_online > this.peak) this.brokeRecord = true;
+          if (this.peak != null && data.peak_online > this.peak) {
+            this.brokeRecord = true;
+            Cheetip?.react?.("record", { n: data.peak_online });
+          }
           this.peak = data.peak_online; this.peakAt = data.peak_at;
           this.paint();
         }
