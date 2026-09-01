@@ -889,6 +889,80 @@ body.dark .live-record{background:linear-gradient(#5a4413,#7a5c18);color:#ffe9b5
   *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;
     transition-duration:.001ms!important}
 }
+/* ===================== POST REACTIONS ===================== */
+.rx{display:flex;gap:4px;flex-wrap:wrap;align-items:center;margin-top:6px}
+.rx-b{display:inline-flex;align-items:center;gap:4px;font:inherit;font-size:12px;
+  padding:3px 7px;cursor:pointer;background:var(--gray);color:var(--ink);
+  border:2px solid;border-color:var(--hi) var(--gray-d) var(--gray-d) var(--hi)}
+.rx-b:active{border-color:var(--gray-d) var(--hi) var(--hi) var(--gray-d)}
+.rx-b.on{background:linear-gradient(#ffe0b8,#ffbe7a);border-color:#fff #a35a00 #a35a00 #fff;font-weight:bold;color:#3a2400}
+body.dark .rx-b{background:var(--gray);color:var(--ink);border-color:var(--gray-l) #000 #000 var(--gray-l)}
+body.dark .rx-b.on{background:linear-gradient(#7a4c10,#a3660f);color:#fff;border-color:#c98a2a #2b1a04 #2b1a04 #c98a2a}
+.rx-e{font-size:13px;line-height:1}
+.rx-n{font-family:"Courier New",monospace;font-variant-numeric:tabular-nums;font-size:11px}
+.rx-tot{font-size:10px;color:var(--note-ink);margin-left:3px}
+
+/* ===================== SINCE YOU STARTED ===================== */
+.ty-head{text-align:center;padding:9px;background:var(--field);color:var(--field-ink);
+  border:2px solid;border-color:var(--gray-d) var(--hi) var(--hi) var(--gray-d)}
+.ty-since{font-size:9px;letter-spacing:1.3px;color:var(--note-ink)}
+.ty-days{font-family:"Courier New",monospace;font-weight:bold;font-size:22px;line-height:1.2}
+.ty-visits{font-size:10.5px;color:var(--note-ink);margin-top:2px}
+.ty-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:6px;margin-top:9px}
+.ty-cell{padding:9px 8px;background:var(--gray);
+  border:2px solid;border-color:var(--hi) var(--gray-d) var(--gray-d) var(--hi)}
+.ty-i{font-size:17px;line-height:1}
+.ty-big{font-family:"Courier New",monospace;font-weight:bold;font-size:19px;line-height:1.15;margin-top:3px;
+  word-break:break-word}
+.ty-cap{font-size:10px;letter-spacing:.5px;color:var(--note-ink);text-transform:uppercase}
+.ty-sub{font-size:10.5px;margin-top:5px;line-height:1.45}
+.ty-foot{margin-top:11px;font-size:11px;display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+
+.setup-l{display:block;font-size:12px;font-weight:bold;margin-top:8px}
+.setup-l input{display:block;width:100%;margin-top:5px;padding:7px;font:inherit;font-size:14px;
+  background:var(--field);color:var(--field-ink);
+  border:2px solid;border-color:var(--gray-d) var(--hi) var(--hi) var(--gray-d)}
+
+/* ===================== GUESS THE DEBT ===================== */
+.gs{padding:9px;margin-bottom:9px;background:linear-gradient(#fff6df,#ffe9bd);color:#3a2a00;
+  border:2px solid;border-color:#fff #b8860b #b8860b #fff}
+body.dark .gs{background:linear-gradient(#4a3a10,#5f4a12);color:#ffeec4;
+  border-color:#8a6a1a #241a05 #241a05 #8a6a1a}
+.gs-q{font-size:12px;font-weight:bold;margin-bottom:7px}
+.gs-in{display:flex;gap:5px;align-items:center;flex-wrap:wrap}
+.gs-in>span{font-family:"Courier New",monospace;font-weight:bold;font-size:15px}
+.gs-in input{flex:1 1 150px;min-width:0;padding:6px;font-size:14px;
+  font-family:"Courier New",monospace;background:var(--field);color:var(--field-ink);
+  border:2px solid;border-color:var(--gray-d) var(--hi) var(--hi) var(--gray-d)}
+.gs-hint{font-size:10px;margin-top:5px;opacity:.75}
+.gs-done{display:flex;gap:7px;align-items:baseline;flex-wrap:wrap;font-size:11px;
+  padding:7px 9px;margin-bottom:9px;background:var(--field);color:var(--field-ink);
+  border:1px solid;border-color:var(--gray-d) var(--hi) var(--hi) var(--gray-d)}
+.gs-k{font-size:9px;letter-spacing:1px;color:var(--note-ink);text-transform:uppercase}
+.gs-done b{font-family:"Courier New",monospace}
+.gs-off{color:var(--note-ink)}
+.gs-off.good{color:#0a6b0a;font-weight:bold}
+body.dark .gs-off.good{color:#5fd35f}
+.gs-streak{margin-left:auto;font-weight:bold}
+
+/* ===================== BUILD YOUR OWN METER ===================== */
+.mm-top{display:flex;align-items:center;gap:9px;justify-content:center;margin-bottom:9px;
+  padding:7px;background:var(--field);color:var(--field-ink);
+  border:1px solid;border-color:var(--gray-d) var(--hi) var(--hi) var(--gray-d)}
+.mm-top>div{text-align:center}
+.mm-top b{display:block;font-family:"Courier New",monospace;font-size:19px;line-height:1.1}
+.mm-mine{color:#8a4a00}
+body.dark .mm-mine{color:#ffb04a}
+.mm-k{font-size:9px;letter-spacing:.8px;color:var(--note-ink);text-transform:uppercase}
+.mm-arrow{font-size:16px;color:var(--note-ink)}
+.mm-row{margin-bottom:7px}
+.mm-row.off{display:flex;justify-content:space-between;font-size:11px;color:var(--note-ink)}
+.mm-lbl{display:flex;justify-content:space-between;font-size:11px}
+.mm-lbl b{font-family:"Courier New",monospace}
+.mm-row input[type=range]{width:100%;accent-color:#c56a00;min-height:26px;margin:2px 0}
+.mm-w{font-family:"Courier New",monospace;font-size:11px;text-align:right;color:var(--note-ink)}
+.mm-foot{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}
+
 /* ==================================================================
    TOUCH TARGETS — deliberately the LAST rules in this stylesheet.
    Everything here has to out-rank a base rule set earlier (#trayOnline's
@@ -935,6 +1009,13 @@ body.dark .live-record{background:linear-gradient(#5a4413,#7a5c18);color:#ffe9b5
   .post .acts button{min-height:38px;padding:6px 11px;font-size:11.5px}
   .post .acts{gap:8px}
   #cheetipClose{width:32px;height:32px}
+  .rx-b{min-height:38px;padding:5px 10px}
+  .rx-e{font-size:15px}
+  .gs-in input{min-height:42px;font-size:16px}
+  .mm-row input[type=range]{min-height:34px}
+  .ty-sub,.ty-visits{font-size:11px}
+  .ty-cap,.gs-k,.mm-k,.ty-since{font-size:10px}
+  .gs-hint,.rx-tot{font-size:11px}
 }
 </style>
 </head>
@@ -960,8 +1041,12 @@ body.dark .live-record{background:linear-gradient(#5a4413,#7a5c18);color:#ffe9b5
     <div class="body">
       <div class="odo" id="debtClock">$0</div>
 
-      <fieldset><legend>&#128100; Your share of it</legend>
+      <div id="guessBox"></div>
+
+      <fieldset><legend>&#128100; <span id="shareLegend">Your share of it</span></legend>
         <div class="odo amber small" id="perCitizen">&mdash;</div>
+        <div class="kv" id="shareWhoRow"><span id="shareWho">Per person, all 342.5 million of us</span>
+          <b><button class="b95 tiny" id="shareEdit">Make it mine</button></b></div>
         <div class="kv"><span>Grown since you opened this</span><b id="shareSince">&mdash;</b></div>
         <div class="kv"><span>Total added since Jan 20 2025</span><b id="debtSince">&mdash;</b></div>
         <div class="kv"><span>Added during this visit</span><b id="sessionDebt">$0</b></div>
@@ -1059,6 +1144,8 @@ body.dark .live-record{background:linear-gradient(#5a4413,#7a5c18);color:#ffe9b5
       </fieldset>
       <fieldset style="margin-top:9px"><legend>&#128300; Why it reads that</legend>
         <div id="meterParts"></div></fieldset>
+      <fieldset style="margin-top:9px"><legend>&#127899; Build your own</legend>
+        <div id="myMeter"></div></fieldset>
       <svg class="spark" id="sparkCheeto" viewBox="0 0 300 38" preserveAspectRatio="none" style="margin-top:8px" hidden></svg>
       <p class="note">A joke composite, computed openly: equal-weight average of disapproval, gas vs. a year ago, CPI vs. the 2% target, the effective tariff rate, and debt growth &mdash; each scaled 0&ndash;100. A vibe, not an economic indicator.</p>
     </div>
@@ -1216,6 +1303,15 @@ body.dark .live-record{background:linear-gradient(#5a4413,#7a5c18);color:#ffe9b5
     <div class="grip"></div>
   </section>
 
+  <!-- ---------------- SINCE YOU STARTED ---------------- -->
+  <section class="win" id="w-tally" data-title="SINCE_YOU.EXE" data-icon="&#128200;"
+           data-x="300" data-y="80" data-w="430" data-h="500">
+    <div class="tb"><span class="ico">&#128200;</span><span class="t">Since You Started Watching</span>
+      <span class="btns"><button data-min>_</button><button data-max>&#9633;</button><button data-close>&times;</button></span></div>
+    <div class="body" id="tallyBody"><div class="note">Loading&hellip;</div></div>
+    <div class="grip"></div>
+  </section>
+
   <!-- ---------------- WHO'S ONLINE ---------------- -->
   <section class="win" id="w-live" data-title="WHO_IS_ON.EXE" data-icon="&#128100;"
            data-x="360" data-y="120" data-w="330" data-h="420">
@@ -1338,6 +1434,9 @@ body.dark .live-record{background:linear-gradient(#5a4413,#7a5c18);color:#ffe9b5
 <script src="/community.js"></script>
 <script src="/predict.js"></script>
 <script src="/live.js"></script>
+<script src="/react.js"></script>
+<script src="/tally.js"></script>
+<script src="/poke.js"></script>
 <script src="/digest.js"></script>
 <script src="/ads.js"></script>
 </body>

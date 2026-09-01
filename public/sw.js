@@ -12,7 +12,7 @@
  *
  * Bump VERSION on any shell change to roll the cache over.
  */
-const VERSION = "cheeto-v3.3.0";
+const VERSION = "cheeto-v3.4.0";
 const SHELL = `${VERSION}-shell`;
 const DATA = `${VERSION}-data`;
 
@@ -26,6 +26,9 @@ const PRECACHE = [
   "/charts.js",
   "/predict.js",
   "/live.js",
+  "/react.js",
+  "/tally.js",
+  "/poke.js",
   "/digest.js",
   "/supabase.js",
   "/logo.svg",

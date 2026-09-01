@@ -343,8 +343,8 @@ const WM = {
     box.innerHTML = "";
     const SHORT = { "w-truth": "Truth Feed", "w-debt": "Debt Clock", "w-chat": "CheetoChat",
                     "w-board": "Bulletin", "w-meter": "Cheeto-Meter", "w-sol": "Solitaire",
-                    "w-mine": "Minesweeper", "w-about": "About", "w-predict": "Call It" };
-    ["w-truth", "w-predict", "w-chat", "w-board", "w-debt", "w-meter", "w-sol", "w-mine", "w-about"].forEach((id) => {
+                    "w-mine": "Minesweeper", "w-about": "About", "w-predict": "Call It", "w-tally": "Since You" };
+    ["w-truth", "w-predict", "w-tally", "w-chat", "w-board", "w-debt", "w-meter", "w-sol", "w-about"].forEach((id) => {
       const w = this.byId(id); if (!w) return;
       const b = document.createElement("button");
       b.className = "dicon"; b.type = "button";
@@ -364,7 +364,7 @@ const WM = {
     // every window AND repeated some of them again below, which is the
     // duplication you spotted.
     const groups = [
-      { head: "Trackers", items: ["w-debt", "w-truth", "w-polls", "w-meter", "w-econ", "w-count", "w-golf", "w-eo"] },
+      { head: "Trackers", items: ["w-debt", "w-truth", "w-polls", "w-meter", "w-econ", "w-tally", "w-count", "w-golf", "w-eo"] },
       { head: "Games",    items: ["w-predict", "w-sol", "w-bj", "w-mine", "w-ball"] },
       { head: "Community",items: ["w-chat", "w-board", "w-profile", "w-live"] },
     ];
@@ -581,11 +581,20 @@ function renderDebtPanel() {
 
   Odo.render("$" + Math.floor(now).toLocaleString("en-US"));
 
-  const share = now / POPULATION;
+  // If the visitor told us their household size, "your share" stops being the
+  // national number divided by everybody — which is identical for every reader
+  // and so isn't really "yours" at all — and becomes their household's slice.
+  const hh = (typeof Tally === "object" && Tally.household && Tally.household()) || null;
+  const share = (now / POPULATION) * (hh || 1);
   const el = (id, v) => { const n = $(id); if (n) n.textContent = v; };
 
+  el("#shareLegend", hh ? `Your household's share of it` : "Your share of it");
+  el("#shareWho", hh ? `Household of ${hh}` : `Per person, all ${fmtCount(POPULATION)} of us`);
+  const edit = $("#shareEdit");
+  if (edit) edit.textContent = hh ? "Change" : "Make it mine";
+
   el("#perCitizen", money(share, 2));
-  el("#shareSince", money((Date.now() - pageLoadedAt) / 1000 * (perSec / POPULATION), 4));
+  el("#shareSince", money((Date.now() - pageLoadedAt) / 1000 * (perSec / POPULATION) * (hh || 1), 4));
   el("#debtSince", money((now - DEBT_AT_INAUG) / 1e12, 3) + "T");
   el("#sessionDebt", money(now - debtAtLoad, 0));
 
@@ -635,8 +644,12 @@ function renderEcon() {
 }
 
 function renderMeter() {
-  const s = D.cheeto ?? 0;
-  $("#cheetoVal").textContent = s.toFixed(1) + " / 100";
+  // If the visitor has set their own component weights, the gauge follows
+  // THEIR reading. The site's own equal-weight figure is still shown beside it
+  // in the breakdown, so the published number is never hidden or overwritten.
+  const custom = typeof MyMeter === "object" ? MyMeter.weights?.() : null;
+  const s = custom ? MyMeter.score(custom) : (D.cheeto ?? 0);
+  $("#cheetoVal").textContent = s.toFixed(1) + " / 100" + (custom ? " (yours)" : "");
   $("#needle").setAttribute("transform", `rotate(${-90 + (s / 100) * 180} 100 100)`);
   const labels = [[20, "MILD SALSA 🟢"], [40, "MEDIUM 🟡"], [60, "FLAMIN' HOT 🟠"], [80, "XXTRA FLAMIN' 🔴"], [101, "MELTING THE BAG 🔥"]];
   $("#cheetoLabel").textContent = (labels.find((l) => s < l[0]) || labels[4])[1];
@@ -705,6 +718,7 @@ function renderFeed() {
       <div class="meta">${esc(stamp)}${isNew ? ' <span class="newbadge">NEW</span>' : ""}
         ${p.url ? `<a href="${esc(p.url)}" target="_blank" rel="noopener">source</a>` : ""}</div>
       ${body}
+      ${p.id ? `<div class="rx" data-rx="${esc(p.id)}"></div>` : ""}
       ${p.text ? `<div class="acts"><button data-share="${esc(p.id)}">🖼 Save as error dialog</button>
                    <button data-copy="${esc(p.id)}">📋 Copy</button></div>` : ""}
     </div>`;
@@ -1047,6 +1061,7 @@ function initChrome() {
   const menu = $("#startMenu"), btn = $("#startBtn");
   const toggle = (e) => { e.stopPropagation(); menu.hidden = !menu.hidden; btn.classList.toggle("on", !menu.hidden); };
   $("#trayOnline")?.addEventListener("click", (e) => { e.stopPropagation(); WM.open("w-live"); });
+  $("#shareEdit")?.addEventListener("click", () => Setup.open(true));
   btn.addEventListener("click", toggle);
   btn.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") toggle(e); });
   document.addEventListener("click", () => { menu.hidden = true; btn.classList.remove("on"); });
