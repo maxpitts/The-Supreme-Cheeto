@@ -46,3 +46,12 @@
   [headers.values]
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
+    # Chrome showed "Not secure" because plain http:// was being served without
+    # a redirect. Netlify's "Force HTTPS" toggle fixes the redirect; this makes
+    # it stick, by telling the browser never to try http for this host again.
+    #
+    # Deliberately no `includeSubDomains` and no `preload`: both are effectively
+    # irreversible for the max-age, and a subdomain added later without a cert
+    # would become unreachable rather than merely insecure. A year on the apex
+    # is the useful part.
+    Strict-Transport-Security = "max-age=31536000"
