@@ -223,10 +223,17 @@ const WM = {
       const deskW = $("#desktop").clientWidth, deskH = $("#desktop").clientHeight;
       el.style.left = clamp(ox + e.clientX - sx, -el.offsetWidth + 90, deskW - 60) + "px";
       el.style.top = clamp(oy + e.clientY - sy, 0, deskH - 26) + "px";
+      // Show where it would land BEFORE letting go. A snap that happens with
+      // no warning feels like the window jumped away from you.
+      this.snapHint(this.snapZone(e.clientX, e.clientY));
     });
     const endDrag = (e) => {
       if (e.pointerId !== pid) return;
-      pid = null; el.classList.remove("dragging"); this.save();
+      const zone = this.snapZone(e.clientX, e.clientY);
+      pid = null; el.classList.remove("dragging");
+      this.snapHint(null);
+      if (zone) this.applySnap(w, zone);
+      this.save();
       try { tb.releasePointerCapture(e.pointerId); } catch {}
     };
     tb.addEventListener("pointerup", endDrag);
@@ -311,8 +318,54 @@ const WM = {
     // windows that fetch their own data populate on first open
     if (id === "w-board" && typeof loadBoard === "function") loadBoard();
     if (id === "w-people" && typeof People === "object") People.load();
+    if (id === "w-bin" && typeof Bin === "object") Bin.render();
     if (id === "w-profile" && typeof renderProfileEditor === "function") renderProfileEditor();
     if (id === "w-admin" && typeof loadHealth === "function") { loadHealth(); loadUsers(); }
+  },
+
+  /* ---------------- edge snapping ----------------
+     Half-screen on the left or right edge, maximise at the top. Deliberately
+     narrow trigger bands: a wide one steals ordinary drags near an edge,
+     which is far more annoying than not having snapping at all. */
+  snapZone(cx, cy) {
+    if (this.mobile) return null;
+    const d = $("#desktop");
+    if (!d) return null;
+    const r = d.getBoundingClientRect();
+    if (cy - r.top < 8) return "max";
+    if (cx - r.left < 14) return "left";
+    if (r.right - cx < 14) return "right";
+    return null;
+  },
+
+  snapHint(zone) {
+    let g = document.getElementById("snapGhost");
+    if (!zone) { if (g) g.hidden = true; return; }
+    if (!g) {
+      g = document.createElement("div");
+      g.id = "snapGhost";
+      $("#desktop")?.appendChild(g);
+    }
+    const d = $("#desktop");
+    const W = d.clientWidth, H = d.clientHeight;
+    const box = zone === "max" ? [0, 0, W, H]
+              : zone === "left" ? [0, 0, Math.round(W / 2), H]
+              : [Math.round(W / 2), 0, Math.round(W / 2), H];
+    g.hidden = false;
+    g.style.left = box[0] + "px"; g.style.top = box[1] + "px";
+    g.style.width = box[2] + "px"; g.style.height = box[3] + "px";
+  },
+
+  applySnap(w, zone) {
+    const d = $("#desktop");
+    if (!d) return;
+    if (zone === "max") { if (!w.max) this.toggleMax(w); return; }
+    const W = d.clientWidth, H = d.clientHeight;
+    w.el.style.left = (zone === "left" ? 0 : Math.round(W / 2)) + "px";
+    w.el.style.top = "0px";
+    w.el.style.width = Math.round(W / 2) + "px";
+    w.el.style.height = H + "px";
+    w.rolled = false; w.el.classList.remove("rolled");
   },
 
   close(w) {
@@ -347,8 +400,9 @@ const WM = {
     box.innerHTML = "";
     const SHORT = { "w-truth": "Truth Feed", "w-debt": "Debt Clock", "w-chat": "CheetoChat",
                     "w-board": "FYP", "w-meter": "Cheeto-Meter", "w-sol": "Solitaire",
-                    "w-mine": "Minesweeper", "w-about": "About", "w-predict": "Call It", "w-tally": "Since You", "w-buddies": "Buddy List", "w-st-bobby": "BOBBYjayyy", "w-st-benp": "benp90" };
-    ["w-truth", "w-st-bobby", "w-st-benp", "w-buddies", "w-predict", "w-tally", "w-chat", "w-debt", "w-about"].forEach((id) => {
+                    "w-mine": "Minesweeper", "w-about": "About", "w-predict": "Call It", "w-tally": "Since You", "w-buddies": "Buddy List", "w-st-bobby": "BOBBYjayyy", "w-st-benp": "benp90",
+                    "w-people": "People", "w-bin": "Recycle Bin" };
+    ["w-truth", "w-st-bobby", "w-st-benp", "w-buddies", "w-people", "w-predict", "w-tally", "w-chat", "w-debt", "w-about", "w-bin"].forEach((id) => {
       const w = this.byId(id); if (!w) return;
       const b = document.createElement("button");
       b.className = "dicon"; b.type = "button";
@@ -399,6 +453,8 @@ const WM = {
                 act: () => Snd.setOn(!Snd.on()) });
     rows.push({ label: "Block pop-ups", icon: "&#128683;", id: "popupItem",
                 act: () => Popups.setBlocked(!Popups.blocked()) });
+    rows.push({ label: "Keyboard shortcuts", icon: "&#9000;",
+                act: () => { if (typeof shortcutsSheet === "function") shortcutsSheet(); } });
     rows.push({ label: "Reset window layout", icon: "&#129704;",
                 act: () => { localStorage.removeItem(this.KEY); location.reload(); } });
     rows.push({ label: "Admin panel", icon: "&#128737;", id: "adminItem", act: () => openAdmin() });

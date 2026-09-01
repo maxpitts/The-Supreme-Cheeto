@@ -1097,6 +1097,31 @@ body.dark .gs-off.good{color:#5fd35f}
   border:2px dashed var(--gray-d)}
 .admimg-bad span{font-size:10px;letter-spacing:.5px;text-transform:uppercase}
 
+/* ===================== CONTEXT MENUS + SNAPPING ===================== */
+#ctxMenu{position:fixed;z-index:9600;min-width:190px;padding:2px;
+  background:var(--gray);color:var(--ink);
+  border:2px solid;border-color:var(--hi) var(--gray-d) var(--gray-d) var(--hi);
+  box-shadow:2px 2px 0 rgba(0,0,0,.4)}
+.ctx-i{display:flex;width:100%;gap:14px;align-items:center;justify-content:space-between;
+  padding:5px 9px;background:none;border:0;font:inherit;font-size:12px;color:inherit;
+  cursor:pointer;text-align:left}
+.ctx-i:hover:not([disabled]),.ctx-i:focus:not([disabled]){background:var(--navy);color:#fff;outline:none}
+.ctx-i[disabled]{color:var(--note-ink);cursor:default}
+.ctx-k{font-size:10px;opacity:.75}
+.ctx-sep{height:1px;margin:3px 4px;background:var(--gray-d);border-bottom:1px solid var(--hi)}
+#snapGhost{position:absolute;z-index:5;pointer-events:none;
+  background:rgba(255,255,255,.16);border:2px dashed rgba(255,255,255,.75)}
+.bin-top{display:flex;gap:11px;align-items:center;margin-bottom:9px}
+.bin-i{font-size:38px;line-height:1}
+.bin-empty{padding:18px;text-align:center;color:var(--note-ink);font-size:12px}
+.ks{width:100%;border-collapse:collapse;font-size:12px}
+.ks td{padding:3px 6px;border-bottom:1px solid var(--gray-d);vertical-align:top}
+.ks td:first-child{white-space:nowrap;width:1%}
+.ks .ks-h{font-size:9px;letter-spacing:.8px;text-transform:uppercase;color:var(--note-ink);
+  padding-top:8px;border-bottom:0}
+kbd{display:inline-block;padding:1px 5px;font-family:"Courier New",monospace;font-size:11px;
+  background:var(--gray);border:1px solid;border-color:var(--hi) var(--gray-d) var(--gray-d) var(--hi)}
+
 /* ===================== PEOPLE + GETTING STARTED ===================== */
 .pp-tabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px}
 .pp-tab.on{font-weight:bold;border-color:var(--gray-d) var(--hi) var(--hi) var(--gray-d)}
@@ -1844,6 +1869,15 @@ body.dark .st-tab.on{background:linear-gradient(#1d6b3f,#0f4326);color:#eaffea}
   </section>
 
   <!-- ---------------- BUDDY LIST ---------------- -->
+  <!-- ---------------- RECYCLE BIN ---------------- -->
+  <section class="win" id="w-bin" data-transient data-title="RECYCLE_BIN" data-icon="&#128465;"
+           data-x="360" data-y="150" data-w="360" data-h="330">
+    <div class="tb"><span class="ico">&#128465;</span><span class="t">Recycle Bin</span>
+      <span class="btns"><button data-min>_</button><button data-max>&#9633;</button><button data-close>&times;</button></span></div>
+    <div class="body" id="binBody"></div>
+    <div class="grip"></div>
+  </section>
+
   <!-- ---------------- PEOPLE ---------------- -->
   <section class="win" id="w-people" data-transient data-title="PEOPLE" data-icon="&#128101;"
            data-x="200" data-y="52" data-w="400" data-h="520">
@@ -2071,6 +2105,7 @@ body.dark .st-tab.on{background:linear-gradient(#1d6b3f,#0f4326);color:#eaffea}
 <script src="/notify.js"></script>
 <script src="/share.js"></script>
 <script src="/people.js"></script>
+<script src="/desktop.js"></script>
 <script src="/predict.js"></script>
 <script src="/live.js"></script>
 <script src="/react.js"></script>
