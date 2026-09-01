@@ -115,8 +115,16 @@ const StreamWindow = {
         this.root.innerHTML = `
           <div class="st-stage">
             ${this.playing
+              /* Sandboxed deliberately. This is third-party code running on our
+                 page, and an iframe WITHOUT a sandbox attribute may open popups
+                 and navigate the top frame — it could put a tab in front of a
+                 visitor that they never asked for, or move them off the site
+                 entirely. allow-scripts and allow-same-origin are what a video
+                 player genuinely needs; allow-popups and allow-top-navigation
+                 are deliberately absent. */
               ? `<iframe class="st-frame" src="https://player.kick.com/${encodeURIComponent(this.name)}?autoplay=true"
                    title="${esc(this.label)} on Kick"
+                   sandbox="allow-scripts allow-same-origin allow-presentation"
                    allow="autoplay; fullscreen; picture-in-picture" allowfullscreen
                    referrerpolicy="no-referrer"></iframe>`
               : `<button class="st-play" data-play>

@@ -12,6 +12,9 @@ const SB_URL = "https://omtnzapftxdtynqwoitc.supabase.co";
 const SB_KEY = "sb_publishable_h8IJNtbwrSABwwx5v30M5Q_E7kahAeT";
 
 let sb = null, me = null, myProfile = null, chatChannel = null, postStatus = null;
+let lastSeenId = 0;          // highest message id already on screen
+let chatPoll = null;         // fallback timer, see startChatPoll()
+let realtimeOK = false;      // whether the socket actually subscribed
 
 /* ---------- boot the client ---------- */
 async function initChat() {
@@ -179,6 +182,7 @@ function renderMessages(rows) {
     return;
   }
   box.innerHTML = rows.map(msgHTML).join("");
+  rows.forEach((r) => { if (r.id != null) lastSeenId = Math.max(lastSeenId, r.id); });
   wireMessageActions();
   box.scrollTop = box.scrollHeight;
 }
@@ -206,6 +210,11 @@ function msgHTML(m) {
 function appendMessage(m) {
   const box = $("#chatLog");
   if (!box) return;
+  // The same message can arrive twice: once optimistically when you send it,
+  // once from the realtime echo (and again from the poll). Ids are in the DOM,
+  // so the second arrival is simply dropped.
+  if (m.id != null && box.querySelector(`[data-mid="${m.id}"]`)) return;
+  if (m.id != null) lastSeenId = Math.max(lastSeenId, m.id);
   const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 60;
   if (box.querySelector("div[style]") && !box.querySelector(".msg")) box.innerHTML = "";
   box.insertAdjacentHTML("beforeend", msgHTML(m));
@@ -219,7 +228,15 @@ async function sendMessage() {
   if (!body) return;
   input.value = "";
 
-  const { error } = await sb.from("cheeto_messages").insert({ user_id: me.id, body });
+  // Ask for the row back so it can be shown immediately. Relying on the
+  // realtime echo to display your OWN message means that if the socket is
+  // down — or just slow — the message vanishes until you refresh, which reads
+  // as "it didn't send" and is exactly what a user reported.
+  const { data: row, error } = await sb
+    .from("cheeto_messages")
+    .insert({ user_id: me.id, body })
+    .select("id, body, created_at, user_id")
+    .single();
   if (error) {
     // Translate the database's refusal into something a human can act on.
     await refreshPostStatus();
@@ -231,6 +248,10 @@ async function sendMessage() {
     input.value = body;                       // never silently eat what they typed
     renderComposer();
     return;
+  }
+  if (row) {
+    appendMessage({ ...row, author: { handle: myProfile?.handle, is_admin: myProfile?.is_admin } });
+    lastSeenId = Math.max(lastSeenId, row.id);
   }
   await refreshPostStatus();
   renderComposer();
@@ -246,11 +267,40 @@ function subscribeRealtime() {
       async (payload) => {
         const row = payload.new;
         if (row.deleted_at) return;
+        realtimeOK = true;
         const { data } = await sb.from("cheeto_profiles")
           .select("handle, is_admin").eq("id", row.user_id).maybeSingle();
         appendMessage({ ...row, author: data || null });
       })
-    .subscribe();
+    .subscribe((status) => {
+      realtimeOK = status === "SUBSCRIBED";
+    });
+
+  startChatPoll();
+}
+
+/* A websocket is not a guarantee. It can fail to subscribe, be blocked by a
+   network, or drop silently — and when it does, a chatroom that only updates
+   over that socket looks broken to everyone in it. This poll is the floor:
+   cheap, only while the window is open, and it dedupes against whatever
+   realtime already delivered. If realtime is healthy this finds nothing. */
+function startChatPoll() {
+  if (chatPoll) return;
+  chatPoll = setInterval(async () => {
+    const w = document.getElementById("w-chat");
+    if (!sb || !w || w.hidden) return;                 // don't poll a closed window
+    if (document.visibilityState === "hidden") return;
+    try {
+      const { data, error } = await sb
+        .from("cheeto_messages")
+        .select("id, body, created_at, user_id, author:cheeto_profiles!cheeto_messages_user_id_fkey ( handle, is_admin )")
+        .is("deleted_at", null)
+        .gt("id", lastSeenId)
+        .order("id", { ascending: true })
+        .limit(50);
+      if (!error) (data || []).forEach(appendMessage);
+    } catch {}
+  }, 8000);
 }
 
 /* ---------- reporting + moderation ---------- */

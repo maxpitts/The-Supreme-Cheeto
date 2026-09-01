@@ -40,10 +40,15 @@ const Buddies = {
         sb.rpc("cheeto_status_feed", { lim: 40 }),
         sb.rpc("cheeto_get_top8", { who: me.id }),
       ]);
-      this.list = bl.error ? [] : (bl.data || []);
-      this.reqs = rq.error ? [] : (rq.data || []);
-      this.feed = fd.error ? [] : (fd.data || []);
-      this.top8 = t8.error ? [] : (t8.data || []);
+      // These must be arrays or paint() throws "this.list.filter is not a
+      // function" and takes the whole buddy list down. An RPC that errors, or
+      // returns a scalar because something upstream changed, should degrade to
+      // an empty list rather than a broken window.
+      const arr = (r) => (!r || r.error || !Array.isArray(r.data)) ? [] : r.data;
+      this.list = arr(bl);
+      this.reqs = arr(rq);
+      this.feed = arr(fd);
+      this.top8 = arr(t8);
       this.loaded = Date.now();
       this.chime();
     } catch {}
