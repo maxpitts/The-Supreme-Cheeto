@@ -303,7 +303,8 @@ const Buddies = {
     if (!r) return;
     if (myProfile) { myProfile.aim_state = state; myProfile.aim_text = msg || null; }
     // Invisible has to actually leave the presence roster, not just look away.
-    if (typeof Live === "object" && Live.trackSelf) Live.trackSelf();
+    // Invisible changes what the heartbeat publishes about you, so push it now.
+    if (typeof Live === "object" && Live.beat) Live.beat();
     Cheetip?.react?.("away", { state });
     this.load(true);
   },

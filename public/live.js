@@ -2,20 +2,23 @@
    WHO'S ONLINE — live visitor count, all-time record, and a hit counter
    Loads after chat.js and shares its Supabase client.
 
-   The live number is real: every open tab joins a Supabase Realtime presence
-   channel and the roster size IS the count. Nobody is estimated, nothing is
-   simulated, and when the connection drops the panel says so rather than
-   freezing on a stale figure and pretending.
+   The live number is real: every open tab pings the database every 30 seconds
+   and the count is the number of tabs that pinged in the last 75. Nobody is
+   estimated, nothing is simulated, and when the pings stop landing the panel
+   says so rather than freezing on a stale figure and pretending.
+
+   This used to use Supabase Realtime Presence, which does not work on this
+   project — see the note above join(). The rewrite is not a downgrade: the
+   heartbeat is queryable, so the buddy list and the people directory can ask
+   "who is online" directly instead of inferring it from a socket roster.
 
    Accuracy notes, because a counter that lies is worse than no counter:
-     - A backgrounded phone keeps its socket open for a while, so it would
-       linger in everyone else's roster as a ghost. We untrack on hide and
-       re-track on show, which is the single biggest source of over-counting.
-     - If the socket is not actually open we report "not connected" instead of
-       showing the last number we happened to see.
-     - The record is written only when the current count EXCEEDS it. Everything
-       else is a wasted round trip — with N people in the room, the old guard
-       fired N writes on every join and leave and changed nothing.
+     - A backgrounded phone is not a visitor. We stop pinging on hide and
+       resume on show, which is the single biggest source of over-counting.
+     - A closing tab sends one last keepalive request to remove itself, so the
+       number drops immediately instead of at the end of the window.
+     - If the pings stop landing we report "not connected" instead of showing
+       the last number we happened to see.
 
    The all-time record can only ever be raised, never lowered, and implausible
    values are refused server-side. It's still a novelty counter on a joke site
@@ -23,7 +26,6 @@
    ===================================================================== */
 
 const Live = {
-  channel: null,
   count: 0,
   peak: null,
   peakAt: null,
@@ -31,7 +33,7 @@ const Live = {
   connected: false,
   tracked: false,
   brokeRecord: false,      // only true if the record moved while you watched
-  reportTimer: null,
+  timer: null,
   watchdog: null,
   lastSync: 0,
 
@@ -68,117 +70,124 @@ const Live = {
     } catch {}
   },
 
-  /* ---------------- presence ---------------- */
+  /* ---------------- who's here ----------------
+     Not Realtime Presence. Presence is broken on this project — a channel
+     reports SUBSCRIBED, track() returns "ok", and presenceState() stays empty
+     forever, on public and private channels alike. Because the failure is
+     indistinguishable from success from the client's side, this counter showed
+     nothing to anyone from launch until it was finally caught.
+
+     A heartbeat has none of that ambiguity: the ping either returns a number
+     or it throws. It costs one small request every 30 seconds per open tab. */
+
+  KEY: "cheeto_tab",
+
+  tabKey() {
+    // Per tab, not per person: two windows are two visitors, which is what a
+    // 90s "users online" counter always meant. sessionStorage is per-tab, so
+    // this survives a refresh but not a new window — exactly right.
+    try {
+      let k = sessionStorage.getItem(this.KEY);
+      if (!k) {
+        k = "t" + Math.random().toString(36).slice(2, 12) + Date.now().toString(36);
+        sessionStorage.setItem(this.KEY, k);
+      }
+      return k;
+    } catch {
+      // Private mode with storage blocked: fall back to a per-load key. The
+      // count runs slightly high for these visitors rather than breaking.
+      if (!this._k) this._k = "t" + Math.random().toString(36).slice(2, 12) + Date.now().toString(36);
+      return this._k;
+    }
+  },
+
   join() {
-    if (this.channel) return;
-    // A random key per tab: two tabs from one person legitimately count as two
-    // open windows, which is what a 90s "users online" counter always meant.
-    const key = "v_" + Math.random().toString(36).slice(2, 11);
+    this.beat();
+    clearInterval(this.timer);
+    this.timer = setInterval(() => this.beat(), 30000);
+  },
 
-    this.channel = sb.channel("cheeto-online", { config: { presence: { key } } });
-
-    const sync = () => {
-      this.count = Object.keys(this.channel.presenceState() || {}).length;
+  async beat() {
+    // A hidden tab is not a visitor. Stop counting it rather than leaving a
+    // phantom in everyone else's number.
+    if (document.visibilityState === "hidden") return;
+    if (!sb) return;
+    try {
+      const { data, error } = await sb.rpc("cheeto_heartbeat", { tab: this.tabKey() });
+      if (error) throw error;
+      this.count = Number(data?.online) || 0;
+      if (data?.peak_online != null) {
+        if (this.peak != null && data.peak_online > this.peak) {
+          this.brokeRecord = true;
+          Cheetip?.react?.("record", { n: data.peak_online });
+        }
+        this.peak = data.peak_online;
+        this.peakAt = data.peak_at;
+      }
       this.connected = true;
+      this.tracked = true;
       this.lastSync = Date.now();
       this.paint();
-      this.reportSoon();
-      // The buddy list keys its online dots off this.
+      this.refreshUids();
+    } catch {
+      // One failed ping is a blip; a run of them means say so rather than
+      // leaving a number on screen that stopped being true.
+      if (Date.now() - this.lastSync > 95000) { this.connected = false; this.paint(); }
+    }
+  },
+
+  /* Which signed-in users are on the site right now, for the buddy dots and
+     the people directory. Cached between beats so nothing queries per-row. */
+  _uids: new Set(),
+
+  async refreshUids() {
+    if (!sb) return;
+    try {
+      const { data, error } = await sb.rpc("cheeto_online_uids");
+      if (error) throw error;
+      this._uids = new Set(Array.isArray(data) ? data : []);
       document.dispatchEvent(new CustomEvent("cheeto:presence"));
-    };
-
-    this.channel
-      .on("presence", { event: "sync" }, sync)
-      .on("presence", { event: "join" }, sync)
-      .on("presence", { event: "leave" }, sync)
-      .subscribe(async (status) => {
-        if (status === "SUBSCRIBED") {
-          this.connected = true;
-          // Fires again after an automatic reconnect, which is what re-adds us
-          // to the roster — without this a dropped socket removes you from
-          // everyone else's count while you still see them.
-          await this.trackSelf();
-        } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
-          this.connected = false;
-          this.tracked = false;
-          this.paint();
-        }
-      });
-  },
-
-  async trackSelf() {
-    if (!this.channel) return;
-    try {
-      // The buddy list needs to know WHICH friends are on, so a signed-in tab
-      // publishes its user id. Presence state is readable by everyone on the
-      // channel, so this is genuinely public — which is exactly why Invisible
-      // withholds it rather than merely hiding a dot in the interface.
-      const invisible = typeof myProfile === "object" && myProfile?.aim_state === "invisible";
-      const uid = (typeof me !== "undefined" && me && !invisible) ? me.id : null;
-      await this.channel.track({ at: Date.now(), signed_in: Boolean(uid), uid });
-      this.tracked = true;
     } catch {}
   },
 
-  /* Which signed-in, non-invisible users are on the site right now. */
-  onlineUids() {
-    const out = new Set();
-    if (!this.channel || !this.connected) return out;
-    try {
-      Object.values(this.channel.presenceState() || {}).forEach((arr) => {
-        (arr || []).forEach((p) => { if (p?.uid) out.add(p.uid); });
-      });
-    } catch {}
-    return out;
-  },
+  onlineUids() { return this._uids; },
 
   async untrackSelf() {
-    if (!this.channel || !this.tracked) return;
-    try { await this.channel.untrack(); this.tracked = false; } catch {}
+    this.tracked = false;
+    if (!sb) return;
+    try { await sb.rpc("cheeto_heartbeat_stop", { tab: this.tabKey() }); } catch {}
   },
 
-  /* A backgrounded tab keeps its socket alive long enough to sit in everyone
-     else's roster as a phantom visitor. Leaving on hide and rejoining on show
-     is what keeps the number honest. */
   watch() {
     document.addEventListener("visibilitychange", () => {
       if (document.visibilityState === "hidden") this.untrackSelf();
-      else if (this.connected) this.trackSelf();
+      else this.beat();
     });
-    window.addEventListener("pagehide", () => { this.untrackSelf(); });
+    /* A closing tab gets one last word so the count drops now rather than in
+       seventy-five seconds. keepalive is what lets the request outlive the
+       page; a plain fetch here is cancelled before it leaves. */
+    window.addEventListener("pagehide", () => {
+      try {
+        const body = JSON.stringify({ tab: this.tabKey() });
+        fetch(SB_URL + "/rest/v1/rpc/cheeto_heartbeat_stop", {
+          method: "POST", keepalive: true,
+          headers: { "content-type": "application/json", apikey: SB_KEY, authorization: "Bearer " + SB_KEY },
+          body,
+        });
+      } catch {}
+    });
 
-    // If the socket quietly dies, no status callback necessarily fires. Say
-    // "not connected" rather than showing a number that stopped being true.
     clearInterval(this.watchdog);
     this.watchdog = setInterval(() => {
-      const sock = sb?.realtime?.isConnected?.();
-      const alive = sock === undefined ? this.connected : sock;
-      if (this.connected && !alive) { this.connected = false; this.paint(); }
+      if (this.connected && Date.now() - this.lastSync > 95000) {
+        this.connected = false;
+        this.paint();
+      }
     }, 15000);
   },
 
-  /* Debounced, jittered, and only when it can actually change something.
-     A busy room fires sync repeatedly and every client sees the same roster,
-     so without the exceeds-check they all write the same no-op simultaneously. */
-  reportSoon() {
-    if (this.peak != null && this.count <= this.peak) return;
-    clearTimeout(this.reportTimer);
-    this.reportTimer = setTimeout(async () => {
-      if (!sb || this.count <= 0) return;
-      if (this.peak != null && this.count <= this.peak) return;
-      try {
-        const { data, error } = await sb.rpc("cheeto_report_online", { n: this.count });
-        if (!error && data) {
-          if (this.peak != null && data.peak_online > this.peak) {
-            this.brokeRecord = true;
-            Cheetip?.react?.("record", { n: data.peak_online });
-          }
-          this.peak = data.peak_online; this.peakAt = data.peak_at;
-          this.paint();
-        }
-      } catch {}
-    }, 2500 + Math.random() * 2500);
-  },
+  /* reportSoon() is gone: cheeto_heartbeat maintains the record itself, in
+     the same statement that counts the room. */
 
   /* ---------------- rendering ---------------- */
   paint() {
@@ -236,11 +245,10 @@ const Live = {
   },
 };
 
-/* Presence carries whether the tab is signed in, so re-track on sign-in and
-   sign-out to keep the roster honest. */
-document.addEventListener("cheeto:auth", () => {
-  if (Live.connected && Live.tracked) Live.trackSelf();
-});
+/* The heartbeat carries who you are, so a sign-in or sign-out has to be
+   reported immediately — otherwise your buddies' dots lag by up to 30 seconds
+   behind you actually arriving. */
+document.addEventListener("cheeto:auth", () => { Live.beat(); });
 
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", () => Live.init());
