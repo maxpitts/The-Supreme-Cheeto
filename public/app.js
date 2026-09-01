@@ -693,6 +693,9 @@ const Odo = {
     if (!this.el) return;
     if (this.chars.length !== str.length) {
       this.el.innerHTML = "";
+      // The stylesheet sizes the digits from this, so the clock always fits the
+      // window it is in — and keeps fitting when the number gains a character.
+      this.el.style.setProperty("--odo-n", str.length);
       this.chars = [...str].map((ch) => {
         if (/\d/.test(ch)) {
           const d = document.createElement("span");

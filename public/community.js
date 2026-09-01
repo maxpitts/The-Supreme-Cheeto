@@ -117,6 +117,64 @@ function ownAvatarPath(url) {
   return m ? decodeURIComponent(m[1].split("?")[0]) : null;
 }
 
+/* =====================================================================
+   PAGE THEMES
+   The list is duplicated in a CHECK constraint in Postgres. That is the
+   point: this array decides what the picker OFFERS, the constraint decides
+   what the database ACCEPTS, and a client that skips this file entirely still
+   cannot store a theme that doesn't exist.
+   ===================================================================== */
+const THEMES = [
+  ["classic",   "Classic"],
+  ["tiled",     "Tiled"],
+  ["starfield", "Starfield"],
+  ["glitter",   "Glitter"],
+  ["vaporwave", "Vaporwave"],
+  ["matrix",    "Matrix"],
+  ["sunset",    "Sunset"],
+  ["cheeto",    "Cheeto"],
+  ["notepad",   "Notepad"],
+  ["bsod",      "Blue screen"],
+];
+
+let pickedTheme = "classic";
+
+function renderThemePicker(current) {
+  const box = $("#pfThemes");
+  if (!box) return;
+  pickedTheme = THEMES.some((t) => t[0] === current) ? current : "classic";
+
+  box.innerHTML = THEMES.map(([id, label]) => `
+    <button type="button" class="th-sw${pickedTheme === id ? " on" : ""}" data-theme="${id}"
+            title="${esc(label)}" aria-pressed="${pickedTheme === id}">
+      <i data-utheme-swatch="${id}"></i><span>${esc(label)}</span>
+    </button>`).join("");
+
+  // The swatch shows the actual theme background rather than a guess at it,
+  // by borrowing the same rules the profile window uses.
+  box.querySelectorAll("[data-utheme-swatch]").forEach((el) => {
+    const probe = document.createElement("div");
+    probe.className = "body";
+    probe.dataset.utheme = el.dataset.utheme_swatch || el.getAttribute("data-utheme-swatch");
+    probe.style.cssText = "position:absolute;left:-9999px;width:10px;height:10px";
+    const host = document.getElementById("w-user") || document.body;
+    host.appendChild(probe);
+    const cs = getComputedStyle(probe);
+    el.style.background = cs.backgroundColor;
+    el.style.backgroundImage = cs.backgroundImage;
+    el.style.backgroundSize = cs.backgroundSize;
+    probe.remove();
+  });
+
+  box.querySelectorAll("[data-theme]").forEach((b) =>
+    b.addEventListener("click", () => {
+      pickedTheme = b.dataset.theme;
+      renderThemePicker(pickedTheme);
+      const m = $("#pfMsg");
+      if (m) m.textContent = "Press Save to keep it.";
+    }));
+}
+
 /* ---------------------------------------------------------------- PROFILE */
 async function openProfile() {
   if (!me) { WM.open("w-chat"); return; }
@@ -180,11 +238,26 @@ async function renderProfileEditor() {
       Nothing is uploaded until you press Save.</p>
     </fieldset>
 
+    <fieldset><legend>&#127912; Page theme</legend>
+      <div class="th-grid" id="pfThemes"></div>
+      <p class="note">Ten presets. There's no box for your own CSS on purpose &mdash;
+      a stylesheet somebody else writes runs on the page every visitor loads,
+      which is a way to fake a login box, not a way to decorate.</p>
+    </fieldset>
+
+    <fieldset><legend>Mood</legend>
+      <input class="i95" id="pfMood" maxlength="40" value="${esc(p?.mood || "")}"
+             placeholder="cranky, caffeinated, doomscrolling…">
+      <p class="note">Shown under your name. 40 characters.</p>
+    </fieldset>
+
     <fieldset><legend>Your wall</legend>
       <label class="chk"><input type="checkbox" id="pfWall" ${p?.wall_closed ? "" : "checked"}>
         Let people leave comments on my profile</label>
       <p class="note">Unticking this hides the comment box on your page. Comments already
       there stay, and you can delete any of them whenever you like.</p>
+      <label class="chk" style="margin-top:7px"><input type="checkbox" id="pfHideViews"
+        ${p?.views_hidden ? "checked" : ""}> Hide my profile view count from other people</label>
       <button class="b95 tiny" id="pfViewWall" type="button" style="margin-top:6px">Read my wall</button>
       <span class="note" id="pfWallCount" style="margin-left:7px"></span>
     </fieldset>
@@ -241,6 +314,7 @@ async function renderProfileEditor() {
   // which is how the Save button quietly stopped working.
   $("#profPfp")?.addEventListener("error", () => { $("#profPfp").src = "/logo.svg"; });
 
+  renderThemePicker(p?.theme || "classic");
   WM.fit?.("w-profile");
   wireAvatar();
   // Both go to the same place. Two buttons because "how does my page look"
@@ -367,6 +441,9 @@ async function saveProfile() {
     display_name: $("#pfName").value.trim() || null,
     bio: $("#pfBio").value.trim() || null,
     avatar_url: avatar,
+    theme: pickedTheme,
+    mood: $("#pfMood")?.value.trim() || null,
+    views_hidden: Boolean($("#pfHideViews")?.checked),
     wall_closed: !$("#pfWall")?.checked,
     links,
   }).eq("id", me.id).select().maybeSingle();

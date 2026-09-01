@@ -153,12 +153,16 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible,
   {outline:2px dotted #000;outline-offset:1px}
 
 /* ============================== READOUTS ============================== */
+/* Sized from the WINDOW, never the screen. These used to be clamp(...,3.6vw,...),
+   so a 400px-wide window on a 1920px monitor was told to draw an eighteen-
+   character number at 30px, which does not fit in 400px. It did not overflow
+   visibly — see .odo-d for why — it silently crushed the digits together. */
 .odo{font-family:"Courier New",monospace;font-weight:bold;background:#000;color:#0f0;
-  text-align:center;padding:9px 5px;letter-spacing:1px;font-size:clamp(15px,3.6vw,30px);
+  text-align:center;padding:9px 5px;letter-spacing:1px;font-size:clamp(13px,7cqw,30px);
   border:2px solid;border-color:var(--gray-d) #fff #fff var(--gray-d);
   text-shadow:0 0 8px rgba(0,255,0,.55);overflow-x:auto;font-variant-numeric:tabular-nums}
 .odo.amber{color:#ffb000;text-shadow:0 0 8px rgba(255,176,0,.55)}
-.odo.small{font-size:clamp(14px,2.4vw,20px)}
+.odo.small{font-size:clamp(12px,5.5cqw,20px)}
 .kv{display:flex;justify-content:space-between;gap:10px;padding:3px 0;
   border-bottom:1px dotted #9a9a9a;font-size:12px}
 .kv:last-child{border-bottom:0}
@@ -610,7 +614,9 @@ body.dark .sol-bar{border-top-color:var(--gray-l)}
   .card{width:44px;height:60px}
   .card .c-i b{font-size:12px}.card .c-i i{font-size:10px}.card .c-mid{font-size:22px}
   .cell{width:26px;height:26px;font-size:14px;line-height:26px}
-  .odo{font-size:clamp(15px,5.2vw,26px)}
+  /* .odo is deliberately NOT overridden here any more: it sizes off the window
+     via cqw, which is already correct on a phone and stays correct when the
+     window is narrower than the screen — which a media query cannot see. */
   .win .body{padding:11px}
   #chatLog{height:46vh}
   .sol-slot{margin-top:-40px}
@@ -688,10 +694,34 @@ body.mobile .urow-acts{width:100%}
 /* ---------- mechanical odometer ---------- */
 .odo-mech{display:flex;justify-content:center;align-items:center;gap:1px;
   font-family:"Courier New",monospace;font-weight:bold;line-height:1}
+/* "safe" keeps the first digit reachable if the row ever does overflow;
+   plain centring pushes the overflow off BOTH edges, where you can't scroll to it. */
+.odo-mech{justify-content:safe center}
+
+/* The clock sizes itself from the number it is actually holding, not from a
+   constant someone guessed. Odo.render publishes the character count as
+   --odo-n; the width each character needs is known (.62em cell + a 1px gap),
+   and .68 rather than .62 leaves about 10% headroom, because the font that
+   renders this on Windows is real Courier New and is wider than the fallback
+   this was measured against.
+
+   Two things fall out of it for free: a narrow window shrinks the digits
+   instead of crushing them, and the day the debt crosses $100 trillion and the
+   string gains a character, the clock quietly gets smaller instead of breaking. */
+.odo-mech{font-size:clamp(12px,
+  calc((100cqw - 20px - (var(--odo-n,19) - 1) * 1px) / (var(--odo-n,19) * .70)),
+  30px)}
 .odo-d{display:inline-block;height:1.15em;overflow:hidden;width:.62em;position:relative}
 .odo-strip{display:block;transition:transform .28s cubic-bezier(.3,1.4,.5,1)}
 .odo-strip i{display:block;height:1.15em;font-style:normal;text-align:center}
 .odo-sep{opacity:.75}
+/* Flex items shrink by default. That is what put the digits on top of each
+   other: when the row was too wide, every cell narrowed below the .62em the
+   glyph needs, and because the cells shrank instead of overflowing, scrollWidth
+   stayed equal to clientWidth — so overflow-x:auto never fired and nothing,
+   human or test, could see that anything was wrong. Refuse to shrink and the
+   failure becomes a scrollbar, which is honest. */
+.odo-d,.odo-sep{flex:0 0 auto}
 
 #startMenu{width:auto;min-width:250px}
 #startMenu ul{max-height:min(74vh,560px);overflow-y:auto}
@@ -717,8 +747,10 @@ body.dark #trayTheme{background:var(--gray);border-color:var(--gray-l) #000 #000
   .kv b{font-size:12px}
   .rate,.buy,.stat{flex-wrap:wrap}
   fieldset{padding:6px}
-  .odo{font-size:clamp(13px,7cqw,22px)}
-  .odo.small{font-size:clamp(12px,5.5cqw,17px)}
+  /* No .odo rule here either. It used to cap at 22px, and the moment the
+     window crossed 360px the base rule took over at 30px — an 8px jump at
+     exactly the width where the box was tightest. That step WAS the bug.
+     One container-relative rule now covers every width continuously. */
   .compose{flex-direction:column}
   .compose button{width:100%}
   .link-row{flex-wrap:wrap}
@@ -788,6 +820,16 @@ body.mobile .ad-flash{font-size:10px;padding:3px 7px}
 .ad-stax .ad-head{color:#5fe0ff;text-shadow:2px 2px 0 #032033}
 .ad-tg .ad-banner{background:linear-gradient(135deg,#0d1a0d,#12400f 55%,#3fbf3f);color:#eaffea}
 .ad-tg .ad-head{color:#8dff8d;text-shadow:2px 2px 0 #052605}
+/* The two Kick channels get distinct skins so they read as two advertisers
+   rather than one banner with a swapped name. Kick green for one, a hotter
+   contrast for the other. */
+.ad-kick .ad-banner{background:linear-gradient(135deg,#0a1400,#183d00 55%,#53fc18);color:#f2ffe6}
+.ad-kick .ad-head{color:#53fc18;text-shadow:2px 2px 0 #06180a;letter-spacing:1px}
+.ad-kick2 .ad-banner{background:linear-gradient(135deg,#1a0033,#3d0a5c 55%,#53fc18);color:#f7eaff}
+.ad-kick2 .ad-head{color:#c8ff5e;text-shadow:2px 2px 0 #1a0033;letter-spacing:1px}
+.ad-onair .ad-flash{background:#c00;color:#fff;border-color:#fff}
+.ad-onair .ad-banner{box-shadow:inset 0 0 0 2px #53fc18}
+
 .ad-house .ad-banner{background:repeating-linear-gradient(45deg,#ffcc00 0 14px,#111 14px 28px);color:#fff}
 .ad-house .ad-head{background:#111;display:inline-block;padding:2px 10px;color:#ffcc00}
 .ad-house .ad-sub{background:#111;display:inline-block;padding:2px 8px;margin-top:5px}
@@ -1186,6 +1228,62 @@ body.dark .wc-step.done .wc-tick{color:#5fd35f}
 .si-msg{font-size:11px;margin-top:7px;min-height:14px;color:var(--note-ink)}
 .si-bad{color:#900;font-weight:bold}
 body.dark .si-bad{color:#ff8a8a}
+
+/* ===================== PROFILE THEMES =====================
+   MySpace's real legacy was letting people wreck their own page. This is that
+   joke without the injection surface: ten presets, all drawn with gradients
+   and repeating-linear-gradient so nothing loads from a third party and no
+   user string ever reaches a stylesheet. Every theme sets BOTH a background
+   and a foreground — a background-only theme is how you get white text on
+   white somewhere you didn't check. */
+#w-user .body[data-utheme]{transition:background .2s}
+#w-user .body[data-utheme] fieldset{background:rgba(255,255,255,.72);border-color:rgba(0,0,0,.3)}
+#w-user .body[data-utheme] .up-bio,
+#w-user .body[data-utheme] .up-wt{color:inherit}
+#w-user .body[data-utheme="classic"]{background:var(--gray);color:var(--ink)}
+
+#w-user .body[data-utheme="tiled"]{color:#1a1a1a;
+  background:#c9c2b6 repeating-linear-gradient(45deg,rgba(0,0,0,.06) 0 10px,transparent 10px 20px)}
+
+#w-user .body[data-utheme="starfield"]{color:#e8e8f2;background:#0a0a1e;
+  background-image:radial-gradient(1px 1px at 20% 30%,#fff,transparent),
+    radial-gradient(1px 1px at 70% 60%,#fff,transparent),
+    radial-gradient(2px 2px at 40% 80%,#cfe,transparent),
+    radial-gradient(1px 1px at 85% 20%,#fff,transparent)}
+#w-user .body[data-utheme="starfield"] fieldset{background:rgba(10,10,40,.72);color:#e8e8f2}
+
+#w-user .body[data-utheme="glitter"]{color:#4a0b33;
+  background:#ffd9ef repeating-linear-gradient(60deg,rgba(255,255,255,.6) 0 3px,transparent 3px 9px)}
+
+#w-user .body[data-utheme="vaporwave"]{color:#20003a;
+  background:linear-gradient(160deg,#ff71ce,#b967ff 45%,#01cdfe)}
+
+#w-user .body[data-utheme="matrix"]{color:#4dff88;background:#020602;
+  background-image:repeating-linear-gradient(0deg,rgba(0,255,90,.09) 0 2px,transparent 2px 4px)}
+#w-user .body[data-utheme="matrix"] fieldset{background:rgba(0,20,4,.8);color:#4dff88}
+
+#w-user .body[data-utheme="sunset"]{color:#3a1200;
+  background:linear-gradient(#ff9d3f,#ff5f6d 60%,#7b2d8e)}
+
+#w-user .body[data-utheme="cheeto"]{color:#3a1c00;
+  background:#ff8a1f repeating-linear-gradient(135deg,rgba(255,255,255,.18) 0 8px,transparent 8px 16px)}
+
+#w-user .body[data-utheme="notepad"]{color:#12224a;background:#fffef2;
+  background-image:linear-gradient(#bcd 1px,transparent 1px);background-size:100% 22px}
+#w-user .body[data-utheme="notepad"] fieldset{background:rgba(255,255,255,.8)}
+
+#w-user .body[data-utheme="bsod"]{color:#e9edff;background:#0000aa;font-family:"Courier New",monospace}
+#w-user .body[data-utheme="bsod"] fieldset{background:rgba(0,0,140,.75);color:#e9edff}
+
+.up-mood{font-size:11px;margin-top:3px;font-style:italic}
+.up-views{font-size:10px;letter-spacing:.5px;text-transform:uppercase;opacity:.85}
+.th-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(78px,1fr));gap:6px}
+.th-sw{padding:0;border:2px solid;border-color:var(--hi) var(--gray-d) var(--gray-d) var(--hi);
+  background:var(--gray);cursor:pointer;overflow:hidden}
+.th-sw.on{border-color:var(--gray-d) var(--hi) var(--hi) var(--gray-d);outline:2px solid var(--navy)}
+.th-sw i{display:block;height:34px}
+.th-sw span{display:block;font-size:9px;padding:2px;letter-spacing:.4px;text-transform:uppercase;
+  background:var(--gray);color:var(--ink)}
 
 /* ===================== SOMEBODY ELSE'S PROFILE ===================== */
 .linky{background:none;border:0;padding:0;font:inherit;font-weight:bold;color:inherit;

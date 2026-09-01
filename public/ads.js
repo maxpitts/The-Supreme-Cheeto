@@ -40,6 +40,35 @@ const AD_SLOTS = [
     cta: "VISIT NOW",
     skin: "tg",
   },
+  /* The two streams get their OWN slots rather than one shared "watch the
+     boys on Kick" banner. They're different channels with different audiences,
+     they don't always go live together, and a combined ad sends half the
+     clicks to whoever isn't streaming. Separate slots also means each can be
+     weighted, paused or rewritten without touching the other. */
+  {
+    id: "bobby",
+    weight: 2,
+    advertiser: "BOBBYjayyy",
+    url: "https://kick.com/bobbyjayyy",
+    headline: "BOBBYjayyy",
+    sub: "Live on Kick. Allegedly trading.",
+    body: "Charts, takes, and the occasional catastrophic entry &mdash; broadcast to an audience that heckles in real time.",
+    cta: "WATCH ON KICK",
+    live: "bobbyjayyy",
+    skin: "kick",
+  },
+  {
+    id: "benp",
+    weight: 2,
+    advertiser: "benp90",
+    url: "https://kick.com/benp90",
+    headline: "benp90",
+    sub: "Also live. Also allegedly trading.",
+    body: "The other half of the stream. Same market, different opinions, louder reactions.",
+    cta: "WATCH ON KICK",
+    live: "benp90",
+    skin: "kick2",
+  },
   {
     id: "house",
     weight: 1,
@@ -97,7 +126,13 @@ const Popups = {
   /* ---------------- ads ---------------- */
   pickSlot() {
     const pool = [];
-    AD_SLOTS.forEach((s) => { for (let i = 0; i < s.weight; i++) pool.push(s); });
+    AD_SLOTS.forEach((s) => {
+      // A stream that is actually on air right now is worth more than one
+      // that isn't — an ad for an offline channel sends people to a VOD page.
+      const onAir = s.live && typeof KickLive === "object" && KickLive.isLive?.(s.live);
+      const w = onAir ? s.weight * 3 : s.weight;
+      for (let i = 0; i < w; i++) pool.push(s);
+    });
     return pool[Math.floor(Math.random() * pool.length)];
   },
 
@@ -110,21 +145,39 @@ const Popups = {
     // prefers-reduced-motion in CSS — a badge that strobes at someone who has
     // asked their OS for less motion is a genuine accessibility problem, not
     // a stylistic one.
-    const flash = s.flash
-      ? `<span class="ad-flash" role="note">${s.flash}</span>` : "";
+    /* A stream ad written while the stream is ON gets the real title and the
+       real viewer count from Kick's own endpoint — the same source the stream
+       windows use. Nothing here is invented; when the channel is offline the
+       ad says so rather than implying otherwise. */
+    const info = s.live && typeof KickLive === "object" ? KickLive.info?.(s.live) : null;
+    const onAir = Boolean(info?.live);
+
+    const flash = onAir
+      ? `<span class="ad-flash" role="note">&#9679; LIVE NOW</span>`
+      : (s.flash ? `<span class="ad-flash" role="note">${s.flash}</span>` : "");
+
+    const sub = onAir && info.title ? esc(info.title) : s.sub;
+    const body = onAir
+      ? `Streaming right now${info.viewers != null ? ` to ${info.viewers} ${info.viewers === 1 ? "person" : "people"}` : ""}. ${s.body}`
+      : s.body;
+    const cta = onAir ? "WATCH LIVE" : s.cta;
+    const link2 = s.url
+      ? `<a class="ad-cta" href="${esc(s.url)}" target="_blank" rel="noopener sponsored">${cta} &raquo;</a>`
+      : link;
+
     return {
       title: "Advertisement",
       navy: false,
       body: `
-        <div class="ad ad-${s.skin}">
+        <div class="ad ad-${s.skin}${onAir ? " ad-onair" : ""}">
           <div class="ad-banner">
             ${flash}
             <div class="ad-head">${s.headline}</div>
-            <div class="ad-sub">${s.sub}</div>
+            <div class="ad-sub">${sub}</div>
             <span class="ad-shine" aria-hidden="true"></span>
           </div>
-          <p class="ad-body">${s.body}</p>
-          <div class="ad-foot">${link}
+          <p class="ad-body">${body}</p>
+          <div class="ad-foot">${link2}
             <span class="ad-tag">SPONSORED &middot; ${s.advertiser}</span></div>
         </div>`,
     };

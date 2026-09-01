@@ -69,6 +69,16 @@ const Profile = {
       ]);
       if (prof.error) throw prof.error;
       this.data = prof.data;
+      // Counted server-side: your own page doesn't count, refreshing doesn't
+      // inflate it, and signed-out visitors aren't counted at all.
+      if (this.data?.ok !== false && !this.data?.suspended) {
+        sb.rpc("cheeto_view_profile", { who: this.who })
+          .then(({ data }) => {
+            if (data == null || this.data?.views == null) return;
+            this.data.views = data;
+          })
+          .catch(() => {});
+      }
       this.wall = (wall.error || !Array.isArray(wall.data)) ? [] : wall.data;
     } catch (err) {
       const box = document.getElementById("userBody");
@@ -120,6 +130,10 @@ const Profile = {
     const s = p.stats || {};
     const links = Array.isArray(p.links) ? p.links : [];
 
+    // The theme name is whitelisted in Postgres, so this can only ever be one
+    // of ten known strings — it is a class selector, never injected CSS.
+    box.dataset.utheme = /^[a-z]+$/.test(p.theme || "") ? p.theme : "classic";
+
     box.innerHTML = `
       <div class="up-head">
         <img class="up-pfp" src="${esc(p.avatar_url || "/logo.svg")}" alt=""
@@ -129,8 +143,10 @@ const Profile = {
           <div class="up-handle">@${esc(p.handle)}</div>
           ${aim ? `<div class="up-aim">${aim[0]} ${aim[1]}${
             p.aim_text ? ` &mdash; <i>${esc(p.aim_text)}</i>` : ""}</div>` : ""}
+          ${p.mood ? `<div class="up-mood">&#128173; currently ${esc(p.mood)}</div>` : ""}
           <div class="up-meta">Member since ${esc(joined)} &middot;
-            ${p.friend_count} friend${p.friend_count === 1 ? "" : "s"}</div>
+            ${p.friend_count} friend${p.friend_count === 1 ? "" : "s"}${
+            p.views != null ? ` &middot; <span class="up-views">${p.views} profile view${p.views === 1 ? "" : "s"}</span>` : ""}</div>
         </div>
       </div>
 
