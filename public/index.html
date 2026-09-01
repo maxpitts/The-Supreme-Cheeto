@@ -1091,6 +1091,34 @@ body.dark .gs-off.good{color:#5fd35f}
 .gs-streak{margin-left:auto;font-weight:bold}
 .gs-rank{font-weight:bold}
 
+.admimg.bad{opacity:.85}
+.admimg-bad{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+  width:100%;aspect-ratio:1;background:var(--field);color:var(--note-ink);font-size:20px;
+  border:2px dashed var(--gray-d)}
+.admimg-bad span{font-size:10px;letter-spacing:.5px;text-transform:uppercase}
+
+/* ===================== NOTIFICATIONS ===================== */
+#trayNotif{flex:0 0 auto;font:inherit;font-size:12px;padding:2px 6px;cursor:pointer;
+  display:flex;align-items:center;gap:3px;background:none;border:0;color:inherit;min-height:24px}
+#trayNotif.has{font-weight:bold}
+.tn-n{display:inline-grid;place-items:center;min-width:15px;height:15px;padding:0 3px;
+  background:#c00;color:#fff;font-size:10px;font-weight:bold;border-radius:8px;line-height:1}
+.nt-list{display:flex;flex-direction:column}
+.nt{display:flex;gap:7px;align-items:flex-start;padding:7px 5px;border-bottom:1px solid var(--gray-d)}
+.nt.new{background:var(--field);color:var(--field-ink)}
+.nt-i{font-size:14px;flex:none;width:18px;text-align:center}
+.nt-av{border:1px solid var(--gray-d);object-fit:cover;flex:none}
+.nt-b{flex:1;min-width:0;font-size:12px;line-height:1.45}
+.nt-p{color:var(--note-ink);font-size:11px;word-break:break-word}
+.nt-w{font-size:9px;letter-spacing:.5px;text-transform:uppercase;color:var(--note-ink);margin-top:2px}
+.nt-a{flex:none}
+.nt-empty{text-align:center;padding:16px 10px}
+.nt-empty-i{font-size:34px;line-height:1}
+.nt-alerts{margin-top:10px;padding:8px;background:var(--field);color:var(--field-ink);
+  border:1px solid;border-color:var(--gray-d) var(--hi) var(--hi) var(--gray-d)}
+.nt-alerts b{display:block;font-size:12px;margin-bottom:3px}
+.nt-alerts .note{display:block;margin:0 0 6px}
+
 /* ===================== SIGN IN ===================== */
 .si{font-size:12px}
 .si-lead{margin:0 0 10px;font-size:12px;line-height:1.5}
@@ -1787,6 +1815,15 @@ body.dark .st-tab.on{background:linear-gradient(#1d6b3f,#0f4326);color:#eaffea}
   </section>
 
   <!-- ---------------- BUDDY LIST ---------------- -->
+  <!-- ---------------- NOTIFICATIONS ---------------- -->
+  <section class="win" id="w-notif" data-transient data-title="MESSAGES" data-icon="&#128172;"
+           data-x="330" data-y="70" data-w="420" data-h="440">
+    <div class="tb navy"><span class="ico">&#128172;</span><span class="t">Notifications</span>
+      <span class="btns"><button data-min>_</button><button data-max>&#9633;</button><button data-close>&times;</button></span></div>
+    <div class="body" id="notifBody"><div class="note">Loading&hellip;</div></div>
+    <div class="grip"></div>
+  </section>
+
   <!-- ---------------- SOMEBODY ELSE'S PROFILE ----------------
        data-transient: empty until a name is clicked, so it starts closed and
        doesn't sit in the mobile stack as a blank panel. -->
@@ -1947,7 +1984,7 @@ body.dark .st-tab.on{background:linear-gradient(#1d6b3f,#0f4326);color:#eaffea}
   <div id="tasks"></div>
   <button id="trayTheme" title="Toggle light / dark">&#127769;</button>
   <button id="trayAccount" title="Sign in to CheetoChat">&#128100; Sign in</button>
-  <div id="tray"><button id="trayLive" type="button" hidden title="Someone is live"></button><button id="trayOnline" type="button" hidden title="Who's online">&#128100; &mdash;</button><span id="trayWatch" title="Time since last post">&#128064; &mdash;</span><span id="trayClock">--:--</span></div>
+  <div id="tray"><button id="trayLive" type="button" hidden title="Someone is live"></button><button id="trayNotif" type="button" hidden title="Notifications">&#128172;</button><button id="trayOnline" type="button" hidden title="Who's online">&#128100; &mdash;</button><span id="trayWatch" title="Time since last post">&#128064; &mdash;</span><span id="trayClock">--:--</span></div>
 </div>
 
 <div id="startMenu" hidden>
@@ -1984,6 +2021,7 @@ body.dark .st-tab.on{background:linear-gradient(#1d6b3f,#0f4326);color:#eaffea}
 <script src="/charts.js"></script>
 <script src="/community.js"></script>
 <script src="/profile.js"></script>
+<script src="/notify.js"></script>
 <script src="/predict.js"></script>
 <script src="/live.js"></script>
 <script src="/react.js"></script>

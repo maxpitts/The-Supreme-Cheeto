@@ -740,13 +740,27 @@ async function loadImages() {
     const url = imgUrl(i.path);
     const when = new Date(i.uploaded_at).toLocaleString("en-US",
       { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
-    return `<div class="admimg">
-      <a href="${esc(url || "#")}" target="_blank" rel="noopener">
-        <img src="${esc(url || "")}" alt="uploaded image" loading="lazy"></a>
+    /* An upload interrupted partway leaves a storage row with no file behind
+       it. Rendering that as an <img> produces a broken-image icon and no
+       explanation — it looks like the site lost somebody's picture, when in
+       fact the picture never arrived. Say what it is and offer to clear it. */
+    const thumb = i.complete
+      ? `<a href="${esc(url || "#")}" target="_blank" rel="noopener">
+           <img src="${esc(url || "")}" alt="Image uploaded by ${esc(i.handle || "a user")}" loading="lazy"></a>`
+      : `<div class="admimg-bad" title="No file was stored for this row">
+           &#9888;<span>incomplete upload</span></div>`;
+
+    return `<div class="admimg${i.complete ? "" : " bad"}">
+      ${thumb}
       <div class="admimg-m">
         <b>${esc(i.handle || "unknown")}</b><br>
         <span class="note">${esc(when)}</span>
+        ${i.complete
+          ? (i.bytes ? `<div class="note">${(i.bytes / 1024).toFixed(0)}KB</div>` : "")
+          : `<div class="note">The upload didn't finish, so there's no image here &mdash;
+             usually a dropped connection mid-send. Safe to delete.</div>`}
         ${i.post_body ? `<div class="note">${esc(i.post_body.slice(0, 60))}</div>` : ""}
+        ${i.complete && !i.post_id ? `<div class="note">Not attached to any post.</div>` : ""}
       </div>
       <button class="b95 tiny" data-nukeimg="${esc(i.path)}">Delete</button>
     </div>`;
