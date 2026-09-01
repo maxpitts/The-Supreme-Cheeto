@@ -171,7 +171,8 @@ function boardHTML() {
   return `<table class="pg-board"><thead><tr><th>#</th><th>Who</th><th>Right</th><th>Rate</th><th>Streak</th></tr></thead><tbody>
     ${PG.board.map((r, i) => `<tr${myProfile && r.handle === myProfile.handle ? ' class="me"' : ""}>
       <td>${i + 1}</td>
-      <td class="pg-who">${r.avatar_url ? `<img src="${esc(r.avatar_url)}" alt="" width="16" height="16" loading="lazy">` : ""}
+      <td class="pg-who" data-open-user="${esc(r.handle || "")}" title="View profile">${
+        r.avatar_url ? `<img src="${esc(r.avatar_url)}" alt="" width="16" height="16" loading="lazy">` : ""}
         ${esc(r.display_name || r.handle || "anon")}</td>
       <td>${r.correct}/${r.total}</td>
       <td>${r.pct == null ? "&mdash;" : Math.round(r.pct) + "%"}</td>

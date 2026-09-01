@@ -202,7 +202,8 @@ const Guess = {
       </tr></thead><tbody>
       ${this.board.map((r) => `<tr${r.is_me ? ' class="me"' : ""}>
         <td>${r.rank}</td>
-        <td class="gb-who">${r.avatar_url ? `<img src="${esc(r.avatar_url)}" alt="" width="16" height="16" loading="lazy">` : ""}
+        <td class="gb-who" data-open-user="${esc(r.handle || "")}" title="View profile">${
+          r.avatar_url ? `<img src="${esc(r.avatar_url)}" alt="" width="16" height="16" loading="lazy">` : ""}
           ${esc(r.display_name || r.handle || "anon")}</td>
         <td class="gb-pct">${r.masked
             ? `<span class="gb-hid" title="Hidden until you've guessed today">&#128274; hidden</span>`

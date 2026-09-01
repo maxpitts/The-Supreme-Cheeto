@@ -195,7 +195,7 @@ function msgHTML(m) {
   const canModerate = myProfile?.is_admin;
   return `<div class="msg" data-mid="${m.id}" data-uid="${esc(m.user_id)}">
     <div class="msg-head">
-      <b class="${admin ? "admin" : ""}">${esc(handle)}</b>
+      <b class="${admin ? "admin" : ""}" data-open-user="${esc(m.user_id)}" title="View profile">${esc(handle)}</b>
       <span class="msg-t">${esc(t)}</span>
       <span class="msg-acts">
         ${me && !mine ? `<button data-report="${m.id}" title="Report">&#9873;</button>` : ""}

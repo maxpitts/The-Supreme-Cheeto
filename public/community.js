@@ -7,6 +7,116 @@
    in Postgres. Anything here is a convenience, not a control.
    ===================================================================== */
 
+/* =====================================================================
+   THE PROFILE PICTURE
+   Same principle as the feed's image handling and for the same reason: the
+   file is decoded and re-encoded through a canvas before it leaves the
+   browser, which strips the EXIF block. A profile picture is very often a
+   photo straight off a phone, and those carry GPS coordinates.
+
+   Avatars get a centre square crop as well, because every place one is
+   displayed — chat, the wall, the Top 8 — is a square, and a browser
+   letterboxing a panorama into 24 pixels looks like a bug.
+
+   `pendingAvatar` has three states, which the save handler depends on:
+     undefined  nothing touched, keep whatever is already there
+     {blob,url} a new picture waiting to be uploaded
+     null       explicitly cleared back to the Cheeto
+   ===================================================================== */
+const AV_DIM = 256;                       // displayed at 72px at the very largest
+const AV_QUALITY = 0.85;
+let pendingAvatar;                        // deliberately undefined to start
+
+async function prepAvatar(file) {
+  if (!file) throw new Error("No file.");
+  if (!/^image\/(jpeg|png|webp|gif|avif)$/.test(file.type)) {
+    throw new Error("That's not an image I can use. JPEG, PNG or WebP.");
+  }
+  if (file.size > 25 * 1024 * 1024) throw new Error("That image is enormous. Under 25MB, please.");
+
+  const bitmap = await createImageBitmap(file).catch(() => { throw new Error("Couldn't read that image."); });
+  // Centre square crop, then scale. Cropping first keeps the maths simple and
+  // means a tall photo loses its edges rather than its subject.
+  const side = Math.min(bitmap.width, bitmap.height);
+  const sx = Math.round((bitmap.width - side) / 2);
+  const sy = Math.round((bitmap.height - side) / 2);
+  const out = Math.min(AV_DIM, side);
+
+  const canvas = document.createElement("canvas");
+  canvas.width = out; canvas.height = out;
+  const ctx = canvas.getContext("2d");
+  ctx.imageSmoothingQuality = "high";
+  ctx.fillStyle = "#ffffff";               // so a transparent PNG isn't flattened to black
+  ctx.fillRect(0, 0, out, out);
+  ctx.drawImage(bitmap, sx, sy, side, side, 0, 0, out, out);
+  bitmap.close?.();
+
+  const blob = await new Promise((r) => canvas.toBlob(r, "image/webp", AV_QUALITY))
+    || await new Promise((r) => canvas.toBlob(r, "image/jpeg", AV_QUALITY));
+  if (!blob) throw new Error("Couldn't process that image.");
+  if (blob.size > 512 * 1024) throw new Error("Still too big after compression — try a simpler image.");
+  return blob;
+}
+
+async function attachAvatar(file) {
+  const note = $("#pfPfpNote");
+  try {
+    if (note) note.textContent = "Processing…";
+    const blob = await prepAvatar(file);
+    if (pendingAvatar?.url) URL.revokeObjectURL(pendingAvatar.url);
+    pendingAvatar = { blob, url: URL.createObjectURL(blob) };
+    [$("#pfPrev"), $("#profPfp")].forEach((img) => { if (img) img.src = pendingAvatar.url; });
+    if (note) note.textContent = `Ready — ${(blob.size / 1024).toFixed(0)}KB, cropped square, metadata removed. Press Save.`;
+  } catch (err) {
+    if (note) note.innerHTML = `<span style="color:#900">${esc(err.message)}</span>`;
+  }
+}
+
+function wireAvatar() {
+  const zone = $("#pfDrop"), input = $("#pfFile");
+  if (!zone || !input) return;
+
+  zone.addEventListener("click", () => input.click());
+  zone.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); input.click(); }
+  });
+  input.addEventListener("change", () => { if (input.files?.[0]) attachAvatar(input.files[0]); });
+
+  ["dragenter", "dragover"].forEach((ev) =>
+    zone.addEventListener(ev, (e) => { e.preventDefault(); zone.classList.add("over"); }));
+  ["dragleave", "drop"].forEach((ev) =>
+    zone.addEventListener(ev, (e) => { e.preventDefault(); zone.classList.remove("over"); }));
+  zone.addEventListener("drop", (e) => {
+    const f = e.dataTransfer?.files?.[0];
+    if (f) attachAvatar(f);
+  });
+
+  // Paste anywhere in the profile window, so a copied image doesn't need the
+  // file dialog at all.
+  $("#profileBody")?.addEventListener("paste", (e) => {
+    const item = [...(e.clipboardData?.items || [])].find((i) => i.type.startsWith("image/"));
+    const f = item?.getAsFile();
+    if (f) { e.preventDefault(); attachAvatar(f); }
+  });
+
+  $("#pfPfpClear")?.addEventListener("click", () => {
+    if (pendingAvatar?.url) URL.revokeObjectURL(pendingAvatar.url);
+    pendingAvatar = null;
+    [$("#pfPrev"), $("#profPfp")].forEach((img) => { if (img) img.src = "/logo.svg"; });
+    const note = $("#pfPfpNote");
+    if (note) note.textContent = "Back to the Cheeto when you press Save.";
+  });
+}
+
+/* If the URL points at our own avatars bucket this returns the storage path,
+   so the old file can be deleted when a new one replaces it. A Google or
+   Discord picture returns null: not ours, not our business. */
+function ownAvatarPath(url) {
+  if (!url) return null;
+  const m = String(url).match(/\/storage\/v1\/object\/public\/avatars\/(.+)$/);
+  return m ? decodeURIComponent(m[1].split("?")[0]) : null;
+}
+
 /* ---------------------------------------------------------------- PROFILE */
 async function openProfile() {
   if (!me) { WM.open("w-chat"); return; }
@@ -23,6 +133,10 @@ async function renderProfileEditor() {
   }
   const { data: p } = await sb.from("cheeto_profiles").select("*").eq("id", me.id).maybeSingle();
   myProfile = p || myProfile;
+  // A redraw discards any unsaved picture, so the preview and the pending
+  // state can never disagree about what pressing Save would do.
+  if (pendingAvatar?.url) URL.revokeObjectURL(pendingAvatar.url);
+  pendingAvatar = undefined;
   const links = Array.isArray(p?.links) ? p.links : [];
 
   box.innerHTML = `
@@ -44,9 +158,32 @@ async function renderProfileEditor() {
       <input class="i95" id="pfName" maxlength="40" value="${esc(p?.display_name || "")}" placeholder="Optional — shown instead of your @handle">
     </fieldset>
 
-    <fieldset><legend>Profile picture (URL)</legend>
-      <input class="i95" id="pfAvatar" maxlength="300" value="${esc(p?.avatar_url || "")}" placeholder="https://…">
-      <p class="note">Must be a direct https link to an image. Left blank, you get the Cheeto.</p>
+    <fieldset><legend>Profile picture</legend>
+      <div class="av-row">
+        <img class="av-prev" id="pfPrev" src="${esc(p?.avatar_url || "/logo.svg")}" alt="Your profile picture"
+             width="64" height="64" onerror="this.src='/logo.svg'">
+        <div class="av-col">
+          <div class="av-drop" id="pfDrop" tabindex="0" role="button"
+               aria-label="Change your picture: drop an image here, paste one, or click to choose a file">
+            <span>&#128247; Drop an image here, paste it, or <u>choose a file</u></span>
+            <input type="file" id="pfFile" accept="image/*" hidden>
+          </div>
+          <div class="av-btns">
+            <button class="b95 tiny" id="pfPfpClear" type="button">Use the Cheeto</button>
+          </div>
+          <div class="note" id="pfPfpNote" style="margin:5px 0 0"></div>
+        </div>
+      </div>
+      <p class="note">Cropped to a square and shrunk to 256 pixels in your browser,
+      which also strips the location and camera data most photos carry.
+      Nothing is uploaded until you press Save.</p>
+    </fieldset>
+
+    <fieldset><legend>Your wall</legend>
+      <label class="chk"><input type="checkbox" id="pfWall" ${p?.wall_closed ? "" : "checked"}>
+        Let people leave comments on my profile</label>
+      <p class="note">Unticking this hides the comment box on your page. Comments already
+      there stay, and you can delete any of them whenever you like.</p>
     </fieldset>
 
     <fieldset><legend>Bio</legend>
@@ -95,12 +232,12 @@ async function renderProfileEditor() {
   };
   $("#pfBio").addEventListener("input", counter); counter();
 
-  $("#pfAvatar").addEventListener("input", () => {
-    const v = $("#pfAvatar").value.trim();
-    $("#profPfp").src = /^https?:\/\//i.test(v) ? v : "/logo.svg";
-  });
-  $("#profPfp").addEventListener("error", () => { $("#profPfp").src = "/logo.svg"; });
+  // The URL box this used to watch is gone. Anything left listening to it
+  // throws on a null element and takes every listener BELOW it with it —
+  // which is how the Save button quietly stopped working.
+  $("#profPfp")?.addEventListener("error", () => { $("#profPfp").src = "/logo.svg"; });
 
+  wireAvatar();
   $("#pfSave").addEventListener("click", saveProfile);
   $("#pfDelete").addEventListener("click", confirmDelete);
 }
@@ -169,10 +306,6 @@ async function saveProfile() {
   const bad = links.find((l) => !/^https?:\/\//i.test(l.url));
   if (bad) { msg.innerHTML = `<span style="color:#900">Links must start with http:// or https://</span>`; return; }
 
-  const avatar = $("#pfAvatar").value.trim();
-  if (avatar && !/^https?:\/\//i.test(avatar)) {
-    msg.innerHTML = `<span style="color:#900">Profile picture must be an http(s) URL.</span>`; return;
-  }
 
   const handle = ($("#pfHandle").value || "").trim();
   if (!/^[a-zA-Z0-9_]{3,20}$/.test(handle)) {
@@ -180,12 +313,39 @@ async function saveProfile() {
     return;
   }
 
+  /* The picture is uploaded BEFORE the profile row is written, so a failed
+     upload can't leave the row pointing at a file that doesn't exist. The
+     reverse order is the one that produces broken images. */
+  const previous = myProfile?.avatar_url || null;
+  // undefined = untouched, null = cleared, object = a new file to upload.
+  let avatar = pendingAvatar === undefined ? previous : null;
+
+  if (pendingAvatar) {
+    msg.textContent = "Uploading picture…";
+    try {
+      const id = (crypto.randomUUID?.() || String(Date.now()) + Math.random().toString(36).slice(2));
+      const path = `${me.id}/${id}.webp`;
+      const { error: upErr } = await sb.storage.from("avatars")
+        .upload(path, pendingAvatar.blob, { contentType: "image/webp", cacheControl: "31536000" });
+      if (upErr) throw upErr;
+      avatar = sb.storage.from("avatars").getPublicUrl(path).data?.publicUrl || null;
+      if (!avatar) throw new Error("Uploaded, but the public URL came back empty.");
+    } catch (err) {
+      const why = /row-level security|Unauthorized/i.test(err.message || "")
+        ? "Picture upload refused — new accounts wait ten minutes, and there's a ten-changes-a-day limit."
+        : (err.message || "Picture upload failed.");
+      msg.innerHTML = `<span style="color:#900">${esc(why)}</span>`;
+      return;
+    }
+  }
+
   msg.textContent = "Saving…";
   const { data, error } = await sb.from("cheeto_profiles").update({
     handle,
     display_name: $("#pfName").value.trim() || null,
     bio: $("#pfBio").value.trim() || null,
-    avatar_url: avatar || null,
+    avatar_url: avatar,
+    wall_closed: !$("#pfWall")?.checked,
     links,
   }).eq("id", me.id).select().maybeSingle();
 
@@ -209,6 +369,16 @@ async function saveProfile() {
   }
 
   myProfile = data;
+
+  /* The old picture is only removed once the new one is safely referenced.
+     Deleting first would mean a failed save leaves the profile pointing at a
+     file that no longer exists. Failure here is silent on purpose: the user's
+     change worked, and an orphaned 30KB file is not their problem. */
+  const stale = ownAvatarPath(previous);
+  if (stale && previous !== data.avatar_url) {
+    try { await sb.storage.from("avatars").remove([stale]); } catch {}
+  }
+
   msg.innerHTML = `<span style="color:#060">Saved.</span>`;
   await afterAuthChange();
   await renderProfileEditor();
@@ -390,8 +560,9 @@ function boardRow(p) {
   const body = p.body.length > 600 ? p.body.slice(0, 600) + "…" : p.body;
   return `<div class="bpost">
     <div class="bpost-top">
-      ${p.avatar_url ? `<img class="bp-av" src="${esc(p.avatar_url)}" alt="" width="22" height="22" loading="lazy">` : ""}
-      <b>${esc(who)}</b>${p.is_admin ? ' <span class="adm">ADMIN</span>' : ""}
+      ${p.avatar_url ? `<img class="bp-av" src="${esc(p.avatar_url)}" alt="" width="22" height="22" loading="lazy"
+           data-open-user="${esc(p.user_id)}">` : ""}
+      <b data-open-user="${esc(p.user_id)}" title="View profile">${esc(who)}</b>${p.is_admin ? ' <span class="adm">ADMIN</span>' : ""}
       <span class="bp-when">${esc(when)}</span>
       ${p.pinned ? '<span class="pin">PINNED</span>' : ""}
     </div>

@@ -145,7 +145,7 @@ const Buddies = {
     return `<div class="bl-row">
       <span class="dot ${esc(state)}"></span>
       ${b.avatar_url ? `<img class="bl-av" src="${esc(b.avatar_url)}" alt="" width="18" height="18" loading="lazy">` : ""}
-      <span class="bl-name">${esc(b.display_name || b.handle)}</span>
+      <span class="bl-name" data-open-user="${esc(b.id)}" title="View profile">${esc(b.display_name || b.handle)}</span>
       ${isOn ? `<button class="bl-mini" data-nudge="${esc(b.id)}" title="Nudge">&#9889;</button>` : ""}
       <button class="bl-mini" data-drop="${esc(b.id)}" data-name="${esc(b.display_name || b.handle)}" title="Remove friend">&times;</button>
       ${b.aim_text && isOn ? `<div class="bl-away">${esc(b.aim_text)}</div>` : ""}
@@ -188,7 +188,7 @@ const Buddies = {
     return this.reqs.map((r) => `
       <div class="bl-req">
         ${r.avatar_url ? `<img class="bl-av" src="${esc(r.avatar_url)}" alt="" width="18" height="18" loading="lazy">` : ""}
-        <span class="bl-name">${esc(r.display_name || r.handle)}</span>
+        <span class="bl-name" data-open-user="${esc(r.handle || "")}" title="View profile">${esc(r.display_name || r.handle)}</span>
         ${r.direction === "incoming"
           ? `<button class="b95 tiny" data-acc="${r.id}">Accept</button>
              <button class="b95 tiny" data-dec="${r.id}">Decline</button>`
@@ -221,7 +221,7 @@ const Buddies = {
       ${rest.length ? rest.map((b) => `
         <div class="bl-row">
           <span class="dot ${this.isOn(b.id) ? "available" : "offline"}"></span>
-          <span class="bl-name">${esc(b.display_name || b.handle)}</span>
+          <span class="bl-name" data-open-user="${esc(b.id)}" title="View profile">${esc(b.display_name || b.handle)}</span>
           <button class="bl-mini" data-t8in="${esc(b.id)}" title="Add to Top 8"
             ${this.top8.length >= 8 ? "disabled" : ""}>+</button>
         </div>`).join("")
@@ -403,7 +403,7 @@ const Buddies = {
       out.innerHTML = rows.length ? rows.map((u) => `
         <div class="bl-row">
           ${u.avatar_url ? `<img class="bl-av" src="${esc(u.avatar_url)}" alt="" width="18" height="18" loading="lazy">` : ""}
-          <span class="bl-name">${esc(u.display_name || u.handle)}</span>
+          <span class="bl-name" data-open-user="${esc(u.id)}" title="View profile">${esc(u.display_name || u.handle)}</span>
           ${u.rel === "none" ? `<button class="b95 tiny" data-add="${esc(u.id)}">Add</button>`
             : `<span class="bl-pend">${esc({ you: "that's you", friends: "friends", sent: "request sent", incoming: "wants to add you" }[u.rel] || u.rel)}</span>`}
         </div>`).join("")
