@@ -197,9 +197,11 @@ const Live = {
     if (tray) {
       tray.hidden = false;
       tray.innerHTML = n == null ? `&#128100; &mdash;` : `<span class="live-dot"></span>${n}`;
-      tray.title = n == null
-        ? "Live count unavailable — not connected"
-        : `${n} ${n === 1 ? "person" : "people"} on the site right now`;
+      tray.title = n != null
+        ? `${n} ${n === 1 ? "person" : "people"} on the site right now`
+        : (this.lastSync === 0 && document.visibilityState === "hidden"
+            ? "This tab opened in the background, so it hasn't been counted yet"
+            : "Live count unavailable — not connected");
       tray.classList.toggle("busy", n != null && n >= 5);
     }
 
@@ -207,9 +209,17 @@ const Live = {
     if (!box) return;
 
     if (n == null) {
-      box.innerHTML = `<div class="note">Not connected to the live counter right now.
-        The number will come back on its own when the connection does &mdash; it's
-        deliberately blank rather than showing you the last number we saw.</div>
+      /* Two different reasons for a blank number, and they deserve different
+         sentences. A tab restored in the background has never pinged — that is
+         the counter working as designed, not a fault, and telling someone
+         "not connected" sends them looking for a problem that isn't there. */
+      const napping = this.lastSync === 0 && document.visibilityState === "hidden";
+      box.innerHTML = `<div class="note">${napping
+        ? `This tab hasn't been counted yet &mdash; it opened in the background, and a
+           tab nobody is looking at isn't a visitor. Click into it and the number appears.`
+        : `Not connected to the live counter right now. The number will come back on its
+           own when the connection does &mdash; it's deliberately blank rather than
+           showing you the last number we saw.`}</div>
         ${this.counterHTML()}`;
       return;
     }
