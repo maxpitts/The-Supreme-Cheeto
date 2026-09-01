@@ -316,6 +316,7 @@ const WM = {
       { label: "Install to home screen", icon: "&#128229;", id: "installItem", act: () => promptInstall() },
       { label: "Refresh data now", icon: "&#128260;", act: () => loadLive(true) },
       { label: "Show Cheetip", icon: "&#129472;", act: () => Cheetip.show() },
+      { label: "Dark mode", icon: "&#127761;", id: "themeItem", act: () => Theme.toggle() },
       { label: "Reset window layout", icon: "&#129704;", act: () => { localStorage.removeItem(this.KEY); location.reload(); } },
       { sep: true },
       { label: "Shut Down…", icon: "&#9211;", act: () => showModal("Shut Down", "&#9211;",
@@ -325,8 +326,9 @@ const WM = {
     [...items, ...extras].forEach((it) => {
       if (it.sep) { ul.appendChild(document.createElement("hr")); return; }
       const li = document.createElement("li");
-      if (it.id) { li.id = it.id; li.hidden = !deferredInstall; }
-      li.innerHTML = `<span>${it.icon}</span><span>${esc(it.label)}</span>`;
+      if (it.id) li.id = it.id;
+      if (it.id === "installItem") li.hidden = !deferredInstall;
+      li.innerHTML = `<span>${it.icon}</span><span class="lbl">${esc(it.label)}</span>`;
       li.addEventListener("click", () => { $("#startMenu").hidden = true; $("#startBtn").classList.remove("on"); it.act(); });
       ul.appendChild(li);
     });
@@ -1350,6 +1352,42 @@ function splash() {
   });
 }
 
+
+/* =====================================================================
+   THEME
+   Remembers the choice, and follows the OS only until the user overrides it.
+   ===================================================================== */
+const Theme = {
+  KEY: "cheeto_theme",
+  get() { try { return localStorage.getItem(this.KEY); } catch { return null; } },
+  set(v) {
+    try { v ? localStorage.setItem(this.KEY, v) : localStorage.removeItem(this.KEY); } catch {}
+    this.apply();
+  },
+  isDark() {
+    const saved = this.get();
+    if (saved === "dark") return true;
+    if (saved === "light") return false;
+    return matchMedia("(prefers-color-scheme: dark)").matches;   // no choice made yet
+  },
+  apply() {
+    const dark = this.isDark();
+    document.body.classList.toggle("dark", dark);
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute("content", dark ? "#062626" : "#008080");
+    const item = $("#themeItem");
+    if (item) item.querySelector(".lbl").textContent = dark ? "Light mode" : "Dark mode";
+  },
+  toggle() { this.set(this.isDark() ? "light" : "dark"); },
+  init() {
+    this.apply();
+    // follow the OS only while the user hasn't picked for themselves
+    matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+      if (!this.get()) this.apply();
+    });
+  },
+};
+
 /* =====================================================================
    PWA
    ===================================================================== */
@@ -1416,6 +1454,7 @@ function openFromQuery() {
    GO
    ===================================================================== */
 function start() {
+  Theme.init();
   WM.init();
   initChrome();
   initBall();

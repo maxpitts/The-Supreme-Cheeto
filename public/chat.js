@@ -155,7 +155,7 @@ async function loadMessages() {
   if (!sb) return;
   const { data, error } = await sb
     .from("cheeto_messages")
-    .select("id, body, created_at, user_id, cheeto_profiles ( handle, is_admin )")
+    .select("id, body, created_at, user_id, author:cheeto_profiles!cheeto_messages_user_id_fkey ( handle, is_admin )")
     .is("deleted_at", null)
     .order("created_at", { ascending: false })
     .limit(100);
@@ -176,8 +176,8 @@ function renderMessages(rows) {
 }
 
 function msgHTML(m) {
-  const handle = m.cheeto_profiles?.handle || "someone";
-  const admin = m.cheeto_profiles?.is_admin;
+  const handle = m.author?.handle || "someone";
+  const admin = m.author?.is_admin;
   const t = new Date(m.created_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
   const mine = me && m.user_id === me.id;
   const canModerate = myProfile?.is_admin;
@@ -240,7 +240,7 @@ function subscribeRealtime() {
         if (row.deleted_at) return;
         const { data } = await sb.from("cheeto_profiles")
           .select("handle, is_admin").eq("id", row.user_id).maybeSingle();
-        appendMessage({ ...row, cheeto_profiles: data || null });
+        appendMessage({ ...row, author: data || null });
       })
     .subscribe();
 }
@@ -299,7 +299,7 @@ async function loadQueue() {
   const out = $("#chatQueueOut");
   out.innerHTML = "Loading…";
   const { data, error } = await sb.from("cheeto_reports")
-    .select("id, reason, created_at, message_id, cheeto_messages ( body, user_id )")
+    .select("id, reason, created_at, message_id, cheeto_messages!cheeto_reports_message_id_fkey ( body, user_id )")
     .is("resolved_at", null).order("created_at", { ascending: false }).limit(40);
   if (error) { out.innerHTML = `<span style="color:#900">${esc(error.message)}</span>`; return; }
   if (!data.length) { out.innerHTML = '<span style="color:#060">Queue is empty.</span>'; return; }

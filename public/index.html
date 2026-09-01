@@ -34,6 +34,12 @@
   --gray:#c0c0c0; --gray-d:#808080; --gray-l:#dfdfdf; --ink:#0a0a0a;
   --navy:#000080; --teal:#008080;
   --orange:#ff7a00; --orange-d:#a33f00;
+  /* surfaces that invert in dark mode */
+  --hi:#ffffff;          /* top-left bevel */
+  --field:#ffffff;       /* inputs, sunken panels, message log */
+  --field-ink:#0a0a0a;
+  --note-ink:#3a3a3a;
+  --deskA:#0aa; --deskB:#066; --deskC:#044;
   --tbh:22px;               /* title bar height */
   --taskh:40px;
 }
@@ -45,7 +51,7 @@ body{
   background:#008080;
   background-image:
     repeating-linear-gradient(45deg,rgba(255,255,255,.035) 0 8px,transparent 8px 16px),
-    radial-gradient(circle at 22% 12%,#0aa 0%,#066 60%,#044 100%);
+    radial-gradient(circle at 22% 12%,var(--deskA) 0%,var(--deskB) 60%,var(--deskC) 100%);
   overflow:hidden;                 /* a desktop doesn't scroll */
   -webkit-font-smoothing:none;
 }
@@ -127,13 +133,13 @@ button{font-family:inherit}
 /* ============================== CONTROLS ============================== */
 fieldset{border:2px groove var(--gray-l);margin:0 0 9px;padding:7px}
 legend{font-weight:bold;padding:0 4px;font-size:11px}
-.sunken{background:#fff;border:2px solid;border-color:var(--gray-d) #fff #fff var(--gray-d);padding:7px}
+.sunken{background:var(--field);color:var(--field-ink);border:2px solid;border-color:var(--gray-d) var(--hi) var(--hi) var(--gray-d);padding:7px}
 .b95{font-size:12px;padding:4px 12px;background:var(--gray);cursor:pointer;
   border:2px solid;border-color:#fff var(--gray-d) var(--gray-d) #fff;
   box-shadow:inset -1px -1px 0 #000,inset 1px 1px 0 var(--gray-l)}
 .b95:active{border-color:var(--gray-d) #fff #fff var(--gray-d);box-shadow:none}
-.i95{font-family:inherit;font-size:12px;padding:4px;width:100%;background:#fff;
-  border:2px solid;border-color:var(--gray-d) #fff #fff var(--gray-d)}
+.i95{font-family:inherit;font-size:12px;padding:4px;width:100%;background:var(--field);color:var(--field-ink);
+  border:2px solid;border-color:var(--gray-d) var(--hi) var(--hi) var(--gray-d)}
 a{color:var(--navy)}
 a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible,.dicon:focus-visible
   {outline:2px dotted #000;outline-offset:1px}
@@ -150,14 +156,14 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible,
 .kv:last-child{border-bottom:0}
 .kv b{font-family:"Courier New",monospace;font-variant-numeric:tabular-nums}
 .up{color:#b00;font-weight:bold}.down{color:#060;font-weight:bold}
-.note{font-size:10px;color:#3a3a3a;margin:8px 0 0;line-height:1.45}
-.bar{height:20px;background:#fff;position:relative;overflow:hidden;
+.note{font-size:10px;color:var(--note-ink);margin:8px 0 0;line-height:1.45}
+.bar{height:20px;background:var(--field);position:relative;overflow:hidden;
   border:2px solid;border-color:var(--gray-d) #fff #fff var(--gray-d)}
 .bar i{display:block;height:100%;background:repeating-linear-gradient(90deg,var(--navy) 0 11px,transparent 11px 14px)}
 .bar.red i{background:repeating-linear-gradient(90deg,#c00 0 11px,transparent 11px 14px)}
 .bar em{position:absolute;inset:0;display:grid;place-items:center;font-style:normal;font-weight:bold;font-size:11px}
 .bar em span{background:rgba(255,255,255,.93);padding:0 6px;border:1px solid rgba(0,0,0,.35)}
-.spark{width:100%;height:38px;display:block;background:#f7f7f2;
+.spark{width:100%;height:38px;display:block;background:var(--field);
   border:2px solid;border-color:var(--gray-d) #fff #fff var(--gray-d)}
 .freshness{font-size:10px;padding:2px 5px;display:inline-block;border:1px solid}
 .fresh-ok{background:#dfffdf;border-color:#0a0;color:#040}
@@ -183,7 +189,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible,
 .gauge svg{width:100%;max-width:250px;height:auto}
 #pet{font-size:44px;text-align:center;line-height:1;transition:transform .3s}
 #petsay{text-align:center;font-size:11px;margin-top:6px;min-height:30px;
-  background:#fff;border:2px solid #000;border-radius:9px;padding:5px;position:relative}
+  background:var(--field);color:var(--field-ink);border:2px solid #000;border-radius:9px;padding:5px;position:relative}
 
 /* ============================== TASKBAR ============================== */
 #taskbar{
@@ -274,7 +280,7 @@ body.mobile #startBtn{padding:5px 8px}
 
 
 /* ============================== CARDS ============================== */
-.card{width:42px;height:58px;background:#fff;border:1px solid #555;border-radius:3px;
+.card{width:42px;height:58px;background:#fff;color:#111;border:1px solid #555;border-radius:3px;
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   font-family:"Times New Roman",Georgia,serif;font-weight:bold;line-height:1;
   box-shadow:1px 1px 0 rgba(0,0,0,.3);user-select:none;flex:0 0 auto}
@@ -355,7 +361,7 @@ body.mobile .tip-char img{width:48px;height:48px}
 body.mobile .tip-bubble{max-width:200px;font-size:11px}
 
 /* ============================== CHEETOCHAT ============================== */
-#chatLog{height:250px;overflow-y:auto;background:#fff;margin:8px 0;font-size:12px}
+#chatLog{height:250px;overflow-y:auto;background:var(--field);color:var(--field-ink);margin:8px 0;font-size:12px}
 .msg{padding:5px 0;border-bottom:1px dotted #ddd}
 .msg:last-child{border-bottom:0}
 .msg-head{display:flex;align-items:center;gap:7px;font-size:11px}
@@ -432,6 +438,88 @@ body.mobile #trayAccount{max-width:96px;padding:4px 7px}
 @keyframes bar-slide{to{background-position:22px 0}}
 .sp-note{font-family:"Comic Sans MS","Chalkboard SE",cursive!important;font-size:13px!important;
   color:#7a3200!important;font-weight:bold}
+
+/* ============================== DARK MODE ==============================
+   Not an invert — a genuinely darker Win95. The chrome greys go charcoal,
+   the bevels flip so windows still read as raised, and the phosphor readouts
+   stay exactly as they are because green-on-black was always the dark mode. */
+body.dark{
+  --gray:#3c3c3c; --gray-d:#151515; --gray-l:#6a6a6a; --ink:#ececec;
+  --hi:#6f6f6f;
+  --field:#141414; --field-ink:#e4e4e4;
+  --note-ink:#a8a8a8;
+  --navy:#2a2a7a;
+  --deskA:#0a3f3f; --deskB:#062626; --deskC:#020f0f;
+}
+body.dark .win{border-color:var(--gray-l) #000 #000 var(--gray-l);
+  box-shadow:inset 1px 1px 0 var(--gray-l),inset -1px -1px 0 #000,3px 3px 10px rgba(0,0,0,.6)}
+body.dark .tb{background:linear-gradient(90deg,#2a2a2a,#4a4a4a)}
+body.dark .win.active .tb{background:linear-gradient(90deg,#7a2f00,#d96500)}
+body.dark .win.active .tb.navy{background:linear-gradient(90deg,#12124a,#2a5ea8)}
+body.dark .b95,body.dark .tb .btns button,body.dark #tasks button,
+body.dark #startBtn,body.dark .msg-acts button,body.dark .cell{
+  background:var(--gray);color:var(--ink);border-color:var(--gray-l) #000 #000 var(--gray-l)}
+body.dark .b95{box-shadow:inset -1px -1px 0 #000,inset 1px 1px 0 var(--gray-l)}
+body.dark fieldset{border-color:var(--gray-l)}
+body.dark a{color:#7fb4ff}
+body.dark .note a{color:#7fb4ff}
+body.dark #taskbar{background:var(--gray);border-top-color:var(--gray-l);box-shadow:0 -2px 0 #000}
+body.dark #tray,body.dark .status{border-color:#000 var(--gray-l) var(--gray-l) #000;color:var(--ink)}
+body.dark #startMenu{background:var(--gray);border-color:var(--gray-l) #000 #000 var(--gray-l)}
+body.dark #startMenu li{color:var(--ink)}
+body.dark #startMenu li:hover{background:#2a5ea8}
+body.dark .dicon .l{text-shadow:1px 1px 0 #000,0 0 4px #000}
+body.dark .caps{background:#2b2718;border-color:#8a6a12;color:#e8dfc0}
+body.dark .fresh-ok{background:#12340f;border-color:#2d8a24;color:#9be48f}
+body.dark .fresh-old{background:#3a3010;border-color:#a8811a;color:#f0d68a}
+body.dark .fresh-bad{background:#3a1414;border-color:#a02020;color:#ff9c9c}
+body.dark .post{border-bottom-color:#333}
+body.dark .post.isnew{background:#332f10}
+body.dark .msg{border-bottom-color:#2e2e2e}
+body.dark .kv{border-bottom-color:#4a4a4a}
+body.dark .login-box,body.dark .who{background:var(--gray);border-color:var(--gray-l)}
+body.dark .card{background:#e8e8e8;color:#111;border-color:#000}
+body.dark .card.back{background:repeating-linear-gradient(45deg,#16306f 0 4px,#22458f 4px 8px);
+  border-color:#0a1738}
+body.dark .card.mine{background:#b00}
+body.dark .card.empty{background:rgba(255,255,255,.07);border-color:#666;color:#999}
+body.dark .qbody{background:var(--field);color:var(--field-ink);border-color:var(--gray-l)}
+body.dark .bar em span{background:rgba(20,20,20,.92);color:var(--ink);border-color:rgba(255,255,255,.3)}
+body.dark .tip-bubble{background:#2e2b1a;color:#f0e6c8;border-color:#000}
+body.dark .tip-bubble::after{border-top-color:#2e2b1a}
+body.dark .stale{background:#3a3520;color:#f0e6c8}
+body.dark .modal .win{background:var(--gray)}
+body.dark #wallpaper{opacity:.34}
+body.dark .msg-head b{color:#7fb4ff}
+body.dark .sol-bar{border-top-color:var(--gray-l)}
+
+/* ============================== MOBILE POLISH ============================== */
+@media (max-width:820px){
+  :root{--taskh:52px}                      /* thumb-sized taskbar */
+  .tb{height:30px}                          /* easier to hit */
+  .tb .btns button{width:26px;height:24px;font-size:13px;line-height:20px}
+  .b95{padding:9px 14px;font-size:13px}     /* 44px-ish touch targets */
+  .b95.tiny{padding:5px 10px}
+  .i95{padding:9px;font-size:16px}          /* 16px stops iOS zoom-on-focus */
+  .compose input{font-size:16px}
+  .msg-acts{opacity:1}                      /* no hover on touch — always show */
+  .msg-acts button{padding:4px 8px;font-size:12px}
+  .dicon{width:88px}
+  .card{width:38px;height:53px}
+  .cell{width:26px;height:26px;font-size:14px;line-height:26px}
+  .odo{font-size:clamp(15px,5.2vw,26px)}
+  .win .body{padding:11px}
+  #chatLog{height:46vh}
+  .sol-slot{margin-top:-40px}
+  .sol-slot:has(.card:not(.back):not(.empty)){margin-top:-28px}
+}
+@media (max-width:420px){
+  .sp-box{padding:16px 18px!important}
+  .sp-txt{font-size:22px!important}
+  .sp-pop{font-size:13px;padding:7px 10px;right:-14px;top:-14px}
+  #wallpaper .wm{font-size:26px}
+}
+
 @media (prefers-reduced-motion: reduce){
   #splash::before,.sp-pop,.sp-bar i{animation:none!important}
 }
