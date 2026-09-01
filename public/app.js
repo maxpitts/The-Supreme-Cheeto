@@ -310,6 +310,7 @@ const WM = {
     this.focus(w); this.clampIntoView(w); this.save();
     // windows that fetch their own data populate on first open
     if (id === "w-board" && typeof loadBoard === "function") loadBoard();
+    if (id === "w-people" && typeof People === "object") People.load();
     if (id === "w-profile" && typeof renderProfileEditor === "function") renderProfileEditor();
     if (id === "w-admin" && typeof loadHealth === "function") { loadHealth(); loadUsers(); }
   },
@@ -370,7 +371,7 @@ const WM = {
       { head: "Trackers", items: ["w-debt", "w-truth", "w-polls", "w-meter", "w-econ", "w-tally", "w-count", "w-golf", "w-eo"] },
       { head: "Internet",  items: ["w-st-bobby", "w-st-benp"] },
       { head: "Games",    items: ["w-predict", "w-sol", "w-bj", "w-mine", "w-ball"] },
-      { head: "Community",items: ["w-buddies", "w-chat", "w-board", "w-profile", "w-live"] },
+      { head: "Community",items: ["w-buddies", "w-people", "w-chat", "w-board", "w-profile", "w-live"] },
     ];
 
     const rows = [];
@@ -382,6 +383,10 @@ const WM = {
       if (g.head === "Community") {
         rows.push({ label: "My Page", icon: "&#128100;",
                     act: () => { if (typeof Profile === "object") Profile.openMine(); } });
+        rows.push({ label: "Notifications", icon: "&#128172;",
+                    act: () => { if (typeof Notify === "object") Notify.open(); } });
+        rows.push({ label: "Getting started", icon: "&#128075;",
+                    act: () => { if (typeof Welcome === "object") { WM.open("w-welcome"); Welcome.refresh(); } } });
       }
     });
 
