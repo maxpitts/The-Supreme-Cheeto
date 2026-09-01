@@ -103,6 +103,25 @@ const WM = {
     $("#desktop").addEventListener("pointerdown", (e) => {
       if (e.target.id === "desktop" || e.target.closest("#wallpaper")) this.blurAll();
     });
+
+    // Resizing the browser (or rotating a phone) used to leave windows wider
+    // than the desktop or stranded past its edge, with no way back short of
+    // resetting the layout. Re-clamp everything on resize, debounced.
+    let rt;
+    window.addEventListener("resize", () => {
+      clearTimeout(rt);
+      rt = setTimeout(() => {
+        if (this.mobile) return;
+        this.wins.forEach((w) => {
+          if (w.el.hidden) return;
+          if (w.max) { Object.assign(w.el.style, { left: "0px", top: "0px", width: "100%", height: "100%" }); return; }
+          this.clampIntoView(w);
+          this.remember(w);
+        });
+        this.save();
+      }, 140);
+    });
+    window.addEventListener("orientationchange", () => setTimeout(() => this.layout(), 260));
   },
 
   byId(id) { return this.wins.find((w) => w.id === id); },
@@ -134,12 +153,21 @@ const WM = {
   },
 
   clampIntoView(w) {
-    const deskW = $("#desktop").clientWidth, deskH = $("#desktop").clientHeight;
+    const desk = $("#desktop");
+    const deskW = desk.clientWidth, deskH = desk.clientHeight;
+
+    // Fit to the viewport, but never below the window's own design size and
+    // never above the size the user chose. Growing the browser back should
+    // give the window its space back rather than leaving it squashed.
+    const want = this.goodSize(w);
+    const targetW = Math.max(230, Math.min(want.w, deskW - 16));
+    const targetH = Math.max(110, Math.min(want.h, deskH - 16));
+    w.el.style.width = targetW + "px";
+    w.el.style.height = w.rolled ? "" : targetH + "px";
+
     let x = parseInt(w.el.style.left) || 0, y = parseInt(w.el.style.top) || 0;
-    const ww = w.el.offsetWidth || w.def.w, wh = w.el.offsetHeight || w.def.h;
-    if (ww > deskW - 8) w.el.style.width = Math.max(230, deskW - 16) + "px";
-    if (wh > deskH - 8) w.el.style.height = Math.max(120, deskH - 16) + "px";
-    x = Math.min(Math.max(0, x), Math.max(0, deskW - 120));
+    // keep at least a grab-able strip of title bar on screen
+    x = Math.min(Math.max(0, x), Math.max(0, deskW - Math.min(targetW, 120)));
     y = Math.min(Math.max(0, y), Math.max(0, deskH - 30));
     w.el.style.left = x + "px";
     w.el.style.top = y + "px";
@@ -945,11 +973,29 @@ function cardHTML(c, extra = "") {
 
 /* ===================================================================== */
 /*  KLONDIKE SOLITAIRE                                                    */
+/*  Rewritten: drag-and-drop (mouse + touch), click-to-move that lets you  */
+/*  change your mind, undo, auto-complete, and valid-target highlighting.  */
 /* ===================================================================== */
 function initSolitaire() {
   const root = $("#solRoot");
   if (!root) return;
-  let stock, waste, found, tab, sel, moves, won;
+
+  let stock, waste, found, tab, sel, moves, history, won;
+
+  /* ---------- state ---------- */
+  const snapshot = () => JSON.stringify({ stock, waste, found, tab, moves });
+  const pushHistory = () => {
+    history.push(snapshot());
+    if (history.length > 120) history.shift();
+  };
+  const undo = () => {
+    if (history.length < 2) return;
+    history.pop();
+    const prev = JSON.parse(history[history.length - 1]);
+    ({ stock, waste, found, tab, moves } = prev);
+    sel = null; won = false;
+    draw();
+  };
 
   function deal() {
     const d = shuffle(freshDeck());
@@ -959,116 +1005,201 @@ function initSolitaire() {
       return pile;
     });
     stock = d; waste = []; found = [[], [], [], []];
-    sel = null; moves = 0; won = false;
+    sel = null; moves = 0; won = false; history = [];
+    pushHistory();
     draw();
   }
 
+  /* ---------- rules ---------- */
   const topOf = (p) => p[p.length - 1] || null;
-  const canStack = (c, onto) =>
-    onto ? (c.red !== onto.red && c.ri === onto.ri - 1) : c.ri === 12;   // empty takes a King
-  const canFound = (c, f) => {
-    const t = topOf(f);
-    return t ? (t.si === c.si && c.ri === t.ri + 1) : c.ri === 0;        // empty takes an Ace
-  };
+  const canStack = (c, onto) => onto ? (c.red !== onto.red && c.ri === onto.ri - 1) : c.ri === 12;
+  const canFound = (c, f) => { const t = topOf(f); return t ? (t.si === c.si && c.ri === t.ri + 1) : c.ri === 0; };
 
-  function autoToFoundation(c, from) {
-    for (let i = 0; i < 4; i++) {
-      if (canFound(c, found[i])) {
-        found[i].push(from.pop());
-        flipIfNeeded(from);
-        moves++;
-        checkWin();
-        return true;
-      }
+  const pileOf = (where, i) => where === "t" ? tab[i] : where === "w" ? waste : found[i];
+
+  /* A run being dragged must itself be a valid descending alternating sequence. */
+  function runIsValid(pile, from) {
+    for (let i = from; i < pile.length - 1; i++) {
+      if (!pile[i].up || !canStack(pile[i + 1], pile[i])) return false;
+    }
+    return pile[from]?.up === true;
+  }
+
+  function legalMove(src, dst) {
+    const sp = pileOf(src.where, src.pileIdx);
+    const moving = sp.slice(src.cardIdx);
+    if (!moving.length) return false;
+    if (src.where === "f" && moving.length > 1) return false;
+    if (!runIsValid(sp, src.cardIdx)) return false;
+
+    if (dst.where === "f") {
+      return moving.length === 1 && canFound(moving[0], found[dst.pileIdx]);
+    }
+    if (dst.where === "t") {
+      if (src.where === "t" && src.pileIdx === dst.pileIdx) return false;
+      return canStack(moving[0], topOf(tab[dst.pileIdx]));
     }
     return false;
   }
-  function flipIfNeeded(pile) {
-    const t = topOf(pile);
+
+  function doMove(src, dst) {
+    if (!legalMove(src, dst)) return false;
+    const sp = pileOf(src.where, src.pileIdx);
+    const moving = sp.splice(src.cardIdx);
+    (dst.where === "f" ? found[dst.pileIdx] : tab[dst.pileIdx]).push(...moving);
+    const t = topOf(sp);
     if (t && !t.up) t.up = true;
+    moves++;
+    pushHistory();
+    checkWin();
+    return true;
   }
+
+  function autoToFoundation(src) {
+    const sp = pileOf(src.where, src.pileIdx);
+    if (src.cardIdx !== sp.length - 1) return false;      // only the top card
+    for (let i = 0; i < 4; i++) {
+      if (legalMove(src, { where: "f", pileIdx: i })) return doMove(src, { where: "f", pileIdx: i });
+    }
+    return false;
+  }
+
+  const allFaceUp = () => tab.every((p) => p.every((c) => c.up)) && !stock.length && !waste.length;
+
+  function autoComplete() {
+    let moved = true, guard = 0;
+    while (moved && guard++ < 300) {
+      moved = false;
+      for (let i = 0; i < 7; i++) {
+        const p = tab[i];
+        if (!p.length) continue;
+        if (autoToFoundation({ where: "t", pileIdx: i, cardIdx: p.length - 1 })) { moved = true; }
+      }
+    }
+    draw();
+  }
+
   function checkWin() {
     if (found.every((f) => f.length === 13)) {
       won = true;
-      showModal("You win", "🏆", `Solitaire solved in ${moves} moves.<br><br>
-        <span style="color:#555;font-size:11px">The cards do not cascade. I'm sorry.</span>`);
+      showModal("You win", "&#127942;",
+        `Solitaire solved in <b>${moves}</b> moves.<br><br>
+         <span style="color:#555;font-size:11px">The cards do not cascade. I'm sorry.</span>`);
     }
   }
 
   function clickStock() {
-    if (stock.length) {
-      const c = stock.pop(); c.up = true; waste.push(c);
-    } else {
-      stock = waste.reverse().map((c) => (c.up = false, c));
-      waste = [];
-    }
-    sel = null; moves++; draw();
+    if (stock.length) { const c = stock.pop(); c.up = true; waste.push(c); }
+    else { stock = waste.reverse().map((c) => (c.up = false, c)); waste = []; }
+    sel = null; moves++; pushHistory(); draw();
   }
 
-  /* selection model: pick a source (pile + index), then a destination */
-  function onCard(where, pileIdx, cardIdx) {
-    const pile = where === "t" ? tab[pileIdx] : where === "w" ? waste : found[pileIdx];
-    const card = pile[cardIdx];
+  /* ---------- interaction ---------- */
+  const sameSel = (a, b) => a && b && a.where === b.where && a.pileIdx === b.pileIdx && a.cardIdx === b.cardIdx;
+
+  function onPick(src) {
+    if (won) return;
+    const pile = pileOf(src.where, src.pileIdx);
+    const card = pile[src.cardIdx];
     if (!card || !card.up) return;
 
-    if (!sel) {
-      // second click on the same card sends it to a foundation if it can go
-      sel = { where, pileIdx, cardIdx };
+    if (sameSel(sel, src)) { sel = null; draw(); return; }        // click again to deselect
+
+    if (sel) {
+      if (doMove(sel, { where: src.where, pileIdx: src.pileIdx })) { sel = null; draw(); return; }
+      // Not a legal destination? Then they're picking a different card.
+      // The old build silently dropped the selection here, which is what made
+      // this unplayable — you had to start the whole move again.
+      sel = runIsValid(pile, src.cardIdx) ? src : null;
       draw();
       return;
     }
-    if (sel.where === where && sel.pileIdx === pileIdx && sel.cardIdx === cardIdx) {
-      const src = where === "t" ? tab[pileIdx] : waste;
-      if (cardIdx === src.length - 1) autoToFoundation(card, src);
-      sel = null; draw();
-      return;
-    }
-    tryMove(sel, { where, pileIdx });
-    sel = null; draw();
+    if (!runIsValid(pile, src.cardIdx)) return;
+    sel = src;
+    draw();
   }
 
-  function onEmpty(where, pileIdx) {
-    if (!sel) return;
-    tryMove(sel, { where, pileIdx });
-    sel = null; draw();
+  function onDrop(dst) {
+    if (!sel || won) return;
+    doMove(sel, dst);
+    sel = null;
+    draw();
   }
 
-  function tryMove(from, to) {
-    const srcPile = from.where === "t" ? tab[from.pileIdx]
-                  : from.where === "w" ? waste : found[from.pileIdx];
-    const moving = srcPile.slice(from.cardIdx);
-    if (!moving.length) return;
+  /* ---------- drag ---------- */
+  let drag = null;
 
-    if (to.where === "f") {
-      if (moving.length !== 1) return;
-      if (!canFound(moving[0], found[to.pileIdx])) return;
-      found[to.pileIdx].push(srcPile.pop());
-    } else if (to.where === "t") {
-      const dest = tab[to.pileIdx];
-      if (!canStack(moving[0], topOf(dest))) return;
-      srcPile.splice(from.cardIdx, moving.length);
-      dest.push(...moving);
-    } else return;
+  function startDrag(e, src) {
+    if (won) return;
+    const pile = pileOf(src.where, src.pileIdx);
+    if (!pile[src.cardIdx]?.up || !runIsValid(pile, src.cardIdx)) return;
 
-    flipIfNeeded(srcPile);
-    moves++;
-    checkWin();
+    const cards = pile.slice(src.cardIdx);
+    const ghost = document.createElement("div");
+    ghost.className = "sol-ghost";
+    ghost.innerHTML = cards.map((c, i) =>
+      `<div class="ghost-card" style="top:${i * 22}px">${cardHTML(c)}</div>`).join("");
+    document.body.appendChild(ghost);
+
+    drag = { src, ghost, moved: false, x0: e.clientX, y0: e.clientY, pid: e.pointerId };
+    positionGhost(e.clientX, e.clientY);
+    root.classList.add("dragging-card");
+    markTargets(src);
+    try { e.target.setPointerCapture(e.pointerId); } catch {}
+    e.preventDefault();
   }
 
+  function positionGhost(x, y) {
+    if (!drag) return;
+    drag.ghost.style.left = (x - 26) + "px";
+    drag.ghost.style.top = (y - 22) + "px";
+  }
+
+  function markTargets(src) {
+    $$(".sol-col", root).forEach((el, i) => {
+      el.classList.toggle("ok", legalMove(src, { where: "t", pileIdx: i }));
+    });
+    $$("[data-f]", root).forEach((el) => {
+      el.classList.toggle("ok", legalMove(src, { where: "f", pileIdx: +el.dataset.f }));
+    });
+  }
+  const clearTargets = () => $$(".ok", root).forEach((el) => el.classList.remove("ok"));
+
+  function endDrag(e) {
+    if (!drag) return;
+    const { src, ghost, moved } = drag;
+    ghost.remove();
+    root.classList.remove("dragging-card");
+    clearTargets();
+    const d = drag; drag = null;
+
+    if (!moved) { onPick(src); return; }                  // a tap, not a drag
+
+    const under = document.elementFromPoint(e.clientX, e.clientY);
+    const col = under?.closest?.(".sol-col");
+    const fnd = under?.closest?.("[data-f]");
+    if (fnd) { doMove(src, { where: "f", pileIdx: +fnd.dataset.f }); }
+    else if (col) { doMove(src, { where: "t", pileIdx: +col.dataset.t }); }
+    sel = null;
+    draw();
+  }
+
+  /* ---------- render ---------- */
   function draw() {
     const isSel = (w, p, c) => sel && sel.where === w && sel.pileIdx === p && sel.cardIdx === c;
 
     let h = `<div class="sol-top">
-      <div class="sol-stock" id="solStock">${stock.length
+      <div class="sol-stock" id="solStock" title="Draw">${stock.length
         ? '<div class="card back"></div>'
-        : '<div class="card empty recycle">↻</div>'}</div>
-      <div class="sol-waste">${waste.length
+        : '<div class="card empty recycle">&#8635;</div>'}</div>
+      <div class="sol-waste" id="solWaste">${waste.length
         ? cardHTML(topOf(waste), isSel("w", 0, waste.length - 1) ? "sel" : "")
         : '<div class="card empty"></div>'}</div>
       <div class="sol-spacer"></div>`;
     found.forEach((f, i) => {
       h += `<div class="sol-found" data-f="${i}">${f.length
-        ? cardHTML(topOf(f)) : '<div class="card empty"><span class="fs">' + SUITS[i].s + "</span></div>"}</div>`;
+        ? cardHTML(topOf(f))
+        : `<div class="card empty"><span class="fs">${SUITS[i].s}</span></div>`}</div>`;
     });
     h += `</div><div class="sol-tab">`;
     tab.forEach((p, i) => {
@@ -1079,21 +1210,57 @@ function initSolitaire() {
       });
       h += `</div>`;
     });
-    h += `</div><div class="sol-bar">Moves: <b>${moves}</b>
-      <button class="b95" id="solNew" style="float:right;padding:2px 9px">New game</button></div>`;
+    h += `</div>
+      <div class="sol-bar">
+        <span>Moves: <b>${moves}</b>${sel ? ' &middot; <i>card picked up</i>' : ""}</span>
+        <span class="sol-btns">
+          <button class="b95 tiny" id="solUndo"${history.length < 2 ? " disabled" : ""}>Undo</button>
+          ${allFaceUp() && !won ? '<button class="b95 tiny" id="solAuto">Auto-finish</button>' : ""}
+          <button class="b95 tiny" id="solNew">New game</button>
+        </span>
+      </div>`;
     root.innerHTML = h;
+    wire();
+  }
 
+  function wire() {
     $("#solStock").addEventListener("click", clickStock);
     $("#solNew").addEventListener("click", deal);
-    $$(".sol-waste", root).forEach((el) =>
-      el.addEventListener("click", () => waste.length && onCard("w", 0, waste.length - 1)));
-    $$("[data-f]", root).forEach((el) =>
-      el.addEventListener("click", () => onEmpty("f", +el.dataset.f)));
+    $("#solUndo").addEventListener("click", undo);
+    $("#solAuto")?.addEventListener("click", autoComplete);
+
+    const attach = (el, src) => {
+      el.addEventListener("pointerdown", (e) => {
+        if (e.pointerType === "mouse" && e.button !== 0) return;
+        startDrag(e, src);
+      });
+      el.addEventListener("dblclick", (e) => { e.stopPropagation(); autoToFoundation(src); draw(); });
+    };
+
     $$(".sol-slot", root).forEach((el) =>
-      el.addEventListener("click", (e) => { e.stopPropagation(); onCard("t", +el.dataset.t, +el.dataset.c); }));
+      attach(el, { where: "t", pileIdx: +el.dataset.t, cardIdx: +el.dataset.c }));
+
+    const wasteEl = $("#solWaste");
+    if (waste.length) attach(wasteEl, { where: "w", pileIdx: 0, cardIdx: waste.length - 1 });
+
+    // dropping onto an empty column or a foundation
     $$(".sol-col", root).forEach((el) =>
-      el.addEventListener("click", () => onEmpty("t", +el.dataset.t)));
+      el.addEventListener("click", (e) => {
+        if (e.target.closest(".sol-slot")) return;
+        onDrop({ where: "t", pileIdx: +el.dataset.t });
+      }));
+    $$("[data-f]", root).forEach((el) =>
+      el.addEventListener("click", () => onDrop({ where: "f", pileIdx: +el.dataset.f })));
   }
+
+  /* pointer move/up live on the window so a drag survives leaving the card */
+  window.addEventListener("pointermove", (e) => {
+    if (!drag || e.pointerId !== drag.pid) return;
+    if (!drag.moved && (Math.abs(e.clientX - drag.x0) > 5 || Math.abs(e.clientY - drag.y0) > 5)) drag.moved = true;
+    if (drag.moved) positionGhost(e.clientX, e.clientY);
+  });
+  window.addEventListener("pointerup", (e) => { if (drag && e.pointerId === drag.pid) endDrag(e); });
+  window.addEventListener("pointercancel", (e) => { if (drag && e.pointerId === drag.pid) endDrag(e); });
 
   deal();
 }
