@@ -241,6 +241,7 @@ async function renderProfileEditor() {
   // which is how the Save button quietly stopped working.
   $("#profPfp")?.addEventListener("error", () => { $("#profPfp").src = "/logo.svg"; });
 
+  WM.fit?.("w-profile");
   wireAvatar();
   // Both go to the same place. Two buttons because "how does my page look"
   // and "what has anyone written on it" are two different questions, and

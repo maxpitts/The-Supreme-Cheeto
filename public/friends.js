@@ -120,6 +120,7 @@ const Buddies = {
         : this.findHTML()}</div>`;
 
     this.wire();
+    WM.fit?.("w-buddies");
   },
 
   awayHTML() {

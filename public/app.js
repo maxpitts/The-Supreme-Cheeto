@@ -274,7 +274,11 @@ const WM = {
       });
       const endR = (e) => {
         if (e.pointerId !== rp) return;
-        rp = null; el.classList.remove("resizing"); this.remember(w); this.save();
+        rp = null; el.classList.remove("resizing");
+        // Once somebody sizes a window by hand, that is the size. Auto-fit
+        // must never quietly undo it on the next open.
+        w.userSized = true;
+        this.remember(w); this.save();
         try { grip.releasePointerCapture(e.pointerId); } catch {}
       };
       grip.addEventListener("pointerup", endR);
@@ -319,8 +323,64 @@ const WM = {
     if (id === "w-board" && typeof loadBoard === "function") loadBoard();
     if (id === "w-people" && typeof People === "object") People.load();
     if (id === "w-bin" && typeof Bin === "object") Bin.render();
+    this.fit(id);
     if (id === "w-profile" && typeof renderProfileEditor === "function") renderProfileEditor();
     if (id === "w-admin" && typeof loadHealth === "function") { loadHealth(); loadUsers(); }
+  },
+
+  /* ---------------- fit to content ----------------
+     Most panels were given a generous fixed height and then rendered half
+     that much, so a window listing four people came with three hundred pixels
+     of empty grey under it. Measured across fourteen windows, eight were more
+     than a third empty.
+
+     Shrink only, never grow past the height the window was designed at: long
+     content is supposed to scroll, and a window that grows to fit a chat log
+     would eat the screen. */
+  fitToContent(w) {
+    if (!w || this.mobile || w.max || w.rolled || w.el.hidden || w.userSized) return;
+    const body = $(".body", w.el), tb = $(".tb", w.el);
+    if (!body) return;
+
+    const kids = [...body.children].filter((k) => k.offsetHeight > 0);
+    if (!kids.length) return;
+
+    /* Do not measure a placeholder. Panels that fetch their contents show a
+       single short "Loading…" line first, and shrink-wrapping THAT leaves a
+       150px window that clips the real content when it arrives — which is
+       worse than the empty space this is here to remove. */
+    if (kids.length === 1 && body.textContent.trim().length < 45) return;
+
+    // scrollHeight equals clientHeight whenever the content is shorter than
+    // the box, so it measures the container rather than what is inside it.
+    // The bottom of the lowest child is the only honest number here.
+    const top = body.getBoundingClientRect().top;
+    const bottom = Math.max(...kids.map((k) => k.getBoundingClientRect().bottom));
+    const padB = parseFloat(getComputedStyle(body).paddingBottom) || 0;
+    // Children can carry margins the bounding boxes don't account for, which
+    // left a couple of panels scrolling by a few pixels. scrollHeight is
+    // reliable in exactly the overflowing case, so add whatever it says is
+    // being clipped — and ignore it otherwise, where it just reports the box.
+    const clipped = Math.max(0, body.scrollHeight - body.clientHeight);
+    const need = Math.ceil(bottom - top + padB + clipped + (tb ? tb.offsetHeight : 0) + 16);
+
+    const desk = $("#desktop");
+    const y = parseInt(w.el.style.top) || 0;
+    const room = Math.max(180, (desk ? desk.clientHeight : 700) - y - 8);
+    const target = clamp(need, 150, Math.min(w.def.h, room));
+
+    // A few pixels either way is not worth a visible jump on every open.
+    if (Math.abs(target - w.el.offsetHeight) < 24) return;
+    w.el.style.height = target + "px";
+  },
+
+  /* Panels fetch their contents, so one measurement at open time catches an
+     empty box. Measure again once the data has had a chance to land. */
+  fit(id) {
+    const w = this.byId(id);
+    if (!w) return;
+    requestAnimationFrame(() => this.fitToContent(w));
+    setTimeout(() => this.fitToContent(w), 700);
   },
 
   /* ---------------- edge snapping ----------------
@@ -528,7 +588,7 @@ const WM = {
         state[x.id] = {
           x: parseInt(x.el.style.left) || 0, y: parseInt(x.el.style.top) || 0,
           w: g.w, h: g.h,
-          open: x.open, min: x.min, rolled: x.rolled, touched: !!x.touched,
+          open: x.open, min: x.min, rolled: x.rolled, touched: !!x.touched, userSized: !!x.userSized,
         };
       });
       localStorage.setItem(this.KEY, JSON.stringify(state));
@@ -549,6 +609,7 @@ const WM = {
       // restoring it "open" would reopen a blank window every visit.
       const openState = w.el.dataset.transient !== undefined ? false : s.open;
       w.saved = true; w.open = openState; w.min = s.min; w.rolled = s.rolled; w.touched = s.touched;
+      w.userSized = !!s.userSized;
       w.lastW = width; w.lastH = height;
       Object.assign(w.el.style, { left: s.x + "px", top: s.y + "px", width: width + "px", height: height + "px" });
       w.el.classList.toggle("rolled", !!s.rolled);

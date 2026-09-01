@@ -221,6 +221,7 @@ const Live = {
            own when the connection does &mdash; it's deliberately blank rather than
            showing you the last number we saw.`}</div>
         ${this.counterHTML()}`;
+    WM.fit?.("w-live");
       return;
     }
 

@@ -100,6 +100,7 @@ function paintPredict(errMsg) {
     being wrong.</p>`;
 
   wirePredict();
+  WM.fit?.("w-predict");
 }
 
 function recordHTML() {

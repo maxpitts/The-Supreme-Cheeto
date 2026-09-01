@@ -163,6 +163,7 @@ const Profile = {
         ${this.wallHTML()}</fieldset>`;
 
     this.wire();
+    WM.fit?.("w-user");
   },
 
   pct(v) {

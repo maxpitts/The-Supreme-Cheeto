@@ -12,7 +12,7 @@
  *
  * Bump VERSION on any shell change to roll the cache over.
  */
-const VERSION = "cheeto-v4.4.0";
+const VERSION = "cheeto-v4.5.0";
 const SHELL = `${VERSION}-shell`;
 const DATA = `${VERSION}-data`;
 
@@ -33,6 +33,12 @@ const PRECACHE = [
   "/tally.js",
   "/poke.js",
   "/digest.js",
+  "/signin.js",
+  "/profile.js",
+  "/notify.js",
+  "/share.js",
+  "/people.js",
+  "/desktop.js",
   "/supabase.js",
   "/logo.svg",
   "/icon-192.png",
@@ -121,11 +127,22 @@ self.addEventListener("fetch", (e) => {
   /* ---- navigations: network first so deploys land, cached shell if offline ---- */
   if (request.mode === "navigate") {
     e.respondWith((async () => {
+      const shell = async () =>
+        (await caches.match("/index.html")) || (await caches.match("/")) ||
+        new Response("Offline", { status: 503, headers: { "content-type": "text/plain" } });
       try {
-        return await fetch(request);
+        const fresh = await fetch(request);
+        /* A dead network throws, but a host having a bad day answers 502/503
+           — and returning that verbatim shows an error page to somebody who
+           has the whole site sitting in a cache two inches away. Treat a
+           server error the same as no server. */
+        if (!fresh.ok && fresh.status >= 500) {
+          const hit = await shell();
+          if (hit.status === 200) return hit;
+        }
+        return fresh;
       } catch {
-        return (await caches.match("/index.html")) || (await caches.match("/")) ||
-          new Response("Offline", { status: 503, headers: { "content-type": "text/plain" } });
+        return shell();
       }
     })());
     return;

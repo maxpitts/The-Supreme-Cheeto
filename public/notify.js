@@ -132,9 +132,11 @@ const Notify = {
         <button class="b95 tiny" data-nt-people>Find people</button></p>
       </div>${this.alertsHTML()}`;
       this.wire();
+      WM.fit?.("w-notif");
       return;
     }
 
+    // measured after the rows exist, at the end of this method
     box.innerHTML = `<div class="nt-list">${this.items.map((n) => {
       const t = this.TEXT[n.kind] || ["&#8226;", n.kind];
       const who = esc(n.display_name || n.handle || "someone");
@@ -153,6 +155,7 @@ const Notify = {
     }).join("")}</div>${this.alertsHTML()}`;
 
     this.wire();
+    WM.fit?.("w-notif");
   },
 
   /* Every notification should be one click from the thing it is about. A list

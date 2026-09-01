@@ -24,6 +24,16 @@ const Landing = {
       if (q.get("open")) return true;                    // deep link or OAuth return
       if (/access_token|refresh_token|error=/.test(location.hash)) return true;
       if (sessionStorage.getItem(this.KEY) === "1") return true;
+
+      /* Installed as an app. The landing page exists to explain the site to
+         somebody arriving cold from a link — a person who put it on their home
+         screen has already decided, and making them press ENTER every single
+         launch is the fastest way to get uninstalled. Both signals are checked
+         because iOS reports standalone its own way, and the manifest's
+         start_url marker survives even where display-mode doesn't. */
+      if (q.get("src") === "pwa") return true;
+      if (window.matchMedia?.("(display-mode: standalone)")?.matches) return true;
+      if (window.navigator.standalone === true) return true;   // iOS Safari
     } catch {}
     return false;
   },

@@ -62,6 +62,7 @@ const People = {
       b.addEventListener("click", async () => { this.mode = b.dataset.pp; this.rows = []; await this.load(); }));
     box.querySelectorAll("[data-pp-add]").forEach((b) =>
       b.addEventListener("click", () => this.add(b.dataset.ppAdd, b)));
+    WM.fit?.("w-people");
   },
 
   row(r) {
@@ -222,6 +223,7 @@ const Welcome = {
     box.querySelectorAll("[data-pp-add]").forEach((b) =>
       b.addEventListener("click", () => People.add(b.dataset.ppAdd, b)));
     box.querySelector("#wcDone")?.addEventListener("click", () => this.dismiss());
+    WM.fit?.("w-welcome");
   },
 };
 
