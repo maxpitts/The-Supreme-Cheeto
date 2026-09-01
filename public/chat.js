@@ -27,6 +27,7 @@ async function initChat() {
   // and if Supabase is unreachable the page must still offer sign-in rather
   // than sitting on "Connecting…" forever.
   renderAuthBar();
+  renderTrayAccount();
 
   try {
     const { data } = await sb.auth.getSession();
@@ -77,6 +78,7 @@ async function afterAuthChange() {
   renderAuthBar();
   renderComposer();
   renderAdminTools();
+  renderTrayAccount();
 }
 
 async function refreshPostStatus() {
@@ -329,3 +331,34 @@ if (document.readyState === "loading") {
 } else {
   initChat();
 }
+
+/* =====================================================================
+   TASKBAR ACCOUNT CHIP
+   The sign-in buttons live inside the CheetoChat window, which is closed by
+   default — so there was no visible way to log in at all. This chip is always
+   on screen and reflects auth state.
+   ===================================================================== */
+function renderTrayAccount() {
+  const chip = $("#trayAccount");
+  if (!chip) return;
+  if (me) {
+    const h = myProfile?.handle || "account";
+    chip.textContent = "\u{1F464} " + h;
+    chip.title = "Signed in as " + h + " — click to open CheetoChat";
+    chip.classList.add("in");
+  } else {
+    chip.textContent = "\u{1F464} Sign in";
+    chip.title = "Sign in to post in CheetoChat";
+    chip.classList.remove("in");
+  }
+}
+
+(function wireTrayAccount() {
+  const chip = document.getElementById("trayAccount");
+  if (!chip) return;
+  chip.addEventListener("click", () => {
+    WM.open("w-chat");
+    // nudge focus to the sign-in buttons for people arriving cold
+    setTimeout(() => document.querySelector("#chatAuth .oauth")?.focus(), 260);
+  });
+})();

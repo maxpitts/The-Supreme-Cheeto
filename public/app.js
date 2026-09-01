@@ -284,9 +284,10 @@ const WM = {
   buildIcons() {
     const box = $("#icons");
     box.innerHTML = "";
-    const SHORT = { "w-truth": "Truth Feed", "w-debt": "Debt Clock", "w-meter": "Cheeto-Meter",
-                    "w-mine": "Minesweeper", "w-about": "About" };
-    ["w-truth", "w-debt", "w-meter", "w-mine", "w-about"].forEach((id) => {
+    const SHORT = { "w-truth": "Truth Feed", "w-debt": "Debt Clock", "w-chat": "CheetoChat",
+                    "w-meter": "Cheeto-Meter", "w-sol": "Solitaire", "w-mine": "Minesweeper",
+                    "w-about": "About" };
+    ["w-truth", "w-chat", "w-debt", "w-meter", "w-sol", "w-mine", "w-about"].forEach((id) => {
       const w = this.byId(id); if (!w) return;
       const b = document.createElement("button");
       b.className = "dicon"; b.type = "button";
@@ -1272,7 +1273,8 @@ function splash() {
     el.id = "splash";
     el.innerHTML = `
       <div class="sp-box">
-        <div class="sp-logo"><img src="/logo.svg" alt="" width="150" height="150"></div>
+        <div class="sp-pop">BOOTING!</div>
+        <div class="sp-logo"><img src="/logo.svg" alt="" width="160" height="160"></div>
         <div class="sp-txt"><b>The Supreme Cheeto</b><span>95</span></div>
         <div class="sp-bar"><i></i></div>
         <div class="sp-note" id="spNote">Starting The Supreme Cheeto&hellip;</div>
@@ -1283,11 +1285,21 @@ function splash() {
     const notes = [
       "Starting The Supreme Cheeto\u2026",
       "Loading cheese dust drivers\u2026",
+      "Reticulating combover\u2026",
       "Counting the national debt\u2026",
       "Asking the pollsters nicely\u2026",
       "Warming up the CHEETO-METER\u2026",
+      "Buffing the tie\u2026",
       "Almost there\u2026",
     ];
+    const pops = ["BOOTING!", "POW!", "ZING!", "LOADING!", "KABLAM!"];
+    let pi = 0;
+    const popEl = el.querySelector(".sp-pop");
+    const popper = setInterval(() => {
+      pi = (pi + 1) % pops.length;
+      if (popEl) popEl.textContent = pops[pi];
+    }, 620);
+
     let n = 0;
     const noteEl = el.querySelector("#spNote");
     const cycle = setInterval(() => {
@@ -1296,7 +1308,7 @@ function splash() {
     }, 420);
 
     const done = () => {
-      clearInterval(cycle);
+      clearInterval(cycle); clearInterval(popper);
       el.style.transition = "opacity .4s";
       el.style.opacity = "0";
       setTimeout(() => { el.remove(); resolve(); }, 420);
