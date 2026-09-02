@@ -195,7 +195,51 @@ async function refreshPostStatus() {
 }
 
 /* ---------- auth UI ---------- */
+/* ---------------------------------------------------------------------
+   iOS HOME-SCREEN APPS AND OAUTH
+
+   An installed web app on iOS gets its OWN storage container: session,
+   cookies, localStorage and even the service worker are separate from Safari's
+   (netguru.com/blog/how-to-share-session-cookie-or-state-between-pwa-in-
+   standalone-mode-and-safari-on-ios). A provider sign-in is a cross-origin
+   navigation, so iOS hands it to Safari; the person signs in there, Safari is
+   redirected back, and supabase-js writes the session into SAFARI's storage.
+   Return to the home-screen app and it is still signed out — it cannot see
+   what Safari stored, and nothing on our side can reach across.
+
+   So on iOS-standalone the two provider buttons cannot succeed, however many
+   times they are pressed. Offering them anyway is the same silent failure as
+   swallowing the OAuth error: a button that looks like it works and doesn't.
+   Say so, and give the two routes that DO work.
+
+   The real fix is the email code below — you type six digits without ever
+   leaving the app, so no storage boundary is crossed. It is waiting on the
+   sending domain, not on anything here. --------------------------------- */
+function iosStandalone() {
+  const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+              (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1); // iPadOS
+  const standalone = navigator.standalone === true ||
+                     window.matchMedia?.("(display-mode: standalone)")?.matches === true;
+  return ios && standalone;
+}
+
 async function signIn(provider) {
+  if (iosStandalone()) {
+    showModal("This won't work from the home screen", "&#9888;", `
+      <p style="margin:0 0 10px">Signing in with ${esc(provider)} has to happen in Safari, and
+      iOS gives this app its own separate storage &mdash; so Safari would sign you in and
+      this app still wouldn't see it. That's an iPhone rule, not something the site can
+      work around.</p>
+      <p style="margin:0 0 10px"><b>Open <span style="font-family:monospace">supremecheeto.club</span>
+      in Safari and sign in there.</b> Everything works normally in the browser.</p>
+      ${EMAIL_SIGNIN
+        ? `<p style="margin:0">Or use <b>Sign in with email</b> &mdash; you type a six-digit code
+           without leaving this app, so it works from the home screen.</p>`
+        : `<p style="margin:0;color:#555;font-size:11px">Email sign-in is coming, and will work
+           right here from the home screen &mdash; it never leaves the app.</p>`}`);
+    return;
+  }
+
   const { error } = await sb.auth.signInWithOAuth({
     provider,
     options: { redirectTo: location.origin + "/?open=w-chat" },

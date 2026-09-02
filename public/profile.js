@@ -140,7 +140,13 @@ const Profile = {
              width="72" height="72" onerror="this.src='/logo.svg'">
         <div class="up-id">
           <div class="up-name">${esc(name)}${p.is_admin ? ' <span class="adm">ADMIN</span>' : ""}</div>
-          <div class="up-handle">@${esc(p.handle)}</div>
+          ${/* Nobody has a display name until they open the editor and set one,
+                so a new account fell back to its handle for BOTH lines and its
+                page opened with "vuziuzi" stacked on "@vuziuzi" — which is a
+                good part of why a profile looked unfinished until its owner
+                touched it. Print the name once. */ ""}
+          ${p.display_name && p.display_name !== p.handle
+            ? `<div class="up-handle">@${esc(p.handle)}</div>` : ""}
           ${aim ? `<div class="up-aim">${aim[0]} ${aim[1]}${
             p.aim_text ? ` &mdash; <i>${esc(p.aim_text)}</i>` : ""}</div>` : ""}
           ${p.mood ? `<div class="up-mood">&#128173; currently ${esc(p.mood)}</div>` : ""}

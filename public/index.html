@@ -602,7 +602,11 @@ body.dark .sol-bar{border-top-color:var(--gray-l)}
 /* ============================== MOBILE POLISH ============================== */
 @media (max-width:820px){
   :root{--taskh:52px}                      /* thumb-sized taskbar */
-  .tb{height:30px}                          /* easier to hit */
+  /* Was `.tb{height:30px}`, a literal that quietly outranked --tbh and made
+     the variable a lie: raising --tbh for touch changed nothing, because this
+     rule is later in the file and wins. Set the variable instead, so there is
+     one place that decides how tall a title bar is. */
+  :root{--tbh:30px}                        /* easier to hit */
   .tb .btns button{width:26px;height:24px;font-size:13px;line-height:20px}
   .b95{padding:9px 14px;font-size:13px}     /* 44px-ish touch targets */
   .b95.tiny{padding:5px 10px}
@@ -1262,8 +1266,13 @@ body.dark .si-bad{color:#ff8a8a}
   background-image:repeating-linear-gradient(0deg,rgba(0,255,90,.09) 0 2px,transparent 2px 4px)}
 #w-user .body[data-utheme="matrix"] fieldset{background:rgba(0,20,4,.8);color:#4dff88}
 
+/* The purple end used to be #7b2d8e, which is darker than it looks next to
+   orange: the theme's own dark-brown text scored 2.06:1 against it, so the
+   bottom third of a sunset profile — wall, comments, empty states — was
+   genuinely hard to read. Same sunset, stopped before it goes dark enough to
+   swallow the text it has to carry. */
 #w-user .body[data-utheme="sunset"]{color:#3a1200;
-  background:linear-gradient(#ff9d3f,#ff5f6d 60%,#7b2d8e)}
+  background:linear-gradient(#ffb04a,#ff8a7f 58%,#cf94da)}
 
 #w-user .body[data-utheme="cheeto"]{color:#3a1c00;
   background:#ff8a1f repeating-linear-gradient(135deg,rgba(255,255,255,.18) 0 8px,transparent 8px 16px)}
@@ -1274,6 +1283,29 @@ body.dark .si-bad{color:#ff8a8a}
 
 #w-user .body[data-utheme="bsod"]{color:#e9edff;background:#0000aa;font-family:"Courier New",monospace}
 #w-user .body[data-utheme="bsod"] fieldset{background:rgba(0,0,140,.75);color:#e9edff}
+
+/* ---- what each theme forgot: everything that ISN'T body text ----
+   The themes set `color`, which the headline and the bio inherit. But the
+   secondary text — "Member since…", "No Top 8 yet.", "Nothing posted yet.",
+   the stat captions, the handle — is painted with var(--note-ink), a fixed
+   dark grey, and links use var(--navy). Neither was ever overridden, so on
+   the dark themes all of that stayed near-black on near-black.
+
+   It reads as two separate complaints and is one bug. A profile that has just
+   been created is ALMOST ENTIRELY secondary text: every panel is an empty
+   state. So a new account on a dark theme looks blank and broken, and only
+   "comes right" once the person fills in enough real content to have text
+   that inherits `color`. Both variables are set here per theme; nothing else
+   needs to change, because every muted rule already reads them. */
+#w-user .body[data-utheme="tiled"]     {--note-ink:#4a463d;--navy:#00006e}
+#w-user .body[data-utheme="starfield"] {--note-ink:#a9a9c4;--navy:#8fb8ff}
+#w-user .body[data-utheme="glitter"]   {--note-ink:#7c3a63;--navy:#8c0a5a}
+#w-user .body[data-utheme="vaporwave"] {--note-ink:#3f1a5c;--navy:#2a0a6b}
+#w-user .body[data-utheme="matrix"]    {--note-ink:#37c46a;--navy:#7effc0}
+#w-user .body[data-utheme="sunset"]    {--note-ink:#4a1a06;--navy:#2e0a52}
+#w-user .body[data-utheme="cheeto"]    {--note-ink:#4a2a08;--navy:#241056}
+#w-user .body[data-utheme="notepad"]   {--note-ink:#48536f;--navy:#000080}
+#w-user .body[data-utheme="bsod"]      {--note-ink:#c3cbf0;--navy:#a8d8ff}
 
 .up-mood{font-size:11px;margin-top:3px;font-style:italic}
 .up-views{font-size:10px;letter-spacing:.5px;text-transform:uppercase;opacity:.85}
@@ -1604,6 +1636,12 @@ body.dark .st-tab.on{background:linear-gradient(#1d6b3f,#0f4326);color:#eaffea}
    desktop mouse — which is precise — sees none of it.
    ================================================================== */
 @media (hover: none) and (pointer: coarse) {
+  /* Growing the buttons to a fingertip without growing the BAR they sit in
+     left a 38px control inside a 30px title bar: it bled over both edges and
+     sat on top of the window's own top border, which is most of what looked
+     broken on a phone. The bar has to be at least as tall as the thing it
+     contains. 42 leaves two clear pixels above and below the button. */
+  :root{--tbh:42px}
   .tb .btns button{min-width:40px;min-height:38px;font-size:15px}
   #startBtn{min-height:40px;padding:5px 12px}
   #tasks button{min-height:38px}
