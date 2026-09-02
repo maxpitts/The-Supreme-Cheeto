@@ -1284,6 +1284,20 @@ body.dark .si-bad{color:#ff8a8a}
 #w-user .body[data-utheme="bsod"]{color:#e9edff;background:#0000aa;font-family:"Courier New",monospace}
 #w-user .body[data-utheme="bsod"] fieldset{background:rgba(0,0,140,.75);color:#e9edff}
 
+/* The decorative themes paint a pale panel so their own background reads
+   through without swallowing the text on it. "classic" must NOT get that
+   panel: it is the only theme that takes its colours from the site variables,
+   so in dark mode its text turns near-white — over a 72%-white panel. The
+   entire profile went grey-on-grey the moment anyone switched to dark mode,
+   and since classic is the default and dark mode is one click in the tray,
+   that was most people looking at most profiles.
+
+   Written as a later rule of EQUAL specificity rather than a :not() on the
+   rule above, because :not() raises specificity: it would have outranked the
+   four themes that define their own dark panel and blanked those instead.
+   Source order is the tool here, not weight. */
+#w-user .body[data-utheme="classic"] fieldset{background:transparent;border-color:var(--gray-l)}
+
 /* ---- what each theme forgot: everything that ISN'T body text ----
    The themes set `color`, which the headline and the bio inherit. But the
    secondary text — "Member since…", "No Top 8 yet.", "Nothing posted yet.",
