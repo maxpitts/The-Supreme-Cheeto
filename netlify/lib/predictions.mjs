@@ -30,7 +30,15 @@ async function sb(path, { method = "GET", body, prefer } = {}) {
     body: body ? JSON.stringify(body) : undefined,
   });
   if (!res.ok) throw new Error(`${method} ${path} -> ${res.status} ${await res.text()}`);
-  return res.status === 204 ? null : res.json();
+  /* `Prefer: return=minimal` gives back an empty body — but PostgREST answers
+     an insert with 201, not 204, so guarding only on 204 still ran
+     JSON.parse("") and threw "Unexpected end of JSON input". Every successful
+     baseline write was reported as a failure because of it, and that is worse
+     than noise: it is the same message a REAL write failure produces, so a
+     genuinely broken baseline would have hidden in plain sight behind an error
+     everyone had learned to ignore. Decide on the body, not the status code. */
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
 }
 
 /* Questions run on Eastern days, because that's the clock the subject keeps.

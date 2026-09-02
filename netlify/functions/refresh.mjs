@@ -3,11 +3,24 @@
 import { runRefresh } from "../lib/sources.mjs";
 
 export default async () => {
-  const result = await runRefresh();
-  console.log("[cheeto] refresh", JSON.stringify(result));
-  return new Response(JSON.stringify(result), {
-    headers: { "content-type": "application/json" },
-  });
+  const started = Date.now();
+  try {
+    const result = await runRefresh();
+    console.log("[cheeto] refresh ok", JSON.stringify({ ...result, tookMs: Date.now() - started }));
+    return new Response(JSON.stringify(result), {
+      headers: { "content-type": "application/json" },
+    });
+  } catch (err) {
+    /* An unhandled throw here used to end the invocation with nothing written
+       and nothing said: the blob kept its old value, the page kept serving it,
+       and the only symptom was a clock that stopped. Whatever goes wrong, say
+       so in a line that can be found by searching the function log for one
+       word, and fail loudly enough that the platform records it. */
+    console.error("[cheeto] refresh FAILED after", Date.now() - started, "ms:",
+      err?.stack || err?.message || err);
+    return new Response(JSON.stringify({ ok: false, error: String(err?.message || err) }),
+      { status: 500, headers: { "content-type": "application/json" } });
+  }
 };
 
 export const config = { schedule: "*/15 * * * *" };
