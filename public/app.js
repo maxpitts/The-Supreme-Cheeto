@@ -476,8 +476,8 @@ const WM = {
     const SHORT = { "w-truth": "Truth Feed", "w-debt": "Debt Clock", "w-chat": "CheetoChat",
                     "w-board": "FYP", "w-meter": "Cheeto-Meter", "w-sol": "Solitaire",
                     "w-mine": "Minesweeper", "w-about": "About", "w-predict": "Call It", "w-tally": "Since You", "w-buddies": "Buddy List", "w-st-bobby": "BOBBYjayyy", "w-st-benp": "benp90",
-                    "w-people": "People", "w-bin": "Recycle Bin" };
-    ["w-truth", "w-st-bobby", "w-st-benp", "w-buddies", "w-people", "w-predict", "w-tally", "w-chat", "w-debt", "w-about", "w-bin"].forEach((id) => {
+                    "w-people": "People", "w-bin": "Recycle Bin", "w-clubs": "Clubs" };
+    ["w-truth", "w-st-bobby", "w-st-benp", "w-buddies", "w-clubs", "w-people", "w-predict", "w-tally", "w-chat", "w-debt", "w-about", "w-bin"].forEach((id) => {
       const w = this.byId(id); if (!w) return;
       const b = document.createElement("button");
       b.className = "dicon"; b.type = "button";
@@ -524,6 +524,8 @@ const WM = {
 
     rows.push({ label: "Messages", icon: "&#9993;",
                 act: () => { if (typeof DM === "object") DM.open(); } });
+    rows.push({ label: "Clubs", icon: "&#127967;",
+                act: () => { if (typeof Clubs === "object") Clubs.open(null); } });
 
     rows.push({ head: "Settings" });
     rows.push({ label: "Display properties…", icon: "&#128421;",

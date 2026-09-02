@@ -132,82 +132,121 @@ const Share = {
     }
 
     /* Measure before drawing. The window used to be a fixed height, which
-       left a slab of empty grey under every short card — the giveaway that a
-       template was stretched rather than laid out. */
-    const wx = 70, ww = this.W - 140;
-    const bwMeasure = ww - 32;
+       left a slab of empty grey under every short card.
+
+       SIZED FOR A FEED, NOT FOR A DESKTOP. A share card is almost never seen
+       at 1200px — it is seen at three or four hundred, in a timeline, on a
+       phone, while somebody scrolls past it. At that scale the old 20px
+       kicker and 24px supporting lines rendered around eight pixels tall and
+       were simply not readable, which makes the card decorative rather than
+       informative. Everything below is sized so that at 0.35x — a typical
+       feed thumbnail — no text falls under about 12 effective pixels.
+
+       The window also fills the canvas now instead of floating in the middle
+       of a pool of teal: wasted space on a card is wasted legibility. */
+    const wx = 54, ww = this.W - 108;
+    const bwMeasure = ww - 44;
     const big = spec.big || "";
-    let size = 108;
+    let size = 132;
     x.font = `bold ${size}px 'Courier New', monospace`;
-    while (x.measureText(big).width > bwMeasure && size > 34) {
+    while (x.measureText(big).width > bwMeasure && size > 44) {
       size -= 4;
       x.font = `bold ${size}px 'Courier New', monospace`;
     }
-    const rh = size + 34;
-    const nLines = Math.min((spec.lines || []).length, 2);
-    // title bar + kicker + readout + one gap per line + bottom padding
-    const wh = Math.min(this.H - 150, 62 + 34 + rh + nLines * 34 + 26);
-    // Centred in the space above the footer, so a short card doesn't sit high
-    // with a pool of empty desktop under it.
-    const wy = Math.max(40, Math.round((this.H - 90 - wh) / 2));
+    const rh = size + 44;
+
+    const KICK = 32, LINE = 36, LGAP = 46;
+    const lines = (spec.lines || []).slice(0, 2);
+    const wy = 34;
+    const wh = this.H - wy - 96;      // down to just above the footer
     this.bevel(x, wx, wy, ww, wh, "#c3c3c3");
 
     // title bar
     const g = x.createLinearGradient(wx + 4, 0, wx + ww - 4, 0);
     g.addColorStop(0, "#0a1e6e"); g.addColorStop(1, "#3a7ad4");
     x.fillStyle = g;
-    x.fillRect(wx + 4, wy + 4, ww - 8, 44);
+    x.fillRect(wx + 4, wy + 4, ww - 8, 54);
     x.fillStyle = "#fff";
-    x.font = "bold 24px 'Courier New', monospace";
+    // 34, not 30: at a 0.35x feed thumbnail this is the difference between
+    // 10.5 and 11.9 effective pixels, and the title is what tells somebody
+    // scrolling past what they are looking at.
+    x.font = "bold 34px 'Courier New', monospace";
     x.textBaseline = "middle";
-    x.fillText(spec.title, wx + 18, wy + 27);
+    x.fillText(spec.title, wx + 20, wy + 32);
 
     // the three chrome buttons, because the joke is the chrome
     ["_", "\u25a1", "\u00d7"].forEach((ch, i) => {
-      const bx = wx + ww - 24 - (3 - i) * 36;
-      this.bevel(x, bx, wy + 11, 30, 28, "#c3c3c3");
+      const bx2 = wx + ww - 26 - (3 - i) * 42;
+      this.bevel(x, bx2, wy + 13, 36, 34, "#c3c3c3");
       x.fillStyle = "#000";
-      x.font = "bold 17px 'Courier New', monospace";
+      x.font = "bold 21px 'Courier New', monospace";
       x.textAlign = "center";
-      x.fillText(ch, bx + 15, wy + 25);
+      x.fillText(ch, bx2 + 18, wy + 30);
       x.textAlign = "left";
     });
 
     // body
-    const bx = wx + 16, by = wy + 62, bw = ww - 32;
+    const bx = wx + 22, bw = ww - 44;
+    let cy = wy + 58 + 30;
     x.fillStyle = "#1a1a1a";
-    x.font = "20px system-ui, sans-serif";
-    x.fillText(spec.kicker, bx, by + 14);
+    x.font = `${KICK}px system-ui, sans-serif`;
+    x.fillText(spec.kicker, bx, cy);
 
     // a sunken readout, like every other number on the site
-    this.sunken(x, bx, by + 34, bw, rh);
+    const ry = cy + 26;
+    this.sunken(x, bx, ry, bw, rh);
     x.fillStyle = spec.color || "#0b7a0b";
     x.font = `bold ${size}px 'Courier New', monospace`;
     x.textAlign = "center";
-    x.fillText(big, bx + bw / 2, by + 34 + rh / 2);
+    x.fillText(big, bx + bw / 2, ry + rh / 2);
     x.textAlign = "left";
 
-    // supporting lines
+    /* Supporting lines, wrapped rather than run off the edge. A long figure
+       like "$40,185,105,246,526" used to push the sentence past the window
+       border on any card with two numbers in it. */
     x.fillStyle = "#1a1a1a";
-    x.font = "24px system-ui, sans-serif";
-    (spec.lines || []).slice(0, 2).forEach((l, i) => {
-      x.fillText(l, bx, by + 34 + rh + 40 + i * 34);
-    });
+    x.font = `${LINE}px system-ui, sans-serif`;
+    let ly = ry + rh + LGAP;
+    const bottom = wy + wh - 18;
+    for (const l of lines) {
+      for (const part of this.wrap(x, l, bw)) {
+        if (ly > bottom) break;
+        x.fillText(part, bx, ly);
+        ly += LGAP;
+      }
+    }
 
     // footer
-    x.fillStyle = "#e8e8e8";
-    x.font = "bold 27px 'Courier New', monospace";
-    x.fillText("supremecheeto.club", wx + 4, this.H - 44);
+    x.fillStyle = "#ffffff";
+    x.font = "bold 34px 'Courier New', monospace";
+    x.fillText("supremecheeto.club", wx, this.H - 40);
     // Right-aligned rather than offset by a magic number, so it cannot ever
     // run into the wordmark on a narrower render.
-    x.fillStyle = "rgba(255,255,255,.72)";
-    x.font = "19px system-ui, sans-serif";
+    /* The strapline was 24px, which is 8px in a feed — present but unreadable,
+       which is the worst of both: it costs space and says nothing. Bigger and
+       shorter, so it survives the scale-down or does not earn its place. */
+    x.fillStyle = "rgba(255,255,255,.9)";
+    x.font = "32px system-ui, sans-serif";
     x.textAlign = "right";
-    x.fillText("tracking the president in real time, from public sources",
-               wx + ww - 4, this.H - 44);
+    x.fillText("tracked from public sources", wx + ww, this.H - 40);
     x.textAlign = "left";
 
     return await new Promise((res) => c.toBlob(res, "image/png"));
+  },
+
+  /* Greedy wrap against the measured width. Without it a long sentence is
+     drawn straight through the window border, which is the single most common
+     way a generated card looks broken. */
+  wrap(x, text, maxW) {
+    const words = String(text).split(/\s+/);
+    const out = []; let line = "";
+    for (const w of words) {
+      const test = line ? line + " " + w : w;
+      if (x.measureText(test).width > maxW && line) { out.push(line); line = w; }
+      else line = test;
+    }
+    if (line) out.push(line);
+    return out.slice(0, 3);
   },
 
   bevel(x, X, Y, W, H, fill) {
