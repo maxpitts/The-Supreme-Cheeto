@@ -91,8 +91,8 @@ const Buddies = {
           <button class="b95 tiny" data-bl-in="google">Google</button>
           <button class="b95 tiny" data-bl-in="discord">Discord</button>
         </div>
-        <div class="note" style="margin-top:7px">Statuses are visible to friends only,
-        so there's nothing to show until you have some.</div>
+        <div class="note" style="margin-top:7px">Statuses and messages are between
+        friends only, so there's nothing to show until you have some.</div>
       </div>`;
       box.querySelectorAll("[data-bl-in]").forEach((b) =>
         b.addEventListener("click", () => signIn(b.dataset.blIn)));
@@ -147,6 +147,7 @@ const Buddies = {
       <span class="dot ${esc(state)}"></span>
       ${b.avatar_url ? `<img class="bl-av" src="${esc(b.avatar_url)}" alt="" width="18" height="18" loading="lazy">` : ""}
       <span class="bl-name" data-open-user="${esc(b.id)}" title="View profile">${esc(b.display_name || b.handle)}</span>
+      <button class="bl-mini" data-im-user="${esc(b.id)}" title="Send a message">&#9993;</button>
       ${isOn ? `<button class="bl-mini" data-nudge="${esc(b.id)}" title="Nudge">&#9889;</button>` : ""}
       <button class="bl-mini" data-drop="${esc(b.id)}" data-name="${esc(b.display_name || b.handle)}" title="Remove friend">&times;</button>
       ${b.aim_text && isOn ? `<div class="bl-away">${esc(b.aim_text)}</div>` : ""}

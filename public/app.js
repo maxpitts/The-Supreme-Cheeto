@@ -517,6 +517,9 @@ const WM = {
       }
     });
 
+    rows.push({ label: "Messages", icon: "&#9993;",
+                act: () => { if (typeof DM === "object") DM.open(); } });
+
     rows.push({ head: "Settings" });
     rows.push({ label: "Display properties…", icon: "&#128421;",
                 act: () => { if (typeof Skin === "object") Skin.open("appearance"); } });
@@ -678,6 +681,26 @@ function fmtCount(n) {
   return n.toFixed(n < 10 ? 1 : 0);
 }
 
+/* The "you could buy N of these" counts were recomputed on every tick all
+   along — they just could not be SEEN to move. fmtCount rounds to one decimal
+   at trillion scale, and at $89,380 a second the debt needs about seven months
+   to push "6.7 trillion Big Macs" to 6.8. Correct, and completely dead on
+   screen.
+
+   Printed in full, the same arithmetic gains 14,921 Big Macs a second, 90
+   iPhones a second, and a median US home every five seconds. The number is
+   longer and much funnier, and it is the same number: no new precision is
+   invented, the rounding is simply removed.
+
+   Below a thousand it keeps a decimal, because "0 Nimitz-class carriers" is
+   worse than "0.4". */
+function fmtBuy(n) {
+  if (!Number.isFinite(n)) return "—";
+  if (n >= 1000) return Math.floor(n).toLocaleString("en-US");
+  if (n >= 10) return n.toFixed(1);
+  return n.toFixed(2);
+}
+
 /* ---------- mechanical odometer ---------- */
 const Odo = {
   el: null, chars: [],
@@ -761,7 +784,7 @@ function renderDebtPanel() {
     buysEl.innerHTML = BUYS.map((b) => `
       <div class="buy">
         <span class="buy-e" aria-hidden="true">${b.e}</span>
-        <b>${esc(fmtCount(now / b.v))}</b>
+        <b>${esc(fmtBuy(now / b.v))}</b>
         <span class="buy-n">${esc(b.n)}</span>
       </div>`).join("");
   }

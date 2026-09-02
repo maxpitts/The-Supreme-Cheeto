@@ -210,6 +210,9 @@ const Profile = {
     const bits = [];
     if (p.friendship === "friends") {
       bits.push(`<span class="up-fr">&#10003; Friends</span>`);
+      // Only offered where it can actually work. A Message button on a
+      // stranger's page would be a button that always fails.
+      bits.push(`<button class="b95 tiny" data-im-user="${esc(p.id)}">&#9993; Message</button>`);
       bits.push(`<button class="b95 tiny" data-up-nudge>Nudge</button>`);
       bits.push(`<button class="b95 tiny" data-up-unfriend>Remove friend</button>`);
     } else if (p.friendship === "pending_out") {
