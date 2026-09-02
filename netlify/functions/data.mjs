@@ -20,15 +20,24 @@
 import { getStore } from "@netlify/blobs";
 import { STORE, KEY, runRefresh } from "../lib/sources.mjs";
 
-/* The cron is every 15 minutes; 20 lets a fire run late without every
-   straggler triggering a second pull. */
-const STALE_MS = 20 * 60 * 1000;
+/* Five minutes, matching how often the open page re-polls — so a visitor who
+   is sitting there watching gets fresh numbers on their own next poll rather
+   than waiting out a longer window.
+
+   This started at 20 minutes, chosen as "a bit longer than the 15-minute
+   cron" on the assumption the cron was the main path and this was the safety
+   net. It isn't: the scheduled function has not fired since 16:00, and every
+   refresh since has come from HERE, on the exact 20-minute beat this constant
+   sets. The safety net turned out to be the whole floor, so it is tightened to
+   the cadence the site actually wants. The lock below still means a burst of
+   visitors is one refresh, not one each. */
+const STALE_MS = 5 * 60 * 1000;
 
 /* One refresh at a time. A burst of visitors arriving on a stale blob must not
    become a burst of scrapes against Treasury, AAA and the rest — that is how a
    site gets itself blocked by the sources it depends on. */
 const LOCK_KEY = "refresh-lock";
-const LOCK_MS = 120 * 1000;
+const LOCK_MS = 90 * 1000;
 
 async function refreshUnlessSomeoneElseIs(store) {
   let lock = null;

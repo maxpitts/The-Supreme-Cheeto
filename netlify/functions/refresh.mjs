@@ -23,4 +23,7 @@ export default async () => {
   }
 };
 
-export const config = { schedule: "*/15 * * * *" };
+/* Every 5 minutes rather than 15. The read path repairs staleness anyway, so
+   this is now the cheap path rather than the only one — and if the schedule
+   starts firing again, most visitors never trigger a refresh themselves. */
+export const config = { schedule: "*/5 * * * *" };
