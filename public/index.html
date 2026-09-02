@@ -41,6 +41,16 @@
   --field-dim:#5a5a5a;   /* timestamps, "source" links, muted text ON the field */
   --note-ink:#3a3a3a;
   --deskA:#0aa; --deskB:#066; --deskC:#044;
+  /* Title bars were three hardcoded gradients — one for light, one for dark,
+     one for the navy variant — which meant a new colour scheme had to fight
+     them rather than configure them. They are tokens now, so a skin sets six
+     values instead of re-declaring rules and hoping it wins on source order.
+     That is the whole lesson from the profile themes: one system, not two. */
+  --sel-bg:#000080; --sel-ink:#ffffff;             /* a selected list row */
+  --tbA:var(--orange-d); --tbB:var(--orange);      /* focused window */
+  --tbNavyA:#000080;     --tbNavyB:#1084d0;        /* the "system" windows */
+  --tbInactA:#4a4a4a;    --tbInactB:#8a8a8a;       /* everything behind it */
+  --deskPattern:repeating-linear-gradient(45deg,rgba(255,255,255,.035) 0 8px,transparent 8px 16px);
   --tbh:22px;               /* title bar height */
   --taskh:40px;
   --safe-b:env(safe-area-inset-bottom,0px);
@@ -56,7 +66,7 @@ body{
   font-size:13px;color:var(--ink);
   background:#008080;
   background-image:
-    repeating-linear-gradient(45deg,rgba(255,255,255,.035) 0 8px,transparent 8px 16px),
+    var(--deskPattern),
     radial-gradient(circle at 22% 12%,var(--deskA) 0%,var(--deskB) 60%,var(--deskC) 100%);
   overflow:hidden;                 /* a desktop doesn't scroll */
   -webkit-font-smoothing:none;
@@ -110,11 +120,11 @@ button{font-family:inherit}
 .tb{
   display:flex;align-items:center;gap:6px;flex:0 0 auto;height:var(--tbh);
   margin:2px;padding:0 3px;color:#fff;font-weight:bold;letter-spacing:.2px;
-  background:linear-gradient(90deg,#6b6b6b,#a8a8a8);   /* inactive */
+  background:linear-gradient(90deg,var(--tbInactA),var(--tbInactB));   /* inactive */
   cursor:grab;user-select:none;touch-action:none;
 }
-.win.active .tb{background:linear-gradient(90deg,var(--orange-d),var(--orange))}
-.win.active .tb.navy{background:linear-gradient(90deg,#000080,#1084d0)}
+.win.active .tb{background:linear-gradient(90deg,var(--tbA),var(--tbB))}
+.win.active .tb.navy{background:linear-gradient(90deg,var(--tbNavyA),var(--tbNavyB))}
 .win.dragging .tb{cursor:grabbing}
 .tb .ico{flex:0 0 auto;font-size:13px;line-height:1}
 .tb .t{flex:1;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
@@ -222,8 +232,11 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible,
 #tasks button{font-size:11px;padding:4px 8px;min-width:96px;max-width:150px;flex:0 0 auto;
   text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;
   color:var(--ink);background:var(--gray);border:2px solid;border-color:var(--hi) var(--gray-d) var(--gray-d) var(--hi)}
+/* The pressed hatch used to be literal #d4d0c8/#c0c0c0, so on any scheme with
+   light text — matrix, eggplant, blue screen — the ACTIVE window's taskbar
+   button was the least readable thing on screen. Same texture, from tokens. */
 #tasks button.on{border-color:var(--gray-d) #fff #fff var(--gray-d);font-weight:bold;
-  background:repeating-linear-gradient(45deg,#d4d0c8 0 2px,#c0c0c0 2px 4px)}
+  background:repeating-linear-gradient(45deg,var(--gray) 0 2px,var(--gray-d) 2px 4px)}
 #tray{flex:0 0 auto;display:flex;align-items:center;gap:7px;font-size:11px;padding:4px 8px;
   font-family:"Courier New",monospace;
   border:2px solid;border-color:var(--gray-d) #fff #fff var(--gray-d)}
@@ -546,9 +559,12 @@ body.dark{
 }
 body.dark .win{border-color:var(--gray-l) #000 #000 var(--gray-l);
   box-shadow:inset 1px 1px 0 var(--gray-l),inset -1px -1px 0 #000,3px 3px 10px rgba(0,0,0,.6)}
-body.dark .tb{background:linear-gradient(90deg,#2a2a2a,#4a4a4a)}
-body.dark .win.active .tb{background:linear-gradient(90deg,#7a2f00,#d96500)}
-body.dark .win.active .tb.navy{background:linear-gradient(90deg,#12124a,#2a5ea8)}
+/* Dark mode now moves the same tokens the skins move, rather than replacing
+   the rules. Two systems writing the same pixels is what broke the profile
+   themes; one token surface cannot develop that class of bug. */
+body.dark{--tbInactA:#2a2a2a; --tbInactB:#4f4f4f;
+          --tbA:#7a2f00; --tbB:#d96500;
+          --tbNavyA:#12124a; --tbNavyB:#2a5ea8}
 body.dark .b95,body.dark .tb .btns button,body.dark #tasks button,
 body.dark #startBtn,body.dark .msg-acts button,body.dark .cell{
   background:var(--gray);color:var(--ink);border-color:var(--gray-l) #000 #000 var(--gray-l)}
@@ -561,7 +577,7 @@ body.dark #taskbar{background:var(--gray);border-top-color:var(--gray-l);box-sha
 body.dark #tray,body.dark .status{border-color:#000 var(--gray-l) var(--gray-l) #000;color:var(--ink)}
 body.dark #startMenu{background:var(--gray);border-color:var(--gray-l) #000 #000 var(--gray-l)}
 body.dark #startMenu li{color:var(--ink)}
-body.dark #startMenu li:hover{background:#2a5ea8}
+body.dark #startMenu li:hover{background:var(--sel-bg);color:var(--sel-ink)}
 body.dark .dicon .l{text-shadow:1px 1px 0 #000,0 0 4px #000}
 body.dark .caps{background:#2b2718;border-color:#8a6a12;color:#e8dfc0}
 body.dark .fresh-ok{background:#12340f;border-color:#2d8a24;color:#9be48f}
@@ -572,6 +588,102 @@ body.dark .post.isnew{background:#332f10}
 body.dark .msg{border-bottom-color:#2e2e2e}
 body.dark .kv{border-bottom-color:#4a4a4a}
 body.dark .login-box,body.dark .who{background:var(--gray);border-color:var(--gray-l)}
+
+/* ====================== DESKTOP SKINS (Display Properties) ==============
+   Every skin declares a COMPLETE palette. That is deliberate: a skin that
+   only overrode a few tokens would inherit the rest from whichever of light
+   or dark mode happened to be on, and the result would be a colour scheme
+   that changes meaning depending on a toggle somewhere else. That is exactly
+   the bug the profile themes had — light text on a light panel because two
+   systems each owned half the answer.
+
+   So these come last, they set everything, and dark mode is a no-op while one
+   is active. "Windows Standard" is the way back to the light/dark toggle.
+
+   The palettes are the real Windows 95 control panel schemes, because the
+   joke lands harder when the colours are accurate. Hot Dog Stand is not an
+   exaggeration; it shipped like that.
+   ===================================================================== */
+/* Written as [data-skin="x"][data-skin] rather than body[data-skin="x"].
+   Two reasons, and both matter:
+     - matching ANY element, not just <body>, lets the Display Properties
+       preview render a real probe under a skin and read the palette back, so
+       the swatches are the actual colours instead of a second hand-written
+       copy that goes stale;
+     - repeating the attribute lifts specificity to (0,2,0), which outranks
+       body.dark at (0,1,1). Without that a skin would lose to dark mode on
+       half its tokens and inherit the rest — the exact half-and-half state
+       that made the profile themes unreadable. */
+[data-skin][data-skin]{--deskPattern:repeating-linear-gradient(45deg,rgba(255,255,255,.035) 0 8px,transparent 8px 16px)}
+
+/* Windows Standard — the grey-and-navy original, teal desktop. */
+[data-skin="win95"][data-skin]{
+  --sel-bg:#000080; --sel-ink:#ffffff;
+  --gray:#c0c0c0; --gray-d:#808080; --gray-l:#dfdfdf; --ink:#0a0a0a; --hi:#fff;
+  --field:#fff; --field-ink:#0a0a0a; --field-dim:#5a5a5a; --note-ink:#3a3a3a;
+  --navy:#000080; --deskA:#0aa; --deskB:#066; --deskC:#044;
+  --tbA:#000080; --tbB:#1084d0; --tbInactA:#55555c; --tbInactB:#87878f;
+  --tbNavyA:#000080; --tbNavyB:#1084d0}
+
+/* Hot Dog Stand. Genuinely shipped. Contrast is checked like any other. */
+[data-skin="hotdog"][data-skin]{
+  --sel-bg:#8c0000; --sel-ink:#ffe9a8;
+  --gray:#ffde00; --gray-d:#b39b00; --gray-l:#fff3a0; --ink:#1a1200; --hi:#fffbe0;
+  --field:#fffbe0; --field-ink:#1a1200; --field-dim:#6b5200; --note-ink:#5c4600;
+  --navy:#8c0000; --deskA:#ff4a3d; --deskB:#c81e10; --deskC:#8c0d05;
+  --tbA:#a30000; --tbB:#ff3b1f; --tbInactA:#5c5200; --tbInactB:#8a7a00;
+  --tbNavyA:#a30000; --tbNavyB:#ff3b1f}
+
+/* Eggplant — aubergine chrome, deep green desktop. */
+[data-skin="eggplant"][data-skin]{
+  --sel-bg:#3d2b56; --sel-ink:#f0e8ff;
+  --gray:#5c5c76; --gray-d:#33334a; --gray-l:#8f8fae; --ink:#f0f0f8; --hi:#8f8fae;
+  --field:#20202e; --field-ink:#ececf6; --field-dim:#a9a9c4; --note-ink:#c2c2d8;
+  --navy:#9fb8ff; --deskA:#2f5c4a; --deskB:#1d3a2e; --deskC:#12241d;
+  --tbA:#3d2b56; --tbB:#7a5c9e; --tbInactA:#33334a; --tbInactB:#55556e;
+  --tbNavyA:#3d2b56; --tbNavyB:#7a5c9e}
+
+/* Rainy Day — the muted blue-grey scheme. */
+[data-skin="rainy"][data-skin]{
+  --sel-bg:#204b73; --sel-ink:#eef4fa;
+  --gray:#8ca0b4; --gray-d:#5a6b7d; --gray-l:#c3d2e0; --ink:#0b1620; --hi:#dbe6f0;
+  --field:#eef4fa; --field-ink:#0b1620; --field-dim:#4a5a6a; --note-ink:#2f3f4d;
+  --navy:#0d3a6b; --deskA:#43617d; --deskB:#2b4257; --deskC:#1a2936;
+  --tbA:#204b73; --tbB:#5e8cb5; --tbInactA:#44525f; --tbInactB:#73838f;
+  --tbNavyA:#204b73; --tbNavyB:#5e8cb5}
+
+/* Matrix — the one people will actually pick. */
+[data-skin="matrix"][data-skin]{
+  --sel-bg:#04361c; --sel-ink:#8effc8;
+  --gray:#0d1a0f; --gray-d:#041a0a; --gray-l:#2f7a45; --ink:#5cff9a; --hi:#2f7a45;
+  --field:#020a04; --field-ink:#7effc0; --field-dim:#3fbf78; --note-ink:#45cc80;
+  --navy:#8effc8; --deskA:#04160a; --deskB:#020c06; --deskC:#000402;
+  --tbA:#04361c; --tbB:#0f8f45; --tbInactA:#0a1f10; --tbInactB:#1d3d28;
+  --tbNavyA:#04361c; --tbNavyB:#0f8f45;
+  --deskPattern:repeating-linear-gradient(0deg,rgba(0,255,90,.05) 0 2px,transparent 2px 4px)}
+
+/* Blue Screen — chrome as the error dialog. */
+[data-skin="bsod"][data-skin]{
+  --sel-bg:#e9edff; --sel-ink:#00006e;
+  --gray:#0a0a8c; --gray-d:#050553; --gray-l:#4a4ad6; --ink:#e9edff; --hi:#4a4ad6;
+  --field:#04043f; --field-ink:#e9edff; --field-dim:#b9c2ee; --note-ink:#c3cbf0;
+  --navy:#a8d8ff; --deskA:#0000aa; --deskB:#000082; --deskC:#00005c;
+  --tbA:#c8c8d8; --tbB:#e9edff; --tbInactA:#2a2a9c; --tbInactB:#4a4ad6;
+  --tbNavyA:#c8c8d8; --tbNavyB:#e9edff;
+  --deskPattern:none}
+/* That skin inverts the title bar (light bar, dark text), so the text on it
+   has to invert too or it vanishes. */
+[data-skin="bsod"] .win.active .tb{color:#00006e;text-shadow:none}
+
+/* Vaporwave. */
+[data-skin="vapor"][data-skin]{
+  --sel-bg:#5c1379; --sel-ink:#ffe3f7;
+  --gray:#f6d9ff; --gray-d:#a86cc2; --gray-l:#fff0ff; --ink:#2a0040; --hi:#fff0ff;
+  --field:#fff6ff; --field-ink:#2a0040; --field-dim:#6b3a86; --note-ink:#4a1a66;
+  --navy:#7a1f9c; --deskA:#ff71c8; --deskB:#8a4bd6; --deskC:#2b1b6b;
+  --tbA:#5c1379; --tbB:#c43f93; --tbInactA:#6b4d7d; --tbInactB:#8f74a0;
+  --tbNavyA:#5c1379; --tbNavyB:#c43f93}
+
 /* Retheme cards by overriding the TOKENS, never `color` directly. The old
    rule set `color:#111` here, and `body.dark .card` (0,2,1) out-specifies
    `.card.red` (0,2,0) — so every card in dark mode rendered black and red
@@ -694,6 +806,64 @@ body.mobile .urow-acts{width:100%}
   .sol-slot:has(.card:not(.back):not(.empty)){margin-top:-34px}
 }
 
+
+
+/* ---------------- Display Properties ---------------- */
+.dp-tabs{display:flex;gap:2px;margin-bottom:-2px}
+.dp-tab{font:inherit;font-size:12px;padding:5px 12px;cursor:pointer;
+  background:var(--gray);color:var(--ink);border:2px solid;
+  border-color:var(--hi) var(--gray-d) var(--gray) var(--hi);border-bottom:0;position:relative;z-index:1}
+.dp-tab.on{font-weight:bold;padding-bottom:7px}
+.dp-pane{border:2px solid;border-color:var(--hi) var(--gray-d) var(--gray-d) var(--hi);
+  background:var(--gray);padding:10px}
+.dp-l{display:block;font-size:11px;font-weight:bold;margin:10px 0 5px}
+
+/* The little CRT. Everything inside it is painted from the LIVE tokens of the
+   scheme being previewed, so editing a palette updates the preview for free —
+   a hand-drawn swatch is a second copy of the colours that goes stale. */
+.dp-mon{display:flex;flex-direction:column;align-items:center;margin-bottom:4px}
+.dp-screen{width:186px;height:118px;border:3px solid var(--gray-d);border-radius:4px;
+  background:var(--pv-desk,#066);position:relative;overflow:hidden;
+  box-shadow:inset 0 0 0 2px rgba(0,0,0,.35)}
+.dp-win{position:absolute;left:22px;top:20px;width:112px;height:62px;
+  background:var(--pv-face,#c0c0c0);border:2px solid;
+  border-color:#fff var(--gray-d) var(--gray-d) #fff}
+.dp-wtb{height:13px;background:var(--pv-tb,linear-gradient(90deg,#a33f00,#ff7a00))}
+.dp-wbody{height:calc(100% - 13px);background:var(--pv-face,#c0c0c0)}
+.dp-task{position:absolute;left:0;right:0;bottom:0;height:14px;background:var(--pv-face,#c0c0c0);
+  border-top:2px solid #fff}
+.dp-stand{width:52px;height:9px;background:var(--gray-d);border-radius:0 0 5px 5px}
+
+.dp-list{display:flex;flex-direction:column;gap:3px}
+.dp-row{display:flex;align-items:center;gap:9px;text-align:left;width:100%;
+  font:inherit;font-size:12px;padding:6px 8px;cursor:pointer;color:var(--ink);
+  background:var(--field);border:2px solid;border-color:var(--gray-d) var(--hi) var(--hi) var(--gray-d)}
+/* Was --navy with hardcoded white. --navy is the LINK colour: on Matrix it
+   is bright green, so the selected row was white text on pale green. A
+   selection needs its own pair, and it is contrast-tested like everything else. */
+.dp-row.on{background:var(--sel-bg);color:var(--sel-ink)}
+.dp-row.on .note{color:var(--sel-ink);opacity:.82}
+.dp-row .note{margin:1px 0 0;display:block}
+.dp-rt{display:flex;flex-direction:column;min-width:0}
+.dp-sw{flex:0 0 auto;width:34px;height:24px;border:1px solid var(--gray-d);
+  background:var(--pv-desk,#066);position:relative;display:block}
+.dp-sw i{position:absolute;left:5px;top:7px;width:22px;height:13px;
+  background:var(--pv-face,#c0c0c0);border:1px solid rgba(0,0,0,.4);display:block}
+.dp-sw b{position:absolute;left:6px;top:8px;width:20px;height:4px;
+  background:var(--pv-tb,#ff7a00);display:block}
+
+.dp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:6px}
+.dp-wall{font:inherit;font-size:10px;padding:5px;cursor:pointer;color:var(--ink);
+  background:var(--gray);border:2px solid;border-color:var(--hi) var(--gray-d) var(--gray-d) var(--hi);
+  display:flex;flex-direction:column;align-items:center;gap:4px}
+.dp-wall.on{border-color:var(--gray-d) var(--hi) var(--hi) var(--gray-d);font-weight:bold}
+.dp-wall i{width:100%;height:34px;display:block;border:1px solid var(--gray-d);background:var(--gray-l)}
+.dp-pat[data-pat="hatch"]{background:#5a5a5a repeating-linear-gradient(45deg,rgba(255,255,255,.28) 0 4px,transparent 4px 8px)}
+.dp-pat[data-pat="none"]{background:#5a5a5a}
+.dp-pat[data-pat="scan"]{background:#5a5a5a repeating-linear-gradient(0deg,rgba(0,0,0,.45) 0 2px,transparent 2px 4px)}
+.dp-pat[data-pat="grid"]{background:#5a5a5a;background-image:repeating-linear-gradient(0deg,rgba(255,255,255,.35) 0 1px,transparent 1px 9px),repeating-linear-gradient(90deg,rgba(255,255,255,.35) 0 1px,transparent 1px 9px)}
+.dp-pat[data-pat="dots"]{background:#5a5a5a radial-gradient(rgba(255,255,255,.5) 1px,transparent 1px);background-size:7px 7px}
+@container winbody (max-width: 360px){ .dp-screen{width:150px;height:96px} }
 
 /* ---------- mechanical odometer ---------- */
 .odo-mech{display:flex;justify-content:center;align-items:center;gap:1px;
@@ -2028,6 +2198,15 @@ body.dark .st-tab.on{background:linear-gradient(#1d6b3f,#0f4326);color:#eaffea}
     <div class="grip"></div>
   </section>
 
+  <!-- ---------------- DISPLAY PROPERTIES ---------------- -->
+  <section class="win" id="w-display" data-transient data-title="DISPLAY_PROPERTIES" data-icon="&#128421;"
+           data-x="300" data-y="70" data-w="430" data-h="540">
+    <div class="tb navy"><span class="ico">&#128421;</span><span class="t">Display Properties</span>
+      <span class="btns"><button data-min>_</button><button data-max>&#9633;</button><button data-close>&times;</button></span></div>
+    <div class="body" id="displayBody"></div>
+    <div class="grip"></div>
+  </section>
+
   <!-- ---------------- PEOPLE ---------------- -->
   <section class="win" id="w-people" data-transient data-title="PEOPLE" data-icon="&#128101;"
            data-x="200" data-y="52" data-w="400" data-h="520">
@@ -2255,6 +2434,7 @@ body.dark .st-tab.on{background:linear-gradient(#1d6b3f,#0f4326);color:#eaffea}
 <script src="/notify.js"></script>
 <script src="/share.js"></script>
 <script src="/people.js"></script>
+<script src="/skin.js"></script>
 <script src="/desktop.js"></script>
 <script src="/predict.js"></script>
 <script src="/live.js"></script>

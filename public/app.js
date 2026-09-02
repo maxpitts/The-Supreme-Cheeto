@@ -518,6 +518,8 @@ const WM = {
     });
 
     rows.push({ head: "Settings" });
+    rows.push({ label: "Display properties…", icon: "&#128421;",
+                act: () => { if (typeof Skin === "object") Skin.open("appearance"); } });
     rows.push({ label: "Light / dark mode", icon: "&#127761;", id: "themeItem", act: () => Theme.toggle() });
     rows.push({ label: "Install to home screen", icon: "&#128229;", id: "installItem", act: () => promptInstall() });
     rows.push({ label: "Refresh data now", icon: "&#128260;", act: () => loadLive(true) });

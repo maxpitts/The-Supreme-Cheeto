@@ -73,7 +73,9 @@ function desktopMenu(e) {
     { label: "&#128172; Notifications", act: () => { if (typeof Notify === "object") Notify.open(); } },
     { sep: true },
     { label: "&#127912; New", disabled: true },
-    { label: "&#9881; Properties", act: () => WM.open("w-about") },
+    // Was opening the About box — the one thing "Properties" has never meant
+    // on any desktop anyone has actually used.
+    { label: "&#128421; Properties", act: () => Skin.open("appearance") },
   ]);
 }
 
