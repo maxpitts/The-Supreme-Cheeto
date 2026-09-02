@@ -369,20 +369,35 @@ const Buddies = {
     if (r) this.load(true);
   },
 
+  /* The one place a status is actually written. There are two boxes that post
+     one now — the taskbar and this window — and a second copy of the insert
+     would drift the first time either of them changed. Returns a result rather
+     than showing UI, so each caller reports failure in its own idiom: a modal
+     suits a window; a modal thrown over the taskbar does not. */
+  async submitStatus(body) {
+    const text = String(body || "").trim();
+    if (!text) return { ok: false, quiet: true };
+    if (!sb || !me) return { ok: false, error: "You need to be signed in to post." };
+    try {
+      const { error } = await sb.from("cheeto_statuses").insert({ user_id: me.id, body: text });
+      if (error) throw error;
+      // Only refetch when the list is actually on screen. Posting from the
+      // taskbar shouldn't pull down a buddy list nobody is looking at.
+      if (!document.getElementById("w-buddies")?.hidden) this.load(true);
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, error: err?.message || "unknown error" };
+    }
+  },
+
   async postStatus() {
     const el = $("#stBody");
-    const body = (el?.value || "").trim();
-    if (!body) return;
-    try {
-      const { error } = await sb.from("cheeto_statuses").insert({ user_id: me.id, body });
-      if (error) throw error;
-      el.value = "";
-      this.load(true);
-    } catch (err) {
-      showModal("Status not posted", "&#9888;",
-        `<span style="font-size:11px;color:#555">${esc(err?.message || "")}</span><br><br>
-         Usually that means your account is too new, or you're rate limited.`);
-    }
+    const r = await this.submitStatus(el?.value);
+    if (r.ok) { if (el) el.value = ""; return; }
+    if (r.quiet) return;
+    showModal("Status not posted", "&#9888;",
+      `<span style="font-size:11px;color:#555">${esc(r.error)}</span><br><br>
+       Usually that means your account is too new, or you're rate limited.`);
   },
 
   async delStatus(id) {
@@ -525,3 +540,94 @@ function initBuddies() {
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", initBuddies);
 } else { initBuddies(); }
+
+
+/* =====================================================================
+   QUICK STATUS — the taskbar box
+
+   A status you have to open a window to write is a status nobody writes. The
+   composer in the Buddy List stays (it sits next to the list it updates), but
+   the everyday path is now one line in the taskbar: type, Enter, done, no
+   navigation and nothing to close.
+
+   It reports success and failure in place rather than in a dialog. A modal
+   thrown over the taskbar to say "posted!" is worse than the thing it is
+   announcing.
+   ===================================================================== */
+const QuickStatus = {
+  el: null, input: null,
+
+  init() {
+    this.el = document.getElementById("quickStatus");
+    this.input = document.getElementById("qsBody");
+    if (!this.el) return;
+
+    this.el.addEventListener("submit", (e) => { e.preventDefault(); this.send(); });
+
+    // On a phone the field lives in a popover above the bar; the toggle both
+    // opens it and puts the cursor in it, because opening a box you then have
+    // to tap again is two taps for one thought.
+    document.getElementById("qsToggle")?.addEventListener("click", () => {
+      this.el.classList.add("open");
+      document.getElementById("qsToggle").setAttribute("aria-expanded", "true");
+      this.input?.focus();
+    });
+    this.input?.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") { this.close(); this.input.blur(); }
+    });
+    // Tapping away closes it without posting — a half-typed thought should not
+    // survive as a floating box over the desktop.
+    document.addEventListener("click", (e) => {
+      if (!this.el.classList.contains("open")) return;
+      if (this.el.contains(e.target)) return;
+      this.close();
+    });
+
+    document.addEventListener("cheeto:auth", () => this.paint());
+    this.paint();
+  },
+
+  close() {
+    this.el?.classList.remove("open");
+    document.getElementById("qsToggle")?.setAttribute("aria-expanded", "false");
+  },
+
+  paint() {
+    if (!this.el) return;
+    // Signed out there is nothing to post, and an input that rejects you on
+    // submit is a worse answer than an input that isn't there.
+    this.el.hidden = !me;
+    if (!me) this.close();
+  },
+
+  async send() {
+    const text = (this.input?.value || "").trim();
+    if (!text || this.busy) return;
+    this.busy = true;
+    this.el.classList.add("busy");
+    const r = await Buddies.submitStatus(text);
+    this.busy = false;
+    this.el.classList.remove("busy");
+
+    if (r.ok) {
+      this.input.value = "";
+      this.close();
+      // Confirmation where they're already looking, not in a dialog.
+      Cheetip?.say?.("Status posted.", 3500);
+      if (typeof Notify === "object") Notify.poll?.();
+      return;
+    }
+    if (r.quiet) return;
+    // Failures DO deserve the dialog: they are usually the rate limit or the
+    // account-age gate, and both need more than a line to explain.
+    showModal("Status not posted", "&#9888;",
+      `<span style="font-size:11px;color:#555">${esc(r.error)}</span><br><br>
+       Usually that means your account is too new, or you're posting too fast.`);
+  },
+};
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", () => QuickStatus.init());
+} else {
+  QuickStatus.init();
+}
