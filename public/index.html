@@ -51,6 +51,7 @@
   --tbNavyA:#000080;     --tbNavyB:#1084d0;        /* the "system" windows */
   --tbInactA:#4a4a4a;    --tbInactB:#8a8a8a;       /* everything behind it */
   --deskPattern:repeating-linear-gradient(45deg,rgba(255,255,255,.035) 0 8px,transparent 8px 16px);
+  --cellpx:20px;            /* minesweeper cell — the grid track reads this too */
   --tbh:22px;               /* title bar height */
   --taskh:40px;
   --safe-b:env(safe-area-inset-bottom,0px);
@@ -285,7 +286,12 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible,
 
 /* ============================== MINESWEEPER ============================== */
 #msGrid{display:grid;gap:0;background:var(--gray-d);width:max-content;margin:0 auto}
-.cell{width:20px;height:20px;font-size:12px;font-weight:bold;line-height:20px;text-align:center;
+/* line-height was set to the cell's full width — but the cell is border-box
+   with a 2px bevel on each side, so the text box was 4px taller than the room
+   inside it and the digit pushed through the border. Centre with flex instead:
+   it cannot be wrong about arithmetic it isn't doing. */
+.cell{width:var(--cellpx);height:var(--cellpx);font-size:12px;font-weight:bold;line-height:1;
+  display:flex;align-items:center;justify-content:center;text-align:center;
   background:var(--gray);color:var(--ink);cursor:pointer;padding:0;
   border:2px solid;border-color:#fff var(--gray-d) var(--gray-d) #fff;font-family:"Courier New",monospace}
 .cell.open{border:1px solid #9a9a9a;background:#c8c8c8;cursor:default}
@@ -412,7 +418,15 @@ body.dark #solRoot .sol-bar{border-top-color:rgba(255,255,255,.2)}
 .sol-top{display:flex;gap:5px;align-items:flex-start;margin-bottom:9px}
 .sol-spacer{flex:1 1 auto;min-width:6px}
 .sol-stock,.sol-waste,.sol-found{flex:0 0 auto;cursor:pointer}
-.sol-tab{display:flex;gap:5px;align-items:flex-start}
+/* A seven-column card table has a hard minimum width: below it the columns
+   were being crushed and the cards spilled out of the window by up to 116px.
+   Cards cannot get narrower than a card, so the table scrolls sideways
+   instead of pretending to fit — an honest overflow rather than a squashed
+   one. */
+.sol-tab{display:flex;gap:5px;align-items:flex-start;min-width:max-content}
+#solRoot{overflow-x:auto}
+.sol-top{min-width:max-content}
+.sol-col{flex:0 0 auto}
 .sol-col{flex:1 1 0;min-width:42px;min-height:80px;position:relative;cursor:pointer}
 /* face-down cards pack tight; face-up ones fan out far enough to read the rank */
 .sol-slot{margin-top:-46px;cursor:pointer}
@@ -739,7 +753,8 @@ body.dark .sol-bar{border-top-color:var(--gray-l)}
   .dicon{width:88px}
   .card{width:44px;height:60px}
   .card .c-i b{font-size:12px}.card .c-i i{font-size:10px}.card .c-mid{font-size:22px}
-  .cell{width:26px;height:26px;font-size:14px;line-height:26px}
+  :root{--cellpx:26px}
+  .cell{font-size:14px;line-height:1}
   /* .odo is deliberately NOT overridden here any more: it sizes off the window
      via cqw, which is already correct on a phone and stays correct when the
      window is narrower than the screen — which a media query cannot see. */
@@ -1311,20 +1326,32 @@ body.dark .live-record{background:linear-gradient(#5a4413,#7a5c18);color:#ffe9b5
 
 @media (prefers-reduced-motion: reduce){ .odo-strip{transition:none} }
 
-.rategrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:5px}
+/* Both grids used to lay a label and a number side by side in a row that
+   could not wrap, so a long figure ($7,722,432,000 per day, or the full Big
+   Mac count) pushed straight out through the right-hand edge. Two changes:
+   the columns are wide enough for the longest real value, and the row is
+   allowed to stack when it isn't. Nothing here clips — a number the site is
+   reporting must always be readable in full. */
+.rategrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:5px}
 .rate{display:flex;justify-content:space-between;gap:8px;font-size:11px;padding:5px 7px;
+  flex-wrap:wrap;
   background:var(--field);color:var(--field-ink);
   border:1px solid;border-color:var(--gray-d) var(--hi) var(--hi) var(--gray-d)}
 .rate.wide{grid-column:1/-1}
-.rate b{font-family:"Courier New",monospace;font-variant-numeric:tabular-nums}
+.rate b{font-family:"Courier New",monospace;font-variant-numeric:tabular-nums;
+  min-width:0;overflow-wrap:anywhere;text-align:right}
 
-.buygrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:5px}
+.buygrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:5px}
 .buy{display:flex;align-items:baseline;gap:6px;font-size:11px;padding:5px 7px;
+  flex-wrap:wrap;
   background:var(--field);color:var(--field-ink);
   border:1px solid;border-color:var(--gray-d) var(--hi) var(--hi) var(--gray-d)}
 .buy-e{font-size:14px;line-height:1}
-.buy b{font-family:"Courier New",monospace;font-variant-numeric:tabular-nums}
-.buy-n{opacity:.75}
+.buy b{font-family:"Courier New",monospace;font-variant-numeric:tabular-nums;
+  min-width:0;overflow-wrap:anywhere}
+/* The label follows the number onto a second line rather than being shoved
+   off the edge beside it. */
+.buy-n{opacity:.75;min-width:0;flex:1 1 auto}
 
 @media (prefers-reduced-motion: reduce){
   #splash::before,.sp-pop,.sp-bar i{animation:none!important}

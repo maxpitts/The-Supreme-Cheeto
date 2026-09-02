@@ -1027,6 +1027,7 @@ function renderFreshness() {
 
 function renderAll() {
   seedMs = Date.parse((D.debt?.asOf || "2026-08-27") + "T00:00:00Z");
+  // Anchored once per visit, on the first render, and never re-anchored.
   if (!debtAtLoad) debtAtLoad = liveDebt();
   tickDebt(); renderApproval(); renderEcon(); renderMeter();
   renderGolfEO(); renderFeed(); renderSparks(); renderFreshness(); tickWatch();
@@ -1048,7 +1049,14 @@ async function loadLive(manual) {
     const prevNewest = (D.posts?.list || [])[0]?.id;
     const prevStamp = D.updatedAt;
     D = { ...D, ...j, seeded: false };
-    debtAtLoad = 0;
+    /* debtAtLoad used to be cleared here, which re-anchored "since you started
+       watching" to the last DATA REFRESH rather than to when you started
+       watching. It was always wrong; it only became obvious once the page
+       started polling every 75 seconds instead of every five minutes, at
+       which point the counter never got above a few million and read as
+       frozen. The anchor belongs to the visit, so it is set once and left
+       alone — a new Treasury figure moves the number it is counting from,
+       which is the honest thing for it to do. */
     renderAll();
     lastGood = Date.now();
 
@@ -1175,7 +1183,11 @@ function initMines() {
   const N = 9, MINES = 10;
   const grid = $("#msGrid");
   let board, revealed, flagged, over, started, t0, timer;
-  grid.style.gridTemplateColumns = `repeat(${N}, 20px)`;
+  /* The track size has to be the CELL size, not a copy of it. This said 20px
+     while the mobile stylesheet made cells 26px, so every cell overflowed its
+     own column and the last one hung 6px past the board. Read it from the
+     variable both now share. */
+  grid.style.gridTemplateColumns = `repeat(${N}, var(--cellpx))`;
 
   function reset() {
     board = Array.from({ length: N }, () => Array(N).fill(0));
