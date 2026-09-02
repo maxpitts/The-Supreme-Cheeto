@@ -91,8 +91,8 @@ const Buddies = {
           <button class="b95 tiny" data-bl-in="google">Google</button>
           <button class="b95 tiny" data-bl-in="discord">Discord</button>
         </div>
-        <div class="note" style="margin-top:7px">Statuses and messages are between
-        friends only, so there's nothing to show until you have some.</div>
+        <div class="note" style="margin-top:7px">Messages are between friends only.
+        Statuses are public &mdash; you just need an account to post one.</div>
       </div>`;
       box.querySelectorAll("[data-bl-in]").forEach((b) =>
         b.addEventListener("click", () => signIn(b.dataset.blIn)));
@@ -464,7 +464,7 @@ const Snd = {
   setOn(v) {
     try { v ? localStorage.setItem(this.KEY, "1") : localStorage.removeItem(this.KEY); } catch {}
     const it = document.getElementById("soundItem");
-    if (it) it.querySelector(".lbl").textContent = v ? "Buddy sounds: on" : "Buddy sounds: off";
+    if (it) it.querySelector(".lbl").textContent = v ? "Sounds: on" : "Sounds: off";
     if (v) this.doorOpen();
   },
 
@@ -511,6 +511,80 @@ const Snd = {
       o.connect(g); g.connect(ac.destination);
       o.start(t); o.stop(t + 0.16);
     });
+  },
+
+  /* ---------------- desktop sounds ----------------
+     Same switch as the buddy sounds, because two mute toggles is one more
+     than anybody wants to find. Everything is synthesised — no audio files to
+     download, and it works offline in the installed app.
+
+     Deliberately quiet and deliberately short. A 1997 desktop clicked; it did
+     not play a jingle every time you touched it. Nothing here fires on
+     hover, scroll or typing, and none of it fires unless the person has
+     turned sounds on, which is off by default: unexpected audio from a
+     browser tab is the fastest way to be closed. */
+
+  /* A short filtered click for opening a window. */
+  click(freq = 900, dur = 0.05, gain = 0.05, type = "square") {
+    const ac = this.ac(); if (!ac) return;
+    const t = ac.currentTime;
+    const o = ac.createOscillator(), g = ac.createGain(), lp = ac.createBiquadFilter();
+    o.type = type; o.frequency.setValueAtTime(freq, t);
+    lp.type = "lowpass"; lp.frequency.setValueAtTime(2600, t);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(gain, t + 0.006);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(lp); lp.connect(g); g.connect(ac.destination);
+    o.start(t); o.stop(t + dur + 0.02);
+  },
+
+  winOpen()  { this.click(760, 0.055, 0.045); },
+  winClose() { this.click(430, 0.05, 0.04); },
+  tick()     { this.click(1500, 0.022, 0.028, "sine"); },
+
+  /* Two descending tones. The Windows error chord was a fifth; this is the
+     same idea without being the same recording. */
+  error() {
+    const ac = this.ac(); if (!ac) return;
+    [[0, 520], [0.14, 350]].forEach(([off, f]) => {
+      const t = ac.currentTime + off;
+      const o = ac.createOscillator(), g = ac.createGain();
+      o.type = "triangle"; o.frequency.setValueAtTime(f, t);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.07, t + 0.012);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.2);
+      o.connect(g); g.connect(ac.destination);
+      o.start(t); o.stop(t + 0.22);
+    });
+  },
+
+  /* A rising three-note figure for a message arriving. */
+  chime() {
+    const ac = this.ac(); if (!ac) return;
+    [[0, 660], [0.09, 880], [0.18, 1170]].forEach(([off, f]) => {
+      const t = ac.currentTime + off;
+      const o = ac.createOscillator(), g = ac.createGain();
+      o.type = "sine"; o.frequency.setValueAtTime(f, t);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.06, t + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
+      o.connect(g); g.connect(ac.destination);
+      o.start(t); o.stop(t + 0.18);
+    });
+  },
+};
+
+/* A tiny alias so other files don't have to know Snd's shape. skin.js already
+   calls Sfx.play("click"); this is what it was waiting for. */
+const Sfx = {
+  play(what) {
+    if (typeof Snd !== "object") return;
+    ({ click: () => Snd.tick(),
+       open: () => Snd.winOpen(),
+       close: () => Snd.winClose(),
+       error: () => Snd.error(),
+       message: () => Snd.chime(),
+     }[what] || (() => {}))();
   },
 };
 

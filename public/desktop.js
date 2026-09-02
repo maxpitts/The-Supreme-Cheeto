@@ -68,6 +68,7 @@ function desktopMenu(e) {
     { label: "&#128260; Refresh data", key: "F5",
       act: () => { if (typeof loadLive === "function") loadLive(true); } },
     { label: "&#129704; Arrange windows", act: () => arrangeWindows() },
+    { label: "&#128204; Line up icons", act: () => { if (typeof Icons === "object") Icons.reset(); } },
     { sep: true },
     { label: "&#128101; People", act: () => WM.open("w-people") },
     { label: "&#128172; Notifications", act: () => { if (typeof Notify === "object") Notify.open(); } },
@@ -207,4 +208,151 @@ if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", initDesktop);
 } else {
   initDesktop();
+}
+
+
+/* =====================================================================
+   DESKTOP ICONS YOU CAN MOVE
+
+   They were a fixed flex column, which is the one thing a desktop icon has
+   never been. Now each one is positioned, dragged, snapped to a grid, and
+   remembered — the same deal the windows already get.
+
+   Two details that matter more than the dragging:
+
+   1. A drag must not become a click. Icons open on click and double-click, so
+      a press that moves more than a few pixels has to suppress the click that
+      follows it, or every rearrangement also launches a window.
+
+   2. Positions are clamped back inside the viewport on load. A window dragged
+      to the far right of a 4K monitor and reopened on a laptop is recoverable
+      because windows have a taskbar; an icon stranded off-screen is simply
+      gone forever.
+   ===================================================================== */
+const Icons = {
+  KEY: "cheeto_icon_pos",
+  GRID_X: 88,
+  GRID_Y: 92,
+  PAD: 8,
+
+  read() {
+    try { return JSON.parse(localStorage.getItem(this.KEY) || "{}") || {}; } catch { return {}; }
+  },
+  write(pos) { try { localStorage.setItem(this.KEY, JSON.stringify(pos)); } catch {} },
+
+  bounds() {
+    const d = document.getElementById("desktop");
+    const r = d ? d.getBoundingClientRect() : { width: window.innerWidth, height: window.innerHeight };
+    return { w: r.width, h: r.height };
+  },
+
+  clamp(x, y) {
+    const { w, h } = this.bounds();
+    return [
+      Math.max(0, Math.min(x, Math.max(0, w - this.GRID_X))),
+      Math.max(0, Math.min(y, Math.max(0, h - this.GRID_Y))),
+    ];
+  },
+
+  /* The column they used to be in, so a first visit looks unchanged and the
+     saved layout is a deliberate departure rather than a surprise. */
+  fallback(i) {
+    const { h } = this.bounds();
+    const perCol = Math.max(1, Math.floor((h - this.PAD * 2) / this.GRID_Y));
+    return [this.PAD + Math.floor(i / perCol) * this.GRID_X,
+            this.PAD + (i % perCol) * this.GRID_Y];
+  },
+
+  layout() {
+    if (WM.mobile) return;
+    const pos = this.read();
+    [...document.querySelectorAll("#icons .dicon")].forEach((el, i) => {
+      const id = el.dataset.icon || String(i);
+      const saved = pos[id];
+      const [x, y] = this.clamp(...(Array.isArray(saved) ? saved : this.fallback(i)));
+      el.style.left = x + "px";
+      el.style.top = y + "px";
+    });
+  },
+
+  save() {
+    const pos = {};
+    document.querySelectorAll("#icons .dicon").forEach((el) => {
+      if (!el.dataset.icon) return;
+      pos[el.dataset.icon] = [parseInt(el.style.left, 10) || 0, parseInt(el.style.top, 10) || 0];
+    });
+    this.write(pos);
+  },
+
+  drag(el, ev) {
+    if (WM.mobile || ev.button !== 0) return;
+    const startX = ev.clientX, startY = ev.clientY;
+    const ox = parseInt(el.style.left, 10) || 0;
+    const oy = parseInt(el.style.top, 10) || 0;
+    let moved = false;
+
+    const move = (e) => {
+      const dx = e.clientX - startX, dy = e.clientY - startY;
+      // A few pixels of slop, because a click with a shaky hand is still a
+      // click and people open icons by clicking them.
+      if (!moved && Math.hypot(dx, dy) < 4) return;
+      if (!moved) { moved = true; el.classList.add("dragging"); el.setPointerCapture?.(ev.pointerId); }
+      const [x, y] = this.clamp(ox + dx, oy + dy);
+      el.style.left = x + "px";
+      el.style.top = y + "px";
+    };
+
+    const up = () => {
+      document.removeEventListener("pointermove", move);
+      document.removeEventListener("pointerup", up);
+      if (!moved) return;
+      el.classList.remove("dragging");
+      // Snap, because Windows did and because a tidy grid is the whole
+      // pleasure of rearranging a desktop.
+      const [x, y] = this.clamp(
+        Math.round((parseInt(el.style.left, 10) || 0) / this.GRID_X) * this.GRID_X + this.PAD % this.GRID_X,
+        Math.round((parseInt(el.style.top, 10) || 0) / this.GRID_Y) * this.GRID_Y + this.PAD % this.GRID_Y);
+      el.style.left = x + "px";
+      el.style.top = y + "px";
+      this.save();
+      if (typeof Sfx === "object") Sfx.play("click");
+      /* Swallow the click this drag is about to generate — and the dblclick
+         too. Icons open on double-click, so two quick repositionings in a row
+         would otherwise land as a double-click and launch the thing you were
+         only trying to tidy. */
+      const eat = (e) => { e.stopPropagation(); e.preventDefault(); };
+      el.addEventListener("click", eat, { capture: true, once: true });
+      el.addEventListener("dblclick", eat, { capture: true, once: true });
+      // If no dblclick follows, don't leave a listener armed for the next one.
+      setTimeout(() => el.removeEventListener("dblclick", eat, { capture: true }), 700);
+    };
+
+    document.addEventListener("pointermove", move);
+    document.addEventListener("pointerup", up);
+  },
+
+  reset() {
+    this.write({});
+    this.layout();
+  },
+
+  init() {
+    const box = document.getElementById("icons");
+    if (!box) return;
+    box.addEventListener("pointerdown", (ev) => {
+      const el = ev.target.closest?.(".dicon");
+      if (el) this.drag(el, ev);
+    });
+    // Re-clamp when the desktop changes shape, or a laptop-sized layout can
+    // strand icons that were placed on a bigger screen.
+    let t = null;
+    window.addEventListener("resize", () => { clearTimeout(t); t = setTimeout(() => this.layout(), 200); });
+    this.layout();
+  },
+};
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", () => Icons.init());
+} else {
+  Icons.init();
 }

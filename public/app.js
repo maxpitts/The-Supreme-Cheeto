@@ -317,6 +317,7 @@ const WM = {
     const wasClosed = !w.open;
     w.open = true; w.min = false; w.touched = true; w.el.hidden = false;
     // Cheetip reacts to what you actually opened — that is the whole joke.
+    if (wasClosed && typeof Sfx === "object") Sfx.play("open");
     if (wasClosed) setTimeout(() => Cheetip?.react?.("window", { id: w.id }), 450);
     w.rolled = false; w.el.classList.remove("rolled");
     if (!this.mobile) {
@@ -445,6 +446,7 @@ const WM = {
     if (this.mobile) return;
     w.open = false; w.touched = true; w.el.hidden = true;
     w.el.classList.remove("active");
+    if (typeof Sfx === "object") Sfx.play("close");
     this.renderTasks(); this.save();
   },
 
@@ -479,6 +481,9 @@ const WM = {
       const w = this.byId(id); if (!w) return;
       const b = document.createElement("button");
       b.className = "dicon"; b.type = "button";
+      // Keyed by window id so a saved position survives the icon list being
+      // reordered — an index would silently reassign everyone's layout.
+      b.dataset.icon = id;
       b.innerHTML = `<span class="g">${w.icon}</span><span class="l">${esc(SHORT[id] || w.title)}</span>`;
       b.addEventListener("dblclick", () => this.open(id));
       b.addEventListener("click", (e) => { if (e.detail === 0) this.open(id); });
@@ -527,7 +532,7 @@ const WM = {
     rows.push({ label: "Install to home screen", icon: "&#128229;", id: "installItem", act: () => promptInstall() });
     rows.push({ label: "Refresh data now", icon: "&#128260;", act: () => loadLive(true) });
     rows.push({ label: "Show Cheetip", icon: "&#129472;", act: () => Cheetip.show() });
-    rows.push({ label: "Buddy sounds: off", icon: "&#128266;", id: "soundItem",
+    rows.push({ label: "Sounds: off", icon: "&#128266;", id: "soundItem",
                 act: () => Snd.setOn(!Snd.on()) });
     rows.push({ label: "Block pop-ups", icon: "&#128683;", id: "popupItem",
                 act: () => Popups.setBlocked(!Popups.blocked()) });
@@ -1041,6 +1046,7 @@ async function loadLive(manual) {
     if (j.empty) throw new Error("no data stored yet");
 
     const prevNewest = (D.posts?.list || [])[0]?.id;
+    const prevStamp = D.updatedAt;
     D = { ...D, ...j, seeded: false };
     debtAtLoad = 0;
     renderAll();
@@ -1048,12 +1054,33 @@ async function loadLive(manual) {
 
     const newest = (D.posts?.list || [])[0];
     if (newest && prevNewest && newest.id !== prevNewest) flashNewPost(newest);
+
+    /* A refresh that changes nothing on screen looks like a refresh that
+       didn't happen — which is why this used to feel like something you had
+       to go and trigger. When the stored figures actually move, say so
+       quietly: pulse the freshness chips, and let the modules that draw their
+       own numbers do the same. No dialog, nothing to dismiss. */
+    if (prevStamp && j.updatedAt && j.updatedAt !== prevStamp) markUpdated();
     if (manual) showModal("Refreshed", "✅",
       `Pulled at ${new Date(j.updatedAt).toLocaleTimeString()}.<br>Feed source: <b>${esc(j.posts?.via || "unknown")}</b>.`);
   } catch (err) {
     if (manual) showModal("Couldn't refresh", "⚠",
       `The data endpoint didn't answer.<br><span style="color:#555;font-size:11px">${esc(err.message)}</span><br><br>Showing the last good numbers, labeled with their age.`);
   }
+}
+
+/* The visual cue for "these numbers are new". Deliberately a short pulse on
+   the freshness chips rather than an animation on every figure: the debt is
+   already moving ten times a second, and adding more motion next to it makes
+   the whole window feel like it is vibrating rather than reporting. */
+function markUpdated() {
+  document.querySelectorAll(".fresh-ok, .fresh-old, .fresh-bad").forEach((el) => {
+    el.classList.remove("just-updated");
+    void el.offsetWidth;                 // restart the animation, not queue it
+    el.classList.add("just-updated");
+    setTimeout(() => el.classList.remove("just-updated"), 1600);
+  });
+  document.dispatchEvent(new CustomEvent("cheeto:updated"));
 }
 
 function flashNewPost(p) {
@@ -1224,6 +1251,10 @@ function showModal(title, glyph, html) {
   $("#modalGlyph").innerHTML = glyph;
   $("#modalBody").innerHTML = html;
   $("#modal").hidden = false;
+  // Every modal on this site is either an error or a refusal, so the chord
+  // fits. If a purely informational dialog ever appears here, this is the
+  // line to reconsider.
+  if (typeof Sfx === "object") Sfx.play("error");
   $("#modalOk").focus();
 }
 function initChrome() {
@@ -2189,8 +2220,12 @@ function start() {
   openFromQuery();
 
   loadLive();
-  setInterval(loadLive, 5 * 60000);        // page re-checks every 5 min
-  document.addEventListener("visibilitychange", () => { if (!document.hidden && Date.now() - lastGood > 120000) loadLive(); });
+  /* Was every 5 minutes, which is a long time to sit in front of a site whose
+     entire premise is that it is live. The endpoint is CDN-cached for 20
+     seconds and the server only does real work when its own data is stale, so
+     asking more often costs a conditional request, not a scrape. */
+  setInterval(loadLive, 75000);            // page re-checks every 75 seconds
+  document.addEventListener("visibilitychange", () => { if (!document.hidden && Date.now() - lastGood > 45000) loadLive(); });
 }
 
 let booted = false;

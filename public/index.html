@@ -102,7 +102,17 @@ button{font-family:inherit}
 }
 
 /* ---------- desktop icons ---------- */
-#icons{position:absolute;top:8px;left:8px;display:flex;flex-direction:column;gap:4px;z-index:2}
+/* The icon layer covers the whole desktop so icons can be dragged anywhere,
+   but it must not swallow clicks meant for the desktop underneath — hence
+   pointer-events:none here and auto on the icons themselves. On a phone the
+   desktop scrolls as a normal document and there is no dragging, so it falls
+   back to the original flex column. */
+#icons{position:absolute;inset:0;z-index:2;pointer-events:none}
+.dicon{position:absolute;pointer-events:auto}
+.dicon.dragging{opacity:.75;z-index:5}
+body.mobile #icons{position:static;inset:auto;display:flex;flex-direction:column;gap:4px;
+  pointer-events:auto;padding:8px}
+body.mobile .dicon{position:static}
 .dicon{width:78px;padding:5px 3px;text-align:center;cursor:pointer;border:1px dotted transparent;background:none}
 .dicon .g{font-size:26px;line-height:1;display:block;filter:drop-shadow(2px 2px 0 rgba(0,0,0,.4))}
 .dicon .l{display:block;color:#fff;font-size:11px;margin-top:3px;text-shadow:1px 1px 0 #000,0 0 3px #000;word-break:break-word}
@@ -824,6 +834,24 @@ body.mobile .urow-acts{width:100%}
   #trayOnline{display:none}                /* the count is also in People */
 }
 
+
+
+.up-stpost{display:flex;gap:6px;margin:0 0 8px}
+.up-stpost input{flex:1 1 auto;min-width:0;font:inherit;font-size:12px;padding:5px 7px;
+  background:var(--field);color:var(--field-ink);border:2px solid;
+  border-color:var(--gray-d) var(--hi) var(--hi) var(--gray-d)}
+@media (max-width:820px){ .up-stpost input{font-size:16px} }
+
+
+/* A one-second pulse when the tracked figures actually change, so a refresh
+   that happened is visibly different from a refresh that didn't. Honours
+   reduced-motion: the colour still changes, it just doesn't animate. */
+@keyframes cheeto-updated{
+  0%{box-shadow:0 0 0 0 rgba(255,176,0,.85)}
+  100%{box-shadow:0 0 0 9px rgba(255,176,0,0)}
+}
+.just-updated{animation:cheeto-updated 1.2s ease-out 1}
+@media (prefers-reduced-motion: reduce){ .just-updated{animation:none;outline:2px solid #ffb000} }
 
 /* ---------------- instant messages ---------------- */
 #trayIm{position:relative}

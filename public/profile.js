@@ -10,8 +10,9 @@
 
    Everything visible here comes from cheeto_public_profile(), which decides
    what a given viewer may see. This file asks for a profile and draws the
-   answer; it does not decide that friends-only statuses are friends-only, and
-   it can't be talked into showing them.
+   answer; it does not decide what is visible and cannot be talked into showing
+   more. (Statuses used to be friends-only and are now public — that changed in
+   Postgres, not here, which is the point.)
    ===================================================================== */
 
 const Profile = {
@@ -244,18 +245,28 @@ const Profile = {
   statusesHTML() {
     const p = this.data;
     const list = Array.isArray(p.statuses) ? p.statuses : [];
-    if (!p.can_see_statuses) {
-      // Statuses are friends-only everywhere else on the site, so saying why
-      // they're absent beats an empty box that looks broken.
+    const mine = p.friendship === "self";
+
+    /* The friends-only branch that used to live here is gone: statuses are
+       public now, so can_see_statuses is always true and a stranger reading
+       your page sees what you've said. That was the point of a profile. */
+    const composer = mine
+      ? `<form class="up-stpost" id="upStForm" autocomplete="off">
+           <input id="upStBody" maxlength="200" placeholder="Post a status&hellip;"
+                  aria-label="Post a status">
+           <button class="b95 tiny" type="submit">Post</button>
+         </form>`
+      : "";
+
+    if (!list.length) {
       return `<fieldset><legend>Status updates</legend>
-        <div class="note">${p.friendship === "pending_out"
-          ? "Friends-only. Your request is still pending."
-          : "Friends-only &mdash; add them and their statuses show up here and in your buddy list."}</div>
-        </fieldset>`;
+        ${composer}
+        <div class="note">${mine
+          ? "Nothing yet. Whatever you post here shows on your page and in the status feed."
+          : "Nothing posted yet."}</div></fieldset>`;
     }
-    if (!list.length) return `<fieldset><legend>Status updates</legend>
-      <div class="note">Nothing posted yet.</div></fieldset>`;
     return `<fieldset><legend>Status updates</legend>
+      ${composer}
       ${list.map((s) => `<div class="up-st">
         <span class="up-when">${esc(this.when(s.created_at))}</span>
         <div>${esc(s.body)}</div></div>`).join("")}</fieldset>`;
@@ -332,6 +343,28 @@ const Profile = {
     }));
     on("[data-up-buddies]", () => WM.open("w-buddies"));
     on("[data-up-post]", (e) => { WM.open("w-board"); });
+
+    /* Posting a status from your own page. Goes through Buddies.submitStatus
+       like the taskbar and the buddy list do — three boxes, one insert, so
+       none of them can drift away from the others. */
+    box.querySelector("#upStForm")?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const input = box.querySelector("#upStBody");
+      const body = (input?.value || "").trim();
+      if (!body || this.busy) return;
+      this.busy = true;
+      const r = await Buddies.submitStatus(body);
+      this.busy = false;
+      if (r.ok) {
+        if (input) input.value = "";
+        await this.load();          // it should appear under the box immediately
+        return;
+      }
+      if (r.quiet) return;
+      showModal("Status not posted", "&#9888;",
+        `<span style="font-size:11px;color:#555">${esc(r.error)}</span><br><br>
+         Usually that means your account is too new, or you're posting too fast.`);
+    });
 
     on("[data-up-add]", (e) => this.act(e.currentTarget, "cheeto_friend_request", { target: this.who },
       "Friend request sent."));

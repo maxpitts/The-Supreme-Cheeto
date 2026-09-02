@@ -25,6 +25,7 @@ const DM = {
   loading: false,
   unread: 0,
   sending: false,
+  everLoaded: false,
 
   /* ---------------------------------------------------------- lifecycle */
   init() {
@@ -57,6 +58,8 @@ const DM = {
       const grew = n > this.unread;
       this.unread = n;
       this.paintBadge();
+      // A message arriving is the one thing on this site worth a noise.
+      if (grew && typeof Sfx === "object") Sfx.play("message");
       // If the window is already open on a thread, new mail should just appear.
       if (grew && !document.getElementById("w-im")?.hidden) this.load(true);
     } catch { /* a badge must never break the desktop */ }
@@ -74,9 +77,20 @@ const DM = {
   },
 
   /* --------------------------------------------------------------- open */
+  LAST_KEY: "cheeto_dm_last",
+
   async open(withWho) {
     if (!me) { promptSignIn("Sign in to send a message."); return; }
     if (withWho !== undefined) this.open_with = withWho || null;
+    // A refresh used to drop you back on the list with no idea which
+    // conversation you had been reading. Remember the last one, the way a
+    // messaging app does.
+    else if (!this.open_with) {
+      try { this.open_with = localStorage.getItem(this.LAST_KEY) || null; } catch {}
+    }
+    try {
+      if (this.open_with) localStorage.setItem(this.LAST_KEY, this.open_with);
+    } catch {}
     WM.open("w-im");
     this.render();
     await this.load(true);
@@ -101,7 +115,9 @@ const DM = {
         this.open_with ? sb.rpc("cheeto_dm_thread", { other: this.open_with, lim: 100 })
                        : Promise.resolve({ data: [] }),
       ]);
-      this.threads = Array.isArray(t?.data) ? t.data : [];
+      // Only treat a load as "done" when it actually returned something
+      // usable; a thrown request must not flip the empty state on.
+      if (Array.isArray(t?.data)) { this.threads = t.data; this.everLoaded = true; }
       const next = Array.isArray(m?.data) ? m.data : [];
       const grew = next.length !== this.msgs.length;
       this.msgs = next;
@@ -136,6 +152,14 @@ const DM = {
   },
 
   listHTML() {
+    /* Until the first fetch lands there is nothing to say yet, and saying
+       "No messages yet" is a lie that reads as data loss — which is exactly
+       how it was reported: refresh, open Messages, and every conversation
+       appears to be gone for the half-second before the list arrives. */
+    if (!this.everLoaded) {
+      return `<div class="im-empty"><div class="im-empty-i">&#9993;</div>
+        <b>Loading&hellip;</b></div>`;
+    }
     if (!this.threads.length) {
       return `<div class="im-empty">
         <div class="im-empty-i">&#9993;</div>
@@ -192,9 +216,15 @@ const DM = {
     const box = document.getElementById("imBody");
     if (!box) return;
     box.querySelectorAll("[data-im-open]").forEach((b) =>
-      b.addEventListener("click", () => { this.open_with = b.dataset.imOpen; this.render(); this.load(true); }));
+      b.addEventListener("click", () => {
+        this.open_with = b.dataset.imOpen;
+        try { localStorage.setItem(this.LAST_KEY, this.open_with); } catch {}
+        this.render(); this.load(true);
+      }));
     document.getElementById("imBack")?.addEventListener("click", () => {
-      this.open_with = null; this.msgs = []; this.render();
+      this.open_with = null; this.msgs = [];
+      try { localStorage.removeItem(this.LAST_KEY); } catch {}
+      this.render();
     });
     document.getElementById("imFind")?.addEventListener("click", () => WM.open("w-buddies"));
     document.getElementById("imForm")?.addEventListener("submit", (e) => { e.preventDefault(); this.send(); });
