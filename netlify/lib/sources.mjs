@@ -133,11 +133,19 @@ async function posts() {
     if (!Array.isArray(raw) || !raw.length) throw new Error("empty api");
     const list = raw.map((p) => {
       const text = stripTags(p.content || "");
+      /* When he posts no words, say what the post IS. The attachment types are
+         right here, so use them rather than calling every wordless post
+         "image-only" — a re-Truth of a video was being labelled as an image,
+         which is a small invented fact, and this site does not invent facts. */
+      const kinds = new Set((p.media_attachments || []).map((m) => m?.type));
+      const media = kinds.has("video") || kinds.has("gifv") ? "video, no caption"
+                  : kinds.has("image") ? "image, no caption"
+                  : kinds.size ? "attachment, no caption" : null;
       return {
         id: String(p.id),
         at: p.created_at,
         text: text || null,
-        note: text ? null : p.media_attachments?.length ? "image-only post" : "no text",
+        note: text ? null : (media || "no caption"),
         url: p.url || `https://truthsocial.com/@realDonaldTrump/${p.id}`,
         replies: p.replies_count ?? null,
         reblogs: p.reblogs_count ?? null,
@@ -183,11 +191,25 @@ async function posts() {
       // reject anything that still looks like markup rather than prose
       if (text && /[<>]|data-[a-z-]+=|https?:\/\/\S+"/.test(text)) text = null;
 
+      /* When there is no text, say WHAT the post is rather than reporting the
+         scrape as a failure. "no text captured" reads like the site broke; in
+         every case checked it was accurate — a re-Truth of a video with no
+         caption of its own — and the mirror's own status__content for those
+         posts is literally <p></p>.
+
+         Only <video> is detected, deliberately. An avatar is never a <video>,
+         so that test cannot produce a false label. Images are NOT inferred:
+         every post block carries avatars and site furniture, and calling a
+         post "image-only" when it isn't would be inventing a fact about the
+         feed — which is the one thing this site must never do. */
+      const hasVideo = /<video[\s>]/i.test(chunk);
+      const clean = text && text.length > 2 ? text.slice(0, 1500) : null;
+
       list.push({
         id,
         at: dm ? parseEasternWallClock(dm[1]) : null,
-        text: text && text.length > 2 ? text.slice(0, 1500) : null,
-        note: text && text.length > 2 ? null : "no text captured",
+        text: clean,
+        note: clean ? null : (hasVideo ? "video, no caption" : "no caption"),
         url: `https://trumpstruth.org/statuses/${id}`,
       });
     }
@@ -372,6 +394,10 @@ export async function runRefresh() {
 }
 
 export { STORE, KEY };
+/* Exported for the test harness only. The post parser is the one piece of
+   scraping whose output is quoted verbatim on the page, so it needs to be
+   callable against fixed HTML rather than only against the live mirror. */
+export { posts as __posts };
 
 /* =====================================================================
    SELF-TEST

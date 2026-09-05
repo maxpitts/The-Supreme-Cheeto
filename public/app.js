@@ -893,9 +893,15 @@ function renderFeed() {
     const when = postTime(p);
     const stamp = when ? new Date(when).toLocaleString("en-US",
       { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : (p.at || "—");
+    /* A post with no words is a real thing he does — a re-Truth, a video, a
+       bare image — and the feed should say so plainly. The old wording,
+       "[ no text captured ]", described OUR scraper rather than HIS post, so a
+       perfectly correct reading looked like a bug on our side. Same fact,
+       stated from the reader's point of view, with the source link already
+       sitting next to it for anyone who wants to check. */
     const body = p.text
       ? `<div class="txt">${esc(p.text)}</div>`
-      : `<div class="txt img-only">[ ${esc(p.note || "no text")} ]</div>`;
+      : `<div class="txt img-only">&mdash; ${esc(p.note || "no caption")} &mdash;</div>`;
     return `<div class="post${isNew ? " isnew" : ""}" data-pid="${esc(p.id || "")}">
       <div class="meta">${esc(stamp)}${isNew ? ' <span class="newbadge">NEW</span>' : ""}
         ${p.url ? `<a href="${esc(p.url)}" target="_blank" rel="noopener">source</a>` : ""}</div>
