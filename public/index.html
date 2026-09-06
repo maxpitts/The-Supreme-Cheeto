@@ -946,6 +946,46 @@ body.mobile .urow-acts{width:100%}
   .im-compose input{font-size:16px}   /* 16px stops iOS zooming on focus */
 }
 
+/* ---------------- SUPREME.EXE (the joke coin) ----------------
+   Styled as a readout, not a sales page. The banner is red, permanent and
+   first in the DOM so it is the first thing read by a screen reader and the
+   first thing seen by everyone else. Nothing in here gets a "buy" colour. */
+.sp-banner{background:#7f0000;color:#fff;font-weight:bold;font-size:10px;
+  letter-spacing:.6px;text-align:center;padding:5px 6px;margin:-2px -2px 8px;
+  border:2px solid;border-color:#a00 #400 #400 #a00;line-height:1.35}
+.sp-pad{padding:8px}
+.sp-pre{text-align:center;padding:14px 10px}
+.sp-glyph{font-size:30px;margin-bottom:6px;font-family:"Courier New",monospace}
+.sp-pre p{margin:6px 0 0}
+
+.sp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));
+  gap:5px;margin-bottom:8px}
+.sp-cell{display:flex;flex-direction:column;gap:2px;min-width:0;padding:5px 6px;
+  background:var(--field);border:2px solid;
+  border-color:var(--gray-d) var(--hi) var(--hi) var(--gray-d)}
+.sp-lbl{font-size:9px;letter-spacing:.5px;text-transform:uppercase;color:var(--field-dim)}
+/* Long numbers must wrap inside the cell rather than push it wide — this is
+   the same overflow class of bug the odometer had, and the fix is the same:
+   let the value break instead of letting the box grow. */
+.sp-v{font-family:"Courier New",monospace;font-size:14px;line-height:1.15;
+  overflow-wrap:anywhere;min-width:0}
+.sp-v.sp-small{font-size:11px}
+.sp-v.up{color:#0a7a0a}
+.sp-v.down{color:#b00}
+body.dark .sp-v.up{color:#66d966}
+body.dark .sp-v.down{color:#ff8a8a}
+
+.sp-roast{margin:0 0 8px;padding:6px 7px;background:var(--gray);
+  border:2px solid;border-color:var(--hi) var(--gray-d) var(--gray-d) var(--hi);
+  font-size:11px;line-height:1.4}
+.sp-addr{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.sp-addr code{font-size:10px;overflow-wrap:anywhere;min-width:0;flex:1 1 120px;
+  padding:3px 4px;background:var(--field);color:var(--field-ink,var(--ink));
+  border:2px solid;border-color:var(--gray-d) var(--hi) var(--hi) var(--gray-d)}
+.sp-foot{margin:0}
+.sp-err{color:#b00;font-size:10px;overflow-wrap:anywhere}
+body.dark .sp-err{color:#ff8a8a}
+
 /* ---------------- quick status (taskbar) ----------------
    Posting a status used to mean opening the Buddy List and finding the box
    inside it. Nobody posts a status they have to go and find: the whole point
@@ -2398,6 +2438,15 @@ body.dark .st-tab.on{background:linear-gradient(#1d6b3f,#0f4326);color:#eaffea}
     <div class="grip"></div>
   </section>
 
+  <!-- ---------------- SUPREME.EXE ---------------- -->
+  <section class="win" id="w-supreme" data-transient data-title="SUPREME.EXE" data-icon="&#128176;"
+           data-x="200" data-y="90" data-w="400" data-h="430">
+    <div class="tb"><span class="ico">&#128176;</span><span class="t">SUPREME.EXE</span>
+      <span class="btns"><button data-min>_</button><button data-max>&#9633;</button><button data-close>&times;</button></span></div>
+    <div class="body" id="supremeBody"></div>
+    <div class="grip"></div>
+  </section>
+
   <!-- ---------------- INSTANT MESSAGES ---------------- -->
   <section class="win" id="w-im" data-transient data-title="MESSAGES" data-icon="&#9993;"
            data-x="250" data-y="80" data-w="400" data-h="500">
@@ -2651,6 +2700,7 @@ body.dark .st-tab.on{background:linear-gradient(#1d6b3f,#0f4326);color:#eaffea}
 <script src="/skin.js"></script>
 <script src="/dm.js"></script>
 <script src="/clubs.js"></script>
+<script src="/supreme.js"></script>
 <script src="/desktop.js"></script>
 <script src="/predict.js"></script>
 <script src="/live.js"></script>
