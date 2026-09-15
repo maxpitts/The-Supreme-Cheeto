@@ -57,12 +57,17 @@ const Exchange = {
   peers: new Map(),
   boards: [],
   keys: Object.create(null),
-  self: { x: 0, z: 8, ry: Math.PI, moving: false },
+  self: { x: 0, z: 2, ry: Math.PI, moving: false },
   /* Camera sits high and looks at chest height rather than at the player's
      feet. Framed lower than this, a third of the screen is empty floor and
      the jumbotron crops off the top — which is the one thing in the room
      people are actually meant to look at. */
-  cam: { yaw: Math.PI, dist: 10.5, height: 6.9, look: 2.6 },
+    /* Orbit camera. yaw and pitch both come from dragging, dist from the
+     wheel or a pinch — the fixed height/look pair this replaced could only
+     ever frame one part of the room, which is why the flag and the big
+     boards kept ending up off the top of the screen. */
+  cam: { yaw: Math.PI, pitch: 0.22, dist: 11.5 },
+  PITCH_MIN: -0.30, PITCH_MAX: 0.95, DIST_MIN: 5, DIST_MAX: 22,
   lastSend: 0,
   lastMoveSend: 0,
   raf: 0,
@@ -152,7 +157,12 @@ const Exchange = {
     fill.position.set(-14, 8, -12);
     this.scene.add(fill);
 
-    const R = this.ROOM, H = 15;
+    const R = this.ROOM, H = 16;
+    /* Declared here, not next to the trading posts. It used to be reset to
+       [] halfway down buildWorld, which silently discarded every collider
+       registered above that line — the columns and the wall booths — so
+       two thirds of the room stayed walk-through. */
+    this.colliders = [];
     const box = (w, h, d, color, x, y, z, flat) => {
       const m = new T.Mesh(new T.BoxGeometry(w, h, d),
         new T.MeshLambertMaterial({ color, flatShading: !!flat }));
@@ -161,124 +171,207 @@ const Exchange = {
       return m;
     };
 
-    /* ---- floor: a chequer of two greys, built as one merged plane of
-       tiles would be nicer, but 2 big planes + a grid helper is far cheaper
-       and reads identically at this scale. */
-    box(R, 0.6, R, 0x8d9299, 0, -0.3, 0);
-    const grid = new T.GridHelper(R, R / 2, 0x3a4048, 0x2a3037);
-    grid.position.y = 0.011;
+    /* ---- floor ----
+       Warm stone, not cold grey. The real floor is beige marble under warm
+       light; a blue-grey room reads as an office, not an exchange. */
+    box(R, 0.6, R, 0xa39b8c, 0, -0.3, 0);
+    const grid = new T.GridHelper(R, R / 3, 0x6d6557, 0x8d8576);
+    grid.position.y = 0.012;
     this.scene.add(grid);
 
     /* ---- walls + ceiling ---- */
-    box(R, H, 1, 0x1d2430, 0, H / 2, -R / 2);
-    box(1, H, R, 0x1d2430, -R / 2, H / 2, 0);
-    box(1, H, R, 0x1d2430, R / 2, H / 2, 0);
-    box(R, H, 1, 0x1d2430, 0, H / 2, R / 2);
-    box(R, 1, R, 0x141a22, 0, H, 0);
+    box(R, H, 1, 0x2a2118, 0, H / 2, -R / 2);
+    box(1, H, R, 0x2a2118, -R / 2, H / 2, 0);
+    box(1, H, R, 0x2a2118, R / 2, H / 2, 0);
+    box(R, H, 1, 0x2a2118, 0, H / 2, R / 2);
+    box(R, 1, R, 0x18120d, 0, H, 0);
+    // A coffered band where wall meets ceiling — cheap, and it stops the
+    // room reading as a cardboard box.
+    box(R, 0.7, R - 2, 0x3a2e21, 0, H - 1, 0);
 
-    /* ---- columns: the neoclassical bit, rendered as blocks ---- */
-    for (const cx of [-15, 15]) {
-      for (const cz of [-14, 0, 14]) {
-        box(2.2, H - 1, 2.2, 0xd8d2c4, cx, (H - 1) / 2, cz, true);
-        box(3, 0.8, 3, 0xeae5d8, cx, H - 1.2, cz);
-        box(3, 0.8, 3, 0xeae5d8, cx, 0.4, cz);
+    /* ---- columns ---- */
+    for (const cx of [-16, 16]) {
+      for (const cz of [-15, 0, 15]) {
+        this.colliders.push({ t: "b", x: cx, z: cz, hw: 1.5, hd: 1.5, h: 14 });
+        box(2.2, H - 2, 2.2, 0xded5c2, cx, (H - 2) / 2, cz, true);
+        box(3, 0.8, 3, 0xefe7d6, cx, H - 2.2, cz);
+        box(3, 0.8, 3, 0xefe7d6, cx, 0.4, cz);
       }
     }
 
-    /* ---- trading posts: chunky octagonal-ish podiums people gather at ---- */
+    /* ---- arched windows down the right wall ----
+       Not real geometry — lit panels behind a frame. At this fidelity the
+       only job is to say "daylight is over there", and a MeshBasicMaterial
+       costs nothing because it ignores lighting entirely. */
+    for (const wz of [-13, -4, 5, 14]) {
+      const pane = new T.Mesh(new T.PlaneGeometry(4.6, 8),
+        new T.MeshBasicMaterial({ color: 0xbcd8ee }));
+      pane.position.set(R / 2 - 0.55, 7.5, wz);
+      pane.rotation.y = -Math.PI / 2;
+      this.scene.add(pane);
+      box(0.4, 9, 5.4, 0x4a3a28, R / 2 - 0.75, 7.5, wz);
+      const arch = new T.Mesh(new T.CylinderGeometry(2.7, 2.7, 0.4, 16, 1, false, 0, Math.PI),
+        new T.MeshLambertMaterial({ color: 0x4a3a28 }));
+      arch.rotation.z = -Math.PI / 2;
+      arch.rotation.y = Math.PI / 2;
+      arch.position.set(R / 2 - 0.75, 11.5, wz);
+      this.scene.add(arch);
+    }
+
+    /* ---- perimeter booths down the left wall ---- */
+    for (const bz of [-14, -7, 0, 7, 14]) {
+      this.colliders.push({ t: "b", x: -R / 2 + 2.2, z: bz, hw: 1.5, hd: 2.6, h: 2.1 });
+      box(2.6, 1.2, 5, 0x3d2f20, -R / 2 + 2.2, 0.6, bz);
+      box(2.8, 0.18, 5.2, 0xb08d4a, -R / 2 + 2.2, 1.26, bz);
+      for (const d of [-1.4, 0, 1.4]) {
+        box(0.2, 1.1, 1.5, 0x0d1117, -R / 2 + 1.3, 1.9, bz + d);
+      }
+    }
+
+    /* ---- trading posts ----
+       No mast. The monitors used to sit on a 4.2-unit black pole rising out
+       of every post, which at eye height put a row of black bars straight
+       across the middle of the view — fine in a plan, awful from inside the
+       room. Real floors hang their displays from the ceiling, which both
+       looks right and gets them out of the sightline entirely. */
     this.posts = [];
+    /* Solid things. Walking through a trading post was the giveaway that
+       this was a diorama rather than a room — you notice it within about
+       two seconds of moving. Circles for the round objects, boxes for the
+       square ones; resolved against the player every frame. */
     const postAt = (x, z) => {
       const g = new T.Group();
-      const base = new T.Mesh(new T.CylinderGeometry(2.6, 2.9, 1.5, 8),
-        new T.MeshLambertMaterial({ color: 0x243447, flatShading: true }));
+      const base = new T.Mesh(new T.CylinderGeometry(2.7, 3.0, 1.5, 8),
+        new T.MeshLambertMaterial({ color: 0x2b3340, flatShading: true }));
       base.position.y = 0.75;
       g.add(base);
-      const top = new T.Mesh(new T.CylinderGeometry(2.8, 2.6, 0.3, 8),
-        new T.MeshLambertMaterial({ color: 0xff7a00 }));
-      top.position.y = 1.62;
-      g.add(top);
-      const mast = new T.Mesh(new T.BoxGeometry(0.35, 4.2, 0.35),
-        new T.MeshLambertMaterial({ color: 0x11161d }));
-      mast.position.y = 3.6;
-      g.add(mast);
+      const trim = new T.Mesh(new T.CylinderGeometry(2.9, 2.7, 0.28, 8),
+        new T.MeshLambertMaterial({ color: 0xb08d4a }));
+      trim.position.y = 1.62;
+      g.add(trim);
+      // A bank of small screens around the rim, which is what a post is.
+      for (let i = 0; i < 8; i++) {
+        const a = (i / 8) * Math.PI * 2;
+        const scr = new T.Mesh(new T.BoxGeometry(1.5, 0.95, 0.16),
+          new T.MeshLambertMaterial({ color: i % 2 ? 0x0e1520 : 0x121a26 }));
+        scr.position.set(Math.cos(a) * 2.55, 2.3, Math.sin(a) * 2.55);
+        scr.rotation.y = -a + Math.PI / 2;
+        g.add(scr);
+      }
       g.position.set(x, 0, z);
       this.scene.add(g);
       this.posts.push(g);
+      this.colliders.push({ t: "c", x, z, r: 3.1, h: 3.0 });
       return g;
     };
     const POSTS = [[-8, -6], [8, -6], [-8, 6], [8, 6], [0, -13]];
     POSTS.forEach(([x, z]) => postAt(x, z));
 
+    /* ---- order slips all over the floor ----
+       One InstancedMesh, so sixty bits of litter cost one draw call. It is
+       a small thing and it does more for "this is a trading floor" than any
+       other object in here. */
+    const slipGeo = new T.PlaneGeometry(0.42, 0.58);
+    const slips = new T.InstancedMesh(slipGeo,
+      new T.MeshLambertMaterial({ color: 0xf2ecdc, side: T.DoubleSide }), 90);
+    const dummy = new T.Object3D();
+    for (let i = 0; i < 90; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const r = 3 + Math.random() * 19;
+      dummy.position.set(Math.cos(a) * r, 0.02, Math.sin(a) * r);
+      dummy.rotation.set(-Math.PI / 2, 0, Math.random() * Math.PI);
+      dummy.updateMatrix();
+      slips.setMatrixAt(i, dummy.matrix);
+    }
+    slips.instanceMatrix.needsUpdate = true;
+    this.scene.add(slips);
+
     /* ------------------------------------------------- the screens ---- */
     this.boards = [];
 
-    // Jumbotron: the debt. Biggest object in the room, as it should be.
+    /* The flag. Every photograph of this building has it, and nothing else
+       says "New York Stock Exchange" in one object. Drawn rather than
+       loaded so there is no asset to fetch. */
     this.addBoard({
-      w: 22, h: 5.5, x: 0, y: 8.6, z: -R / 2 + 1.1, ry: 0,
+      w: 18, h: 5.2, x: 0, y: 13.1, z: -R / 2 + 1.05, ry: 0,
+      px: 1024, py: 512, draw: (c, g) => this.drawFlag(c, g),
+    });
+
+    // Jumbotron: the debt. Biggest screen in the room, as it should be.
+    this.addBoard({
+      w: 20, h: 5, x: 0, y: 8.4, z: -R / 2 + 1.1, ry: 0,
       px: 1024, py: 256, draw: (c, g) => this.drawDebt(c, g),
     });
 
-    // Post-top monitors — one per trading post, each a different tracker.
+    // The big boards flanking it — rows of live figures with up/down marks.
+    this.addBoard({
+      w: 9.5, h: 6.4, x: -16.5, y: 8.6, z: -R / 2 + 1.1, ry: 0,
+      px: 512, py: 512, draw: (c, g) => this.drawBigBoard(c, g, 0),
+    });
+    this.addBoard({
+      w: 9.5, h: 6.4, x: 16.5, y: 8.6, z: -R / 2 + 1.1, ry: 0,
+      px: 512, py: 512, draw: (c, g) => this.drawBigBoard(c, g, 1),
+    });
+
+    // Post monitors, hung from the ceiling on thin cables.
     const MON = [
-      { at: POSTS[0], draw: (c, g) => this.drawStat(c, g, "CHEETO-METER", this.vCheeto()) },
-      { at: POSTS[1], draw: (c, g) => this.drawStat(c, g, "APPROVAL", this.vApproval()) },
-      { at: POSTS[2], draw: (c, g) => this.drawStat(c, g, "GAS", this.vGas()) },
-      { at: POSTS[3], draw: (c, g) => this.drawStat(c, g, "EGGS", this.vEggs()) },
-      { at: POSTS[4], draw: (c, g) => this.drawStat(c, g, "GOLF DAYS", this.vGolf()) },
+      { draw: (c, g) => this.drawStat(c, g, "CHEETO-METER", this.vCheeto()) },
+      { draw: (c, g) => this.drawStat(c, g, "APPROVAL", this.vApproval()) },
+      { draw: (c, g) => this.drawStat(c, g, "GAS", this.vGas()) },
+      { draw: (c, g) => this.drawStat(c, g, "EGGS", this.vEggs()) },
+      { draw: (c, g) => this.drawStat(c, g, "GOLF DAYS", this.vGolf()) },
     ];
     MON.forEach((m, i) => {
       const [x, z] = POSTS[i];
-      /* 512x300 rather than 360x210: these screens are small and far away,
-         so the texture is heavily minified, and at the lower resolution the
-         decimal points in "63.4" and "41.2%" were being filtered out of
-         existence. A number that silently loses its decimal point is worse
-         than no number. */
-      this.addBoard({ w: 4.4, h: 2.2, x, y: 5.4, z, ry: 0, px: 1024, py: 512, draw: m.draw, double: true });
+      const Y = 10.4;
+      box(0.07, H - Y - 1.4, 0.07, 0x0b0f14, x - 1.9, (H - 1) - (H - Y - 1.4) / 2, z);
+      box(0.07, H - Y - 1.4, 0.07, 0x0b0f14, x + 1.9, (H - 1) - (H - Y - 1.4) / 2, z);
+      box(4.5, 0.3, 1.2, 0x11161d, x, Y + 1.2, z);
+      this.addBoard({ w: 4.0, h: 2.0, x, y: Y, z, ry: 0,
+                      px: 1024, py: 512, draw: m.draw, double: true });
     });
 
-    // Side wall monitors, angled in.
-    this.addBoard({ w: 9, h: 4.5, x: -R / 2 + 1.1, y: 8, z: -6, ry: Math.PI / 2,
+    // Side wall monitors.
+    this.addBoard({ w: 8, h: 4, x: -R / 2 + 1.1, y: 9, z: -8, ry: Math.PI / 2,
       px: 512, py: 256, draw: (c, g) => this.drawApprovalBars(c, g) });
-    this.addBoard({ w: 9, h: 4.5, x: R / 2 - 1.1, y: 8, z: -6, ry: -Math.PI / 2,
+    this.addBoard({ w: 8, h: 4, x: -R / 2 + 1.1, y: 9, z: 4, ry: Math.PI / 2,
       px: 512, py: 256, draw: (c, g) => this.drawEcon(c, g) });
 
-    // The ticker band: verbatim Truth posts crawling around the back wall.
+    // The ticker band: verbatim Truth posts crawling across the back wall.
     this.tickerBoard = this.addBoard({
-      w: R - 2, h: 1.4, x: 0, y: 4.6, z: -R / 2 + 1.1, ry: 0,
+      w: R - 3, h: 1.4, x: 0, y: 4.5, z: -R / 2 + 1.1, ry: 0,
       px: 2048, py: 64, draw: (c, g) => this.drawTicker(c, g),
     });
 
-    /* ---- the opening bell ----
-       Every trading floor has one and it is the only object in here that
-       does something purely because it is fun. Ringing it is broadcast, so
-       it goes off for everybody standing on the floor at once. */
-    const bellPost = new T.Group();
-    const stand = new T.Mesh(new T.CylinderGeometry(0.9, 1.2, 1.4, 8),
-      new T.MeshLambertMaterial({ color: 0x2a3444, flatShading: true }));
-    stand.position.y = 0.7; bellPost.add(stand);
-    const bell = new T.Mesh(new T.CylinderGeometry(0.55, 0.95, 1.1, 10),
+    /* ---- the opening bell, on a balcony above the floor ----
+       Which is where it actually is, and it means the bell is visible from
+       anywhere in the room rather than being a thing you trip over. */
+    const balc = new T.Group();
+    this.colliders.push({ t: "b", x: 0, z: R / 2 - 3.2, hw: 4.6, hd: 2.6, h: 4.8 });
+    box(9, 0.6, 5, 0x3d2f20, 0, 3.4, R / 2 - 3.2);
+    box(9, 0.22, 0.3, 0xb08d4a, 0, 4.55, R / 2 - 5.6);
+    for (const rx of [-4.2, -1.4, 1.4, 4.2]) box(0.16, 1.1, 0.16, 0xb08d4a, rx, 4.0, R / 2 - 5.6);
+    for (const sx of [-3.6, 3.6]) box(0.5, 3.4, 0.5, 0x3d2f20, sx, 1.7, R / 2 - 3.2);
+    // steps up
+    for (let i = 0; i < 4; i++) box(4, 0.8, 0.9, 0x4a3a28, 0, 0.4 + i * 0.8, R / 2 - 0.9 - i * 0.9);
+    const bell = new T.Mesh(new T.CylinderGeometry(0.6, 1.05, 1.25, 12),
       new T.MeshLambertMaterial({ color: 0xe8b53a, flatShading: true }));
-    bell.position.y = 2.0; bellPost.add(bell);
-    const yoke = new T.Mesh(new T.BoxGeometry(0.22, 1.1, 0.22),
-      new T.MeshLambertMaterial({ color: 0x11161d }));
-    yoke.position.y = 1.5; bellPost.add(yoke);
-    bellPost.position.set(14, 0, 10);
-    this.scene.add(bellPost);
+    bell.position.set(0, 5.6, R / 2 - 3.6);
+    this.scene.add(bell);
+    box(0.24, 1.2, 0.24, 0x11161d, 0, 6.6, R / 2 - 3.6);
     this.bell = bell;
+    this.scene.add(balc);
 
-    /* ---- what you can walk up to ----
-       Each monitor is a shortcut to the desktop window that owns the same
-       number, which is the point of putting the site inside a room: you
-       walk to the thing you want and it opens the real window behind. */
+    /* ---- what you can walk up to ---- */
     this.hot = [
-      { x: -8, z: -6, r: 4.4, label: "THE_CHEETO-METER.EXE", win: "w-meter" },
-      { x: 8, z: -6, r: 4.4, label: "APPROVAL_RATING.EXE", win: "w-polls" },
-      { x: -8, z: 6, r: 4.4, label: "KITCHEN_TABLE.EXE", win: "w-econ" },
-      { x: 8, z: 6, r: 4.4, label: "EGG_PRICES.EXE", win: "w-econ" },
-      { x: 0, z: -13, r: 4.4, label: "GOLF_TRACKER.EXE", win: "w-golf" },
-      { x: 0, z: -19, r: 6.0, label: "NATIONAL_DEBT.EXE", win: "w-debt" },
-      { x: -16, z: -18, r: 5.0, label: "TRUTH_SOCIAL.EXE", win: "w-truth" },
-      { x: 14, z: 10, r: 3.4, label: "RING THE OPENING BELL", act: "bell" },
+      { x: -8, z: -6, r: 4.6, label: "THE_CHEETO-METER.EXE", win: "w-meter" },
+      { x: 8, z: -6, r: 4.6, label: "APPROVAL_RATING.EXE", win: "w-polls" },
+      { x: -8, z: 6, r: 4.6, label: "KITCHEN_TABLE.EXE", win: "w-econ" },
+      { x: 8, z: 6, r: 4.6, label: "EGG_PRICES.EXE", win: "w-econ" },
+      { x: 0, z: -13, r: 4.6, label: "GOLF_TRACKER.EXE", win: "w-golf" },
+      { x: 0, z: -19, r: 6.5, label: "NATIONAL_DEBT.EXE", win: "w-debt" },
+      { x: -17, z: -19, r: 5.5, label: "TRUTH_SOCIAL.EXE", win: "w-truth" },
+      { x: 0, z: R / 2 - 8, r: 4.2, label: "RING THE OPENING BELL", act: "bell" },
     ];
     this.near = null;
 
@@ -286,15 +379,32 @@ const Exchange = {
     this.avatar = this.buildBody(this.myColor(), true);
     this.scene.add(this.avatar);
 
-    /* ---- NPC traders: the floor should never look abandoned ---- */
+    /* ---- NPC traders ----
+       These used to orbit the room on fixed circles, which from inside read
+       exactly as what it was: people gliding round on invisible carousels.
+       They now walk to a destination, stand there a while, occasionally
+       throw a hand up like they are calling a bid, and then pick somewhere
+       else. Destinations are weighted towards the trading posts, because a
+       real floor is knots of people around the posts and stragglers in
+       between, not an even scatter.
+
+       Jacket colours are mostly blue on purpose — the floor uniform is a
+       blue smock, and a rainbow crowd reads as a video game rather than an
+       exchange. */
     this.npcs = [];
-    const NPC_COLORS = [0xd94f4f, 0x4f7fd9, 0x51b06a, 0xc9a227, 0x8a5fd9, 0xcf6a2e];
-    for (let i = 0; i < 14; i++) {
-      const g = this.buildBody(NPC_COLORS[i % NPC_COLORS.length], false);
-      const a = (i / 14) * Math.PI * 2;
-      const r = 7 + (i % 4) * 3.4;
-      g.position.set(Math.cos(a) * r, 0, Math.sin(a) * r);
-      g.userData = { a, r, sp: 0.12 + (i % 5) * 0.045, bob: Math.random() * 6 };
+    const JACKETS = [0x2f6fd0, 0x3a7fe0, 0x24589f, 0x4a8ae8, 0x2f6fd0,
+                     0x3a7fe0, 0xc9a227, 0xd94f4f, 0x51b06a, 0x8a5fd9];
+    this.POSTXZ = POSTS;
+    for (let i = 0; i < 20; i++) {
+      const g = this.buildBody(JACKETS[i % JACKETS.length], false);
+      const st = this.npcGoal();
+      g.position.set(st.tx, 0, st.tz);
+      g.userData = Object.assign(this.npcGoal(), {
+        sp: 2.6 + Math.random() * 2.2,
+        phase: Math.random() * 9,
+        wait: Math.random() * 4,
+        shout: 0,
+      });
       this.scene.add(g);
       this.npcs.push(g);
     }
@@ -404,6 +514,72 @@ const Exchange = {
     g.fillStyle = "#3d4a42";
     g.fillText("THE CHEETO EXCHANGE", c.width / 2, 226);
     return txt;
+  },
+
+  /* The flag, drawn rather than fetched. 13 stripes and a canton; the
+     stars are a grid of dots because at this distance an accurate 50-star
+     arrangement and a tidy grid are the same handful of pixels. */
+  drawFlag(c, g) {
+    const sh = c.height / 13;
+    for (let i = 0; i < 13; i++) {
+      g.fillStyle = i % 2 === 0 ? "#b22234" : "#f4f4f4";
+      g.fillRect(0, i * sh, c.width, sh + 1);
+    }
+    const cw = c.width * 0.42, ch = sh * 7;
+    g.fillStyle = "#3c3b6e";
+    g.fillRect(0, 0, cw, ch);
+    g.fillStyle = "#fff";
+    for (let r = 0; r < 9; r++) {
+      for (let col = 0; col < (r % 2 ? 5 : 6); col++) {
+        const x = (cw / 12) * (r % 2 ? 2 + col * 2 : 1 + col * 2);
+        const y = (ch / 10) * (1 + r);
+        g.beginPath(); g.arc(x, y, cw / 46, 0, Math.PI * 2); g.fill();
+      }
+    }
+    return "flag";                                 // static; paints once
+  },
+
+  /* The big board. Rows of live figures with an up/down mark where we hold
+     a previous value to compare against — and NO mark where we don't,
+     rather than inventing a direction. */
+  bigRows(which) {
+    const d = this.D() || {};
+    const dir = (v, prev) => (!isFinite(v) || !isFinite(prev)) ? "" : v > prev ? "up" : v < prev ? "dn" : "";
+    const A = [
+      ["GAS", this.vGas(), dir(d.gas?.v, d.gas?.prev)],
+      ["EGGS", this.vEggs(), ""],
+      ["CPI", isFinite(d.cpi?.v) ? d.cpi.v.toFixed(1) + "%" : "—", ""],
+      ["TARIFF", isFinite(d.tariff?.v) ? d.tariff.v.toFixed(1) + "%" : "—", dir(d.tariff?.v, d.tariff?.prev)],
+      ["CHEETO", this.vCheeto(), ""],
+    ];
+    const B = [
+      ["APPROVE", this.vApproval(), ""],
+      ["DISAPP", isFinite(d.approval?.disapprove) ? d.approval.disapprove.toFixed(1) + "%" : "—", ""],
+      ["EXEC ORD", isFinite(d.eo?.orders) ? String(d.eo.orders) : "—", ""],
+      ["GOLF DAYS", this.vGolf(), ""],
+      ["ON FLOOR", String(this.peers.size + 1), ""],
+    ];
+    return which ? B : A;
+  },
+
+  drawBigBoard(c, g, which) {
+    const rows = this.bigRows(which);
+    g.fillStyle = "#05080b"; g.fillRect(0, 0, c.width, c.height);
+    g.fillStyle = "#0b1119"; g.fillRect(8, 8, c.width - 16, c.height - 16);
+    g.textAlign = "left";
+    rows.forEach(([k, v, d], i) => {
+      const y = 78 + i * 88;
+      if (i % 2) { g.fillStyle = "#0f1720"; g.fillRect(12, y - 54, c.width - 24, 74); }
+      g.font = "bold 34px 'Courier New', monospace";
+      g.fillStyle = "#6c7d90";
+      g.fillText(k, 26, y);
+      g.textAlign = "right";
+      g.fillStyle = d === "up" ? "#3ddc7a" : d === "dn" ? "#ff5f5f" : "#ffb04a";
+      this.fit(g, (d === "up" ? "\u25B2 " : d === "dn" ? "\u25BC " : "") + v,
+               c.width - 26, y, c.width * 0.6, 44);
+      g.textAlign = "left";
+    });
+    return rows.map((r) => r[1] + r[2]).join("|");
   },
 
   drawStat(c, g, label, value) {
@@ -561,6 +737,67 @@ const Exchange = {
     return s;
   },
 
+  /* Push a point out of anything solid. Two passes, because sliding out of
+     one collider can push you into its neighbour — the gap between two
+     trading posts is exactly the case that needs the second pass. */
+  resolve(x, z, rad) {
+    for (let pass = 0; pass < 2; pass++) {
+      for (const c of this.colliders || []) {
+        if (c.t === "c") {
+          const dx = x - c.x, dz = z - c.z;
+          const d = Math.hypot(dx, dz), min = c.r + rad;
+          if (d < min) {
+            if (d < 1e-4) { x = c.x + min; }
+            else { x = c.x + (dx / d) * min; z = c.z + (dz / d) * min; }
+          }
+        } else {
+          const hw = c.hw + rad, hd = c.hd + rad;
+          const dx = x - c.x, dz = z - c.z;
+          if (Math.abs(dx) < hw && Math.abs(dz) < hd) {
+            // Leave by the nearest face, which is what "sliding along a
+            // wall" actually is.
+            const px = hw - Math.abs(dx), pz = hd - Math.abs(dz);
+            if (px < pz) x = c.x + (dx < 0 ? -hw : hw);
+            else z = c.z + (dz < 0 ? -hd : hd);
+          }
+        }
+      }
+    }
+    return { x, z };
+  },
+
+  /* Is this point inside something solid, at this height? Height matters
+     for the camera and not for the player: you can look over the balcony
+     rail from above, you cannot walk through it. */
+  solidAt(x, z, pad, y) {
+    for (const c of this.colliders || []) {
+      if (y != null && c.h != null && y > c.h) continue;
+      if (c.t === "c") {
+        if (Math.hypot(x - c.x, z - c.z) < c.r + pad) return true;
+      } else if (Math.abs(x - c.x) < c.hw + pad && Math.abs(z - c.z) < c.hd + pad) {
+        return true;
+      }
+    }
+    return false;
+  },
+
+  /* How far the camera can actually sit behind you before something gets in
+     the way. Walk backwards towards the bell balcony and the camera used to
+     end up inside it, filling the screen with the underside of a wooden
+     platform. Standard third-person fix: march out along the desired ray
+     and stop at the last clear step. */
+  clearDist(want, cp) {
+    const STEPS = 8;
+    for (let i = STEPS; i >= 1; i--) {
+      const d = want * (i / STEPS);
+      const x = this.self.x - Math.sin(this.cam.yaw) * cp * d;
+      const z = this.self.z - Math.cos(this.cam.yaw) * cp * d;
+      const y = Math.max(1.1, Math.sin(this.cam.pitch) * d + 2.0);
+      if (!this.solidAt(x, z, 0.6, y)) return d;
+    }
+    return want * 0.18;
+  },
+
   /* ------------------------------------------------------ interaction */
   nearest() {
     let best = null, bd = Infinity;
@@ -683,19 +920,49 @@ const Exchange = {
     /* Drag to look. Pointer events so mouse and touch are one code path —
        pointer lock is tempting but a locked cursor inside a draggable
        window that the person still has to move and close is hostile. */
-    let dragging = false, lastX = 0;
+    const pts = new Map();
+    let lastX = 0, lastY = 0, pinch = 0;
+    const clampCam = () => {
+      this.cam.pitch = Math.max(this.PITCH_MIN, Math.min(this.PITCH_MAX, this.cam.pitch));
+      this.cam.dist = Math.max(this.DIST_MIN, Math.min(this.DIST_MAX, this.cam.dist));
+    };
     dom.addEventListener("pointerdown", (e) => {
-      dragging = true; lastX = e.clientX;
+      pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      lastX = e.clientX; lastY = e.clientY;
+      if (pts.size === 2) {
+        const [a, b] = [...pts.values()];
+        pinch = Math.hypot(a.x - b.x, a.y - b.y);
+      }
       dom.setPointerCapture?.(e.pointerId);
     });
     dom.addEventListener("pointermove", (e) => {
-      if (!dragging) return;
+      if (!pts.has(e.pointerId)) return;
+      pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (pts.size >= 2) {
+        // Pinch to zoom. Two fingers never means "turn".
+        const [a, b] = [...pts.values()];
+        const d = Math.hypot(a.x - b.x, a.y - b.y);
+        if (pinch) { this.cam.dist *= pinch / (d || 1); clampCam(); }
+        pinch = d;
+        return;
+      }
       this.cam.yaw -= (e.clientX - lastX) * 0.007;
-      lastX = e.clientX;
+      this.cam.pitch += (e.clientY - lastY) * 0.005;
+      clampCam();
+      lastX = e.clientX; lastY = e.clientY;
     });
-    const endDrag = (e) => { dragging = false; dom.releasePointerCapture?.(e.pointerId); };
+    const endDrag = (e) => {
+      pts.delete(e.pointerId);
+      if (pts.size < 2) pinch = 0;
+      dom.releasePointerCapture?.(e.pointerId);
+    };
     dom.addEventListener("pointerup", endDrag);
     dom.addEventListener("pointercancel", endDrag);
+    dom.addEventListener("wheel", (e) => {
+      this.cam.dist *= 1 + Math.sign(e.deltaY) * 0.12;
+      clampCam();
+      e.preventDefault();
+    }, { passive: false });
 
     /* Touch stick. Only rendered on coarse pointers; see the CSS. */
     const stick = document.getElementById("xcStick");
@@ -896,8 +1163,11 @@ const Exchange = {
       const dz = (-ix * fx - iz * fz) / (mag || 1);
       const SPEED = 7.2;
       const lim = this.ROOM / 2 - 2.2;
-      this.self.x = Math.max(-lim, Math.min(lim, this.self.x + dx * SPEED * dt));
-      this.self.z = Math.max(-lim, Math.min(lim, this.self.z + dz * SPEED * dt));
+      let nx = Math.max(-lim, Math.min(lim, this.self.x + dx * SPEED * dt));
+      let nz = Math.max(-lim, Math.min(lim, this.self.z + dz * SPEED * dt));
+      const fixed = this.resolve(nx, nz, 0.75);
+      this.self.x = Math.max(-lim, Math.min(lim, fixed.x));
+      this.self.z = Math.max(-lim, Math.min(lim, fixed.z));
       this.self.ry = Math.atan2(dx, dz);
     }
 
@@ -914,10 +1184,15 @@ const Exchange = {
        looking in through a wall. That is what "the scaling is off" actually
        was — not the scale of anything, but a camera standing in the street. */
     const wall = this.ROOM / 2 - 1.6;
-    const cx = Math.max(-wall, Math.min(wall, this.self.x - Math.sin(this.cam.yaw) * this.cam.dist));
-    const cz = Math.max(-wall, Math.min(wall, this.self.z - Math.cos(this.cam.yaw) * this.cam.dist));
-    this.camera.position.lerp(new T.Vector3(cx, this.cam.height, cz), 1 - Math.pow(0.0016, dt));
-    this.camera.lookAt(this.self.x, this.cam.look, this.self.z);
+    const cp = Math.cos(this.cam.pitch), sp = Math.sin(this.cam.pitch);
+    const useD = this.clearDist(this.cam.dist, cp);
+    const cx = Math.max(-wall, Math.min(wall,
+      this.self.x - Math.sin(this.cam.yaw) * cp * useD));
+    const cz = Math.max(-wall, Math.min(wall,
+      this.self.z - Math.cos(this.cam.yaw) * cp * useD));
+    const cy = Math.max(1.1, sp * useD + 2.0);
+    this.camera.position.lerp(new T.Vector3(cx, cy, cz), 1 - Math.pow(0.0016, dt));
+    this.camera.lookAt(this.self.x, 2.3, this.self.z);
 
     /* ---- peers: ease toward their last known target ---- */
     const k = 1 - Math.pow(0.0009, dt);
@@ -932,14 +1207,7 @@ const Exchange = {
     }
 
     /* ---- NPCs ---- */
-    for (const n of this.npcs) {
-      const u = n.userData;
-      u.a += u.sp * dt;
-      n.position.x = Math.cos(u.a) * u.r;
-      n.position.z = Math.sin(u.a) * u.r;
-      n.rotation.y = -u.a + Math.PI / 2;
-      this.swing(n, true, t + u.bob);
-    }
+    for (const n of this.npcs) this.stepNpc(n, dt, t);
 
     /* ---- screens ---- */
     this._tick = (this._tick || 0) + dt * 190;
@@ -967,6 +1235,53 @@ const Exchange = {
     if (!this._sweepT || t - this._sweepT > 1) { this._sweepT = t; this.sweep(); }
 
     this.renderer.render(this.scene, this.camera);
+  },
+
+  /* Pick somewhere to go. Two thirds of the time that is a spot around one
+     of the trading posts, which is what makes the crowd clump instead of
+     spreading out into an even lattice. */
+  npcGoal() {
+    const lim = this.ROOM / 2 - 4;
+    if (Math.random() < 0.66 && this.POSTXZ?.length) {
+      const [px, pz] = this.POSTXZ[(Math.random() * this.POSTXZ.length) | 0];
+      const a = Math.random() * Math.PI * 2;
+      const r = 3.4 + Math.random() * 2.2;
+      return { tx: px + Math.cos(a) * r, tz: pz + Math.sin(a) * r, wait: 0 };
+    }
+    return { tx: (Math.random() * 2 - 1) * lim, tz: (Math.random() * 2 - 1) * lim, wait: 0 };
+  },
+
+  stepNpc(n, dt, t) {
+    const u = n.userData;
+
+    if (u.wait > 0) {
+      u.wait -= dt;
+      // Standing around. Every so often somebody calls a bid.
+      if (u.shout > 0) {
+        u.shout -= dt;
+        const L = n.userData.armL, R = n.userData.armR;
+        if (L && R) { L.rotation.x = -2.1; R.rotation.x = -2.1; }
+        n.position.y = 0;
+      } else {
+        if (Math.random() < dt * 0.22) u.shout = 0.5 + Math.random() * 0.7;
+        this.swing(n, false, t + u.phase);
+      }
+      if (u.wait <= 0) Object.assign(u, this.npcGoal());
+      return;
+    }
+
+    const dx = u.tx - n.position.x, dz = u.tz - n.position.z;
+    const d = Math.hypot(dx, dz);
+    if (d < 0.5) { u.wait = 2.5 + Math.random() * 8; u.shout = 0; return; }
+    const step = Math.min(d, u.sp * dt);
+    n.position.x += (dx / d) * step;
+    n.position.z += (dz / d) * step;
+    // Turn towards travel rather than snapping, or they pivot like turrets.
+    let turn = Math.atan2(dx, dz) - n.rotation.y;
+    while (turn > Math.PI) turn -= Math.PI * 2;
+    while (turn < -Math.PI) turn += Math.PI * 2;
+    n.rotation.y += turn * Math.min(1, dt * 7);
+    this.swing(n, true, t + u.phase);
   },
 
   swing(g, moving, t) {
