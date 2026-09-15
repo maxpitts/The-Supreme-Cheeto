@@ -43,6 +43,23 @@ const Exchange = {
      opens the window and never for anyone who doesn't. */
   THREE_URL: "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js",
 
+  /* ------------------------------------------------------ AD INVENTORY
+     Sellable slots on the floor. Fill an entry to sell a board; leave it
+     out and the slot shows ADVERTISE HERE with the site address on it,
+     which is itself the pitch. Selling a slot is editing this array and
+     nothing else.
+
+     Deliberately not pre-filled with STAX — that partnership ended, and a
+     house ad for a lapsed partner is worse than an empty slot. Slot 1 is a
+     T&G house ad; change or remove it freely.
+
+     Shape: { slot: <index>, title, line, tint }  — text only, on purpose.
+     An image here would mean fetching a third-party asset into the world
+     on every load, and the 90s screen look is better served by type. */
+  ADS: [
+    { slot: 1, title: "TRADES & GAINS", line: "tradesandgains.io", tint: 0x1a4a8a },
+  ],
+
   TOPIC: "cheeto-exchange-floor",
   TICK_HZ: 8,
   STALE_MS: 6000,
@@ -131,6 +148,84 @@ const Exchange = {
     });
   },
 
+  /* One texture for all fifty-five small screens.
+     The rim screens on the posts and the booth monitors were plain black
+     boxes — from inside the room that reads as "every screen is off",
+     which is exactly how it was reported. Giving each its own canvas would
+     mean fifty-five texture uploads a frame; instead there is ONE tall
+     canvas of rows, and each screen's geometry has its UVs pointed at a
+     different band of it. Repainting the canvas updates all of them at
+     once, for the cost of a single upload. */
+  DW_ROWS: 32,
+
+  buildDataWall() {
+    const T = window.THREE;
+    const c = document.createElement("canvas");
+    c.width = 512; c.height = 1024;
+    this.dwCanvas = c;
+    this.dwG = c.getContext("2d");
+    const tex = new T.CanvasTexture(c);
+    tex.generateMipmaps = true;
+    tex.minFilter = T.LinearMipmapLinearFilter;
+    tex.anisotropy = this.renderer.capabilities?.getMaxAnisotropy?.() || 1;
+    this.dwTex = tex;
+    this.smallMat = new T.MeshBasicMaterial({ map: tex });
+    this.paintDataWall();
+    return this.smallMat;
+  },
+
+  paintDataWall() {
+    const g = this.dwG, c = this.dwCanvas;
+    if (!g) return;
+    const d = this.D() || {};
+    const debt = this.debtNow();
+    // Real figures, repeated down the wall with a rolling offset so the
+    // screens are never all showing the same line.
+    const rows = [
+      ["DEBT", debt == null ? "—" : "$" + Math.round(debt / 1e9).toLocaleString("en-US") + "B", 1],
+      ["GAS", this.vGas(), isFinite(d.gas?.v) && isFinite(d.gas?.prev) ? (d.gas.v > d.gas.prev ? 1 : -1) : 0],
+      ["EGGS", this.vEggs(), 0],
+      ["CPI", isFinite(d.cpi?.v) ? d.cpi.v.toFixed(1) + "%" : "—", 0],
+      ["APPR", this.vApproval(), -1],
+      ["DISA", isFinite(d.approval?.disapprove) ? d.approval.disapprove.toFixed(1) + "%" : "—", 1],
+      ["TARIFF", isFinite(d.tariff?.v) ? d.tariff.v.toFixed(1) + "%" : "—", 1],
+      ["CHEETO", this.vCheeto(), 0],
+      ["GOLF", this.vGolf(), 1],
+      ["EO", isFinite(d.eo?.orders) ? String(d.eo.orders) : "—", 1],
+      ["FLOOR", String(this.peers.size + 1), 0],
+      ["POSTS", String((d.posts?.list || []).length), 0],
+    ];
+    const RH = c.height / this.DW_ROWS;
+    g.fillStyle = "#05090d"; g.fillRect(0, 0, c.width, c.height);
+    const roll = Math.floor((this._dwRoll || 0));
+    for (let i = 0; i < this.DW_ROWS; i++) {
+      const [k, v, dir] = rows[(i + roll) % rows.length];
+      const y = i * RH;
+      if (i % 2) { g.fillStyle = "#0a1119"; g.fillRect(0, y, c.width, RH); }
+      g.font = "bold 19px 'Courier New', monospace";
+      g.textAlign = "left";
+      g.fillStyle = "#5d6f83";
+      g.fillText(k, 12, y + RH * 0.68);
+      g.textAlign = "right";
+      g.fillStyle = dir > 0 ? "#3ddc7a" : dir < 0 ? "#ff5f5f" : "#ffb04a";
+      g.fillText((dir > 0 ? "\u25B2" : dir < 0 ? "\u25BC" : " ") + v, c.width - 12, y + RH * 0.68);
+    }
+    if (this.dwTex) this.dwTex.needsUpdate = true;
+  },
+
+  /* A screen plane whose UVs show one band of the shared wall. */
+  smallScreen(w, h, band) {
+    const T = window.THREE;
+    const geo = new T.PlaneGeometry(w, h);
+    const uv = geo.attributes.uv;
+    const BANDS = 8;
+    const b = band % BANDS;
+    const v0 = b / BANDS, v1 = (b + 1) / BANDS;
+    uv.setXY(0, 0, v1); uv.setXY(1, 1, v1); uv.setXY(2, 0, v0); uv.setXY(3, 1, v0);
+    uv.needsUpdate = true;
+    return new T.Mesh(geo, this.smallMat);
+  },
+
   /* ------------------------------------------------------------- world */
   buildWorld() {
     const T = window.THREE;
@@ -148,6 +243,8 @@ const Exchange = {
     // at native density is how you turn a browser tab into a hand warmer.
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
     host.appendChild(this.renderer.domElement);
+
+    this.buildDataWall();
 
     this.scene.add(new T.AmbientLight(0xffffff, 0.62));
     const key = new T.DirectionalLight(0xfff0dd, 0.85);
@@ -224,7 +321,11 @@ const Exchange = {
       box(2.6, 1.2, 5, 0x3d2f20, -R / 2 + 2.2, 0.6, bz);
       box(2.8, 0.18, 5.2, 0xb08d4a, -R / 2 + 2.2, 1.26, bz);
       for (const d of [-1.4, 0, 1.4]) {
-        box(0.2, 1.1, 1.5, 0x0d1117, -R / 2 + 1.3, 1.9, bz + d);
+        box(0.2, 1.15, 1.6, 0x0c1119, -R / 2 + 1.3, 1.9, bz + d);
+        const scr = this.smallScreen(1.35, 0.9, bz + d);
+        scr.position.set(-R / 2 + 1.42, 1.9, bz + d);
+        scr.rotation.y = Math.PI / 2;
+        this.scene.add(scr);
       }
     }
 
@@ -239,7 +340,7 @@ const Exchange = {
        this was a diorama rather than a room — you notice it within about
        two seconds of moving. Circles for the round objects, boxes for the
        square ones; resolved against the player every frame. */
-    const postAt = (x, z) => {
+    const postAt = (x, z, meta) => {
       const g = new T.Group();
       const base = new T.Mesh(new T.CylinderGeometry(2.7, 3.0, 1.5, 8),
         new T.MeshLambertMaterial({ color: 0x2b3340, flatShading: true }));
@@ -252,20 +353,68 @@ const Exchange = {
       // A bank of small screens around the rim, which is what a post is.
       for (let i = 0; i < 8; i++) {
         const a = (i / 8) * Math.PI * 2;
-        const scr = new T.Mesh(new T.BoxGeometry(1.5, 0.95, 0.16),
-          new T.MeshLambertMaterial({ color: i % 2 ? 0x0e1520 : 0x121a26 }));
-        scr.position.set(Math.cos(a) * 2.55, 2.3, Math.sin(a) * 2.55);
+        const hous = new T.Mesh(new T.BoxGeometry(1.6, 1.05, 0.18),
+          new T.MeshLambertMaterial({ color: 0x0c1119 }));
+        hous.position.set(Math.cos(a) * 2.55, 2.3, Math.sin(a) * 2.55);
+        hous.rotation.y = -a + Math.PI / 2;
+        g.add(hous);
+        const scr = this.smallScreen(1.34, 0.82, i + (x + z));
+        scr.position.set(Math.cos(a) * 2.66, 2.3, Math.sin(a) * 2.66);
         scr.rotation.y = -a + Math.PI / 2;
         g.add(scr);
       }
+      /* The terminal in the middle of the post. This is the thing you walk
+         up to — the ceiling monitor tells you what the post IS from across
+         the room, and this is what you actually use. Before it existed the
+         middle of every post was a flat empty disc, which is both ugly and
+         confusing: nothing said where to stand. */
+      const ped = new T.Mesh(new T.CylinderGeometry(0.75, 0.95, 2.1, 8),
+        new T.MeshLambertMaterial({ color: 0x1b2430, flatShading: true }));
+      ped.position.y = 2.6; g.add(ped);
+      const crt = new T.Mesh(new T.BoxGeometry(2.0, 1.6, 1.5),
+        new T.MeshLambertMaterial({ color: 0xd8d2c4 }));
+      crt.position.y = 4.35; crt.rotation.y = Math.PI / 8; g.add(crt);
+      const face = new T.Mesh(new T.PlaneGeometry(1.5, 1.1),
+        new T.MeshBasicMaterial({ color: meta.c }));
+      face.position.set(Math.sin(Math.PI / 8) * 0.76, 4.4, Math.cos(Math.PI / 8) * 0.76);
+      face.rotation.y = Math.PI / 8; g.add(face);
+      g.userData.face = face;
+      const kb = new T.Mesh(new T.BoxGeometry(1.5, 0.16, 0.6),
+        new T.MeshLambertMaterial({ color: 0xc9c2b2 }));
+      kb.position.set(0, 3.62, 0.85); g.add(kb);
+
+      // Floor paint in the post's colour — the cheapest way to break up a
+      // room that was otherwise beige from wall to wall.
+      const ring = new T.Mesh(new T.RingGeometry(3.2, 4.5, 28),
+        new T.MeshBasicMaterial({ color: meta.c, transparent: true, opacity: 0.22,
+                                  side: T.DoubleSide }));
+      ring.rotation.x = -Math.PI / 2; ring.position.set(x, 0.015, z);
+      this.scene.add(ring);
+
+      // A light in the post's colour, so the glow pools on the floor.
+      const lamp = new T.PointLight(meta.c, 0.85, 16, 2);
+      lamp.position.set(x, 8.2, z);
+      this.scene.add(lamp);
+
       g.position.set(x, 0, z);
       this.scene.add(g);
       this.posts.push(g);
       this.colliders.push({ t: "c", x, z, r: 3.1, h: 3.0 });
       return g;
     };
+    /* Each post is a colour and a name, used by its banner, its floor
+       paint, its light and its terminal. One table so they can never drift
+       apart — the failure mode otherwise is a green banner over an orange
+       post, which reads as a bug even though nothing is broken. */
     const POSTS = [[-8, -6], [8, -6], [-8, 6], [8, 6], [0, -13]];
-    POSTS.forEach(([x, z]) => postAt(x, z));
+    this.POSTMETA = [
+      { c: 0xff7a00, n: "CHEETO-METER", win: "w-meter" },
+      { c: 0x2f7fe0, n: "APPROVAL",     win: "w-polls" },
+      { c: 0x35b06a, n: "KITCHEN TABLE", win: "w-econ" },
+      { c: 0xe0b020, n: "EGGS",         win: "w-econ" },
+      { c: 0xd94f4f, n: "GOLF",         win: "w-golf" },
+    ];
+    POSTS.forEach(([x, z], i) => postAt(x, z, this.POSTMETA[i]));
 
     /* ---- order slips all over the floor ----
        One InstancedMesh, so sixty bits of litter cost one draw call. It is
@@ -321,6 +470,17 @@ const Exchange = {
       { draw: (c, g) => this.drawStat(c, g, "EGGS", this.vEggs()) },
       { draw: (c, g) => this.drawStat(c, g, "GOLF DAYS", this.vGolf()) },
     ];
+    // Colour-coded banners hung above the monitors — sector signage, which
+    // is what a real floor uses to tell you which post is which.
+    MON.forEach((m, i) => {
+      const [bx, bz] = POSTS[i];
+      const meta = this.POSTMETA[i];
+      const ban = new T.Mesh(new T.PlaneGeometry(5.4, 1.1),
+        new T.MeshBasicMaterial({ color: meta.c, side: T.DoubleSide }));
+      ban.position.set(bx, 12.9, bz);
+      this.scene.add(ban);
+      box(5.6, 0.16, 0.16, 0x11161d, bx, 13.5, bz);
+    });
     MON.forEach((m, i) => {
       const [x, z] = POSTS[i];
       const Y = 10.4;
@@ -336,6 +496,25 @@ const Exchange = {
       px: 512, py: 256, draw: (c, g) => this.drawApprovalBars(c, g) });
     this.addBoard({ w: 8, h: 4, x: -R / 2 + 1.1, y: 9, z: 4, ry: Math.PI / 2,
       px: 512, py: 256, draw: (c, g) => this.drawEcon(c, g) });
+
+    this.addBoard({ w: 4.6, h: 2.3, x: -R / 2 + 1.15, y: 9.5, z: 16, ry: Math.PI / 2,
+      px: 512, py: 256, draw: (c, g) => this.drawClock(c, g) });
+
+    /* ---- ad boards ----
+       Positioned where a real floor puts sponsor signage: between the
+       windows and flanking the entrance. Six slots. */
+    const AD_AT = [
+      { x: R / 2 - 1.15, y: 4.2, z: -8.5, ry: -Math.PI / 2, w: 7, h: 2.6 },
+      { x: R / 2 - 1.15, y: 4.2, z: 0.5, ry: -Math.PI / 2, w: 7, h: 2.6 },
+      { x: R / 2 - 1.15, y: 4.2, z: 9.5, ry: -Math.PI / 2, w: 7, h: 2.6 },
+      { x: -R / 2 + 1.15, y: 4.6, z: -18, ry: Math.PI / 2, w: 6.5, h: 2.4 },
+      { x: -R / 2 + 1.15, y: 4.6, z: 12, ry: Math.PI / 2, w: 6.5, h: 2.4 },
+      { x: 0, y: 2.4, z: R / 2 - 1.15, ry: Math.PI, w: 9, h: 2.2 },
+    ];
+    AD_AT.forEach((a, i) => {
+      this.addBoard({ w: a.w, h: a.h, x: a.x, y: a.y, z: a.z, ry: a.ry,
+        px: 512, py: 256, draw: (c, g) => this.drawAd(c, g, i) });
+    });
 
     // The ticker band: verbatim Truth posts crawling across the back wall.
     this.tickerBoard = this.addBoard({
@@ -408,6 +587,30 @@ const Exchange = {
       this.scene.add(g);
       this.npcs.push(g);
     }
+
+    /* ---- ticker tape ----
+       One InstancedMesh of 160 scraps, parked under the floor until the
+       bell goes. Ringing a bell that does nothing visible is a button, not
+       an event; this is what makes anyone ring it twice. */
+    const tapeGeo = new T.PlaneGeometry(0.3, 0.5);
+    this.tape = new T.InstancedMesh(tapeGeo,
+      new T.MeshBasicMaterial({ side: T.DoubleSide, vertexColors: true }), 160);
+    this.tape.instanceColor = new T.InstancedBufferAttribute(new Float32Array(160 * 3), 3);
+    const TAPE_COLS = [[1, .48, 0], [1, 1, 1], [.2, .86, .48], [1, .69, .29], [.85, .2, .2]];
+    this.tapeBits = [];
+    const dum = new T.Object3D();
+    for (let i = 0; i < 160; i++) {
+      const col = TAPE_COLS[i % TAPE_COLS.length];
+      this.tape.instanceColor.setXYZ(i, col[0], col[1], col[2]);
+      this.tapeBits.push({ x: 0, y: -50, z: 0, vx: 0, vy: 0, vz: 0, r: 0, vr: 0, life: 0 });
+      dum.position.set(0, -50, 0); dum.updateMatrix();
+      this.tape.setMatrixAt(i, dum.matrix);
+    }
+    this.tape.instanceColor.needsUpdate = true;
+    this.tape.instanceMatrix.needsUpdate = true;
+    this.tape.frustumCulled = false;
+    this.scene.add(this.tape);
+    this._dummy = new T.Object3D();
 
     this.clock = new T.Clock();
     this.resize();
@@ -580,6 +783,64 @@ const Exchange = {
       g.textAlign = "left";
     });
     return rows.map((r) => r[1] + r[2]).join("|");
+  },
+
+  /* An ad slot, or the pitch for one. */
+  drawAd(c, g, i) {
+    const ad = (this.ADS || []).find((a) => a.slot === i);
+    if (ad) {
+      g.fillStyle = "#" + (ad.tint ?? 0x1a2a3a).toString(16).padStart(6, "0");
+      g.fillRect(0, 0, c.width, c.height);
+      g.fillStyle = "rgba(255,255,255,.10)";
+      g.fillRect(10, 10, c.width - 20, c.height - 20);
+      g.textAlign = "center";
+      g.fillStyle = "#ffffff";
+      this.fit(g, String(ad.title || ""), c.width / 2, 118, c.width - 60, 72);
+      g.fillStyle = "#cfe0f2";
+      this.fit(g, String(ad.line || ""), c.width / 2, 186, c.width - 60, 42, "normal");
+      return "ad" + i + ad.title + ad.line;
+    }
+    g.fillStyle = "#12161c"; g.fillRect(0, 0, c.width, c.height);
+    g.strokeStyle = "#3a4654"; g.lineWidth = 6;
+    g.setLineDash([16, 12]);
+    g.strokeRect(16, 16, c.width - 32, c.height - 32);
+    g.setLineDash([]);
+    g.textAlign = "center";
+    g.fillStyle = "#8a99aa";
+    g.font = "bold 62px 'Courier New', monospace";
+    g.fillText("ADVERTISE HERE", c.width / 2, 120);
+    g.fillStyle = "#5d6b7a";
+    g.font = "34px 'Courier New', monospace";
+    g.fillText("supremecheeto.club", c.width / 2, 178);
+    return "empty" + i;
+  },
+
+  /* A clock, and whether the real market is open. NYSE hours in Eastern,
+     weekdays only — the holiday calendar is not modelled, so a holiday
+     shows OPEN and that is a known and deliberate limit rather than a
+     claim. */
+  drawClock(c, g) {
+    const now = new Date();
+    const et = new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/New_York", hour12: false,
+      weekday: "short", hour: "2-digit", minute: "2-digit",
+    }).formatToParts(now).reduce((o, p) => (o[p.type] = p.value, o), {});
+    const hh = +et.hour % 24, mm = +et.minute;
+    const wk = !["Sat", "Sun"].includes(et.weekday);
+    const mins = hh * 60 + mm;
+    const open = wk && mins >= 570 && mins < 960;
+    const txt = String(hh).padStart(2, "0") + ":" + String(mm).padStart(2, "0");
+    g.fillStyle = "#05080b"; g.fillRect(0, 0, c.width, c.height);
+    g.textAlign = "center";
+    g.fillStyle = "#6c7d90";
+    g.font = "bold 30px 'Courier New', monospace";
+    g.fillText("NEW YORK", c.width / 2, 52);
+    g.fillStyle = "#ffb04a";
+    this.fit(g, txt, c.width / 2, 150, c.width - 50, 110);
+    g.fillStyle = open ? "#3ddc7a" : "#ff5f5f";
+    g.font = "bold 34px 'Courier New', monospace";
+    g.fillText(open ? "MARKET OPEN" : "MARKET CLOSED", c.width / 2, 210);
+    return txt + open;
   },
 
   drawStat(c, g, label, value) {
@@ -829,8 +1090,56 @@ const Exchange = {
   },
 
   /* --------------------------------------------------------- the bell */
+  throwTape() {
+    if (!this.tapeBits) return;
+    const R = this.ROOM / 2;
+    for (const b of this.tapeBits) {
+      b.x = (Math.random() * 2 - 1) * (R - 6);
+      b.z = (Math.random() * 2 - 1) * (R - 6);
+      b.y = 13 + Math.random() * 2.5;
+      b.vx = (Math.random() - 0.5) * 1.1;
+      b.vz = (Math.random() - 0.5) * 1.1;
+      b.vy = -(1.7 + Math.random() * 1.6);
+      b.r = Math.random() * 6.28;
+      b.vr = (Math.random() - 0.5) * 7;
+      b.life = 7 + Math.random() * 2.5;
+    }
+  },
+
+  stepTape(dt) {
+    if (!this.tape || !this.tapeBits) return;
+    let live = 0;
+    const d = this._dummy;
+    for (let i = 0; i < this.tapeBits.length; i++) {
+      const b = this.tapeBits[i];
+      if (b.life <= 0) continue;
+      b.life -= dt;
+      b.x += b.vx * dt; b.z += b.vz * dt; b.y += b.vy * dt;
+      b.r += b.vr * dt;
+      // Flutter rather than fall like gravel — scraps of paper drift.
+      b.vx += Math.sin(b.r * 1.7) * dt * 0.5;
+      if (b.y <= 0.03) { b.y = 0.03; b.vy = 0; b.vx *= 0.9; b.vz *= 0.9; b.vr *= 0.9; }
+      d.position.set(b.x, b.y, b.z);
+      d.rotation.set(b.y <= 0.04 ? -Math.PI / 2 : b.r * 0.7, b.r, b.r * 0.4);
+      d.updateMatrix();
+      this.tape.setMatrixAt(i, d.matrix);
+      live++;
+    }
+    if (live) this.tape.instanceMatrix.needsUpdate = true;
+    else if (this._tapeLive) {
+      // Park them out of sight once the last one expires.
+      for (let i = 0; i < this.tapeBits.length; i++) {
+        d.position.set(0, -50, 0); d.updateMatrix();
+        this.tape.setMatrixAt(i, d.matrix);
+      }
+      this.tape.instanceMatrix.needsUpdate = true;
+    }
+    this._tapeLive = live > 0;
+  },
+
   ringBell(mine) {
     this._bellT = performance.now();
+    this.throwTape();
     if (typeof Sfx === "object") Sfx.play("chime");
     if (mine && this.chan && this.netOK) {
       this.chan.send({ type: "broadcast", event: "bell",
@@ -1199,6 +1508,11 @@ const Exchange = {
     for (const e of this.peers.values()) {
       e.g.position.x += (e.tx - e.g.position.x) * k;
       e.g.position.z += (e.tz - e.g.position.z) * k;
+      /* Other people get pushed out of solid objects too. Their authority
+         is their own client, so this is cosmetic — but a peer standing
+         inside a trading post looks broken to everyone except them. */
+      const pf = this.resolve(e.g.position.x, e.g.position.z, 0.7);
+      e.g.position.x = pf.x; e.g.position.z = pf.z;
       let d = e.try_ - e.g.rotation.y;
       while (d > Math.PI) d -= Math.PI * 2;
       while (d < -Math.PI) d += Math.PI * 2;
@@ -1215,6 +1529,13 @@ const Exchange = {
     // Everything else only when its content actually changed. The debt
     // board changes constantly, the rest almost never — paintBoard's
     // signature check sorts that out without a special case per screen.
+    // Roll the small-screen wall on its own slower beat — one texture
+    // upload every two seconds updates all fifty-five of them.
+    if (!this._dwT || t - this._dwT > 2) {
+      this._dwT = t;
+      this._dwRoll = (this._dwRoll || 0) + 1;
+      this.paintDataWall();
+    }
     if (!this._boardT || t - this._boardT > 0.2) {
       this._boardT = t;
       for (const b of this.boards) if (b !== this.tickerBoard) this.paintBoard(b, false);
@@ -1223,6 +1544,26 @@ const Exchange = {
     /* ---- what you're standing next to ---- */
     const n = this.nearest();
     if (n !== this.near) { this.near = n; this.paintPrompt(); }
+    // The terminal you can use glows; the rest sit still. Without this the
+    // prompt is the only feedback and you have to read it to know which
+    // machine you are actually at.
+    if (this.posts && this.POSTMETA) {
+      for (let i = 0; i < this.posts.length; i++) {
+        const face = this.posts[i].userData.face;
+        if (!face) continue;
+        const live = n && n.win === this.POSTMETA[i].win
+          && Math.hypot(this.POSTMETA[i]._x ?? n.x, 0) >= 0;
+        const at = n && Math.hypot(this.posts[i].position.x - this.self.x,
+                                   this.posts[i].position.z - this.self.z) < 4.8;
+        face.material.opacity = 1;
+        face.material.transparent = true;
+        face.scale.setScalar(at ? 1 + Math.sin(t * 6) * 0.04 : 1);
+        face.material.color.setHex(this.POSTMETA[i].c);
+        if (!at) face.material.color.multiplyScalar(0.55);
+      }
+    }
+
+    this.stepTape(dt);
 
     /* ---- the bell swings when it's been rung ---- */
     if (this.bell) {
@@ -1248,7 +1589,11 @@ const Exchange = {
       const r = 3.4 + Math.random() * 2.2;
       return { tx: px + Math.cos(a) * r, tz: pz + Math.sin(a) * r, wait: 0 };
     }
-    return { tx: (Math.random() * 2 - 1) * lim, tz: (Math.random() * 2 - 1) * lim, wait: 0 };
+    for (let i = 0; i < 12; i++) {
+      const tx = (Math.random() * 2 - 1) * lim, tz = (Math.random() * 2 - 1) * lim;
+      if (!this.solidAt(tx, tz, 1.0)) return { tx, tz, wait: 0 };
+    }
+    return { tx: 0, tz: 0, wait: 0 };
   },
 
   stepNpc(n, dt, t) {
@@ -1274,8 +1619,20 @@ const Exchange = {
     const d = Math.hypot(dx, dz);
     if (d < 0.5) { u.wait = 2.5 + Math.random() * 8; u.shout = 0; return; }
     const step = Math.min(d, u.sp * dt);
-    n.position.x += (dx / d) * step;
-    n.position.z += (dz / d) * step;
+    let nx = n.position.x + (dx / d) * step;
+    let nz = n.position.z + (dz / d) * step;
+    /* Traders were walking straight through the posts, which is the thing
+       that most gave the room away — you collide, and then a man in a blue
+       jacket strolls through a solid desk beside you. Same solver as the
+       player; if a goal turns out to be unreachable they give up and pick
+       another rather than grinding against a wall forever. */
+    const fx = this.resolve(nx, nz, 0.7);
+    if (Math.hypot(fx.x - n.position.x, fx.z - n.position.z) < step * 0.25) {
+      u.stuck = (u.stuck || 0) + dt;
+      if (u.stuck > 0.9) { u.stuck = 0; Object.assign(u, this.npcGoal()); }
+    } else u.stuck = 0;
+    n.position.x = fx.x;
+    n.position.z = fx.z;
     // Turn towards travel rather than snapping, or they pivot like turrets.
     let turn = Math.atan2(dx, dz) - n.rotation.y;
     while (turn > Math.PI) turn -= Math.PI * 2;
