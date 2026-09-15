@@ -12,7 +12,7 @@
  *
  * Bump VERSION on any shell change to roll the cache over.
  */
-const VERSION = "cheeto-v4.9.0";
+const VERSION = "cheeto-v5.0.0";
 const SHELL = `${VERSION}-shell`;
 const DATA = `${VERSION}-data`;
 
@@ -42,6 +42,11 @@ const PRECACHE = [
   "/dm.js",
   "/clubs.js",
   "/supreme.js",
+  /* exchange.js is precached; three.js deliberately is NOT. The library is
+     ~600KB and only matters to someone who opens the Exchange, so it loads
+     from the CDN on first open instead of being pushed to every visitor's
+     phone on install. */
+  "/exchange.js",
   "/desktop.js",
   "/supabase.js",
   "/logo.svg",

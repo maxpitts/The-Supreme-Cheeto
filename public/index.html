@@ -946,6 +946,72 @@ body.mobile .urow-acts{width:100%}
   .im-compose input{font-size:16px}   /* 16px stops iOS zooming on focus */
 }
 
+/* ---------------- THE CHEETO EXCHANGE ----------------
+   The canvas fills the window body and the chrome floats over it. The
+   stage is position:relative and everything inside absolute, so a resize
+   of the window is handled by one ResizeObserver rather than by layout
+   maths in JS. */
+.xc-body{padding:0;display:flex;flex-direction:column;overflow:hidden}
+.xc-stage{position:relative;flex:1;min-height:180px;background:#0b1016;overflow:hidden}
+#xcCanvas{position:absolute;inset:0}
+#xcCanvas canvas{display:block;width:100%;height:100%}
+.xc-status{position:absolute;inset:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;text-align:center;gap:4px;
+  padding:18px;color:#cfd6de;background:#0b1016;font-size:12px;line-height:1.5}
+.xc-err{color:#ff8a8a;font-size:11px;overflow-wrap:anywhere}
+/* Top-RIGHT, not top-left: the jumbotron is dead centre at the top of the
+   room, and a counter sitting on top of the debt figure hid the one number
+   the whole floor is built around. */
+.xc-hud{position:absolute;top:6px;right:6px;padding:3px 8px;font-size:11px;
+  color:#e6ecf2;background:rgba(6,10,14,.72);border:1px solid #2b3642;
+  pointer-events:none;max-width:60%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.xc-hud b{color:#ffb04a}
+.xc-off{color:#ff9a7a}
+.xc-foot{flex:0 0 auto;display:flex;flex-wrap:wrap;gap:4px 10px;justify-content:space-between;
+  align-items:center;padding:4px 7px;background:var(--gray);
+  border-top:2px solid;border-color:var(--hi) transparent transparent}
+.xc-keys,.xc-note{font-size:10px;color:var(--note-ink);min-width:0;overflow-wrap:anywhere}
+
+/* The walk-up prompt. A button, not a div, so the same element serves the
+   E key on a desktop and a thumb on a phone. */
+.xc-prompt{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);
+  display:flex;align-items:center;gap:8px;max-width:90%;
+  padding:7px 10px;font:inherit;font-size:12px;cursor:pointer;
+  color:#fff;background:rgba(8,12,17,.9);border:2px solid;
+  border-color:#5a6675 #10161d #10161d #5a6675}
+.xc-prompt b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.xc-key{flex:0 0 auto;padding:1px 7px;background:#ff7a00;color:#1a1005;
+  font-weight:bold;border:1px solid #ffca8a}
+.xc-flash{position:absolute;left:50%;top:38px;transform:translateX(-50%);
+  padding:5px 12px;font-size:12px;font-weight:bold;color:#1a1005;background:#ffb04a;
+  border:2px solid;border-color:#ffe0b0 #9a5a00 #9a5a00 #ffe0b0;
+  max-width:88%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;pointer-events:none}
+.xc-emotes{display:flex;gap:3px;flex-wrap:wrap;min-width:0}
+.xc-em{font-size:15px;line-height:1;padding:3px 5px;cursor:pointer;background:var(--gray);
+  border:2px solid;border-color:var(--hi) var(--gray-d) var(--gray-d) var(--hi)}
+.xc-em:active{border-color:var(--gray-d) var(--hi) var(--hi) var(--gray-d)}
+@media (pointer:coarse){
+  .xc-em{font-size:19px;padding:6px 9px}
+  .xc-prompt{bottom:130px;font-size:13px;padding:9px 12px}
+}
+
+/* The thumbstick only exists on touch. On a mouse it would be clutter and
+   it would also eat drag-to-look in the bottom-left corner. */
+.xc-stick{display:none}
+@media (pointer:coarse){
+  /* On a phone the window body is short and the 180px floor leaves a
+     letterbox you cannot play in. Give the floor real height — the footer
+     and title bar still fit above the taskbar at 780px tall. */
+  .xc-stage{min-height:min(60vh,420px)}
+  .xc-stick{display:block;position:absolute;left:14px;bottom:14px;width:104px;height:104px;
+    border-radius:50%;background:rgba(10,16,22,.42);border:2px solid rgba(255,255,255,.22);
+    touch-action:none}
+  .xc-knob{position:absolute;left:50%;top:50%;width:44px;height:44px;margin:-22px 0 0 -22px;
+    border-radius:50%;background:rgba(255,122,0,.85);border:2px solid #fff;
+    pointer-events:none;will-change:transform}
+  .xc-keys{display:none}
+}
+
 /* ---------------- SUPREME.EXE (the joke coin) ----------------
    Styled as a readout, not a sales page. The banner is red, permanent and
    first in the DOM so it is the first thing read by a screen reader and the
@@ -2438,6 +2504,35 @@ body.dark .st-tab.on{background:linear-gradient(#1d6b3f,#0f4326);color:#eaffea}
     <div class="grip"></div>
   </section>
 
+  <!-- ---------------- THE CHEETO EXCHANGE ---------------- -->
+  <section class="win" id="w-exchange" data-transient data-title="CHEETO_EXCHANGE.EXE" data-icon="&#127974;"
+           data-x="140" data-y="50" data-w="720" data-h="520">
+    <div class="tb"><span class="ico">&#127974;</span><span class="t">CHEETO_EXCHANGE.EXE</span>
+      <span class="btns"><button data-min>_</button><button data-max>&#9633;</button><button data-close>&times;</button></span></div>
+    <div class="body xc-body">
+      <div class="xc-stage">
+        <div id="xcCanvas"></div>
+        <div id="xcStatus" class="xc-status">Loading the floor&hellip;</div>
+        <div id="xcHud" class="xc-hud"></div>
+        <div id="xcFlash" class="xc-flash" hidden></div>
+        <button type="button" id="xcPrompt" class="xc-prompt" hidden></button>
+        <div id="xcStick" class="xc-stick"><span id="xcKnob" class="xc-knob"></span></div>
+      </div>
+      <div class="xc-foot">
+        <span class="xc-emotes">
+          <button type="button" class="xc-em" data-xc-emote="&#127482;&#127480;">&#127482;&#127480;</button>
+          <button type="button" class="xc-em" data-xc-emote="&#128514;">&#128514;</button>
+          <button type="button" class="xc-em" data-xc-emote="&#129327;">&#129327;</button>
+          <button type="button" class="xc-em" data-xc-emote="&#128128;">&#128128;</button>
+          <button type="button" class="xc-em" data-xc-emote="&#128293;">&#128293;</button>
+          <button type="button" class="xc-em" data-xc-emote="&#128200;">&#128200;</button>
+        </span>
+        <span class="xc-keys">WASD to walk &middot; drag to look &middot; E to use</span>
+      </div>
+    </div>
+    <div class="grip"></div>
+  </section>
+
   <!-- ---------------- SUPREME.EXE ---------------- -->
   <section class="win" id="w-supreme" data-transient data-title="SUPREME.EXE" data-icon="&#128176;"
            data-x="200" data-y="90" data-w="400" data-h="430">
@@ -2701,6 +2796,7 @@ body.dark .st-tab.on{background:linear-gradient(#1d6b3f,#0f4326);color:#eaffea}
 <script src="/dm.js"></script>
 <script src="/clubs.js"></script>
 <script src="/supreme.js"></script>
+<script src="/exchange.js"></script>
 <script src="/desktop.js"></script>
 <script src="/predict.js"></script>
 <script src="/live.js"></script>

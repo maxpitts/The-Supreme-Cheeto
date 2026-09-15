@@ -336,6 +336,7 @@ const WM = {
     // Desktop icons call WM.open directly, so the coin window has to boot from
     // here too — otherwise opening it by icon skips the disclaimer.
     if (id === "w-supreme" && typeof Supreme === "object") Supreme.boot();
+    if (id === "w-exchange" && typeof Exchange === "object") Exchange.boot();
     this.fit(id);
     if (id === "w-profile" && typeof renderProfileEditor === "function") renderProfileEditor();
     if (id === "w-admin" && typeof loadHealth === "function") { loadHealth(); loadUsers(); }
@@ -480,8 +481,8 @@ const WM = {
                     "w-board": "FYP", "w-meter": "Cheeto-Meter", "w-sol": "Solitaire",
                     "w-mine": "Minesweeper", "w-about": "About", "w-predict": "Call It", "w-tally": "Since You", "w-buddies": "Buddy List", "w-st-bobby": "BOBBYjayyy", "w-st-benp": "benp90",
                     "w-people": "People", "w-bin": "Recycle Bin", "w-clubs": "Clubs",
-                    "w-supreme": "SUPREME.EXE" };
-    ["w-truth", "w-st-bobby", "w-st-benp", "w-buddies", "w-clubs", "w-people", "w-predict", "w-tally", "w-chat", "w-debt", "w-supreme", "w-about", "w-bin"].forEach((id) => {
+                    "w-supreme": "SUPREME.EXE", "w-exchange": "The Exchange" };
+    ["w-truth", "w-exchange", "w-st-bobby", "w-st-benp", "w-buddies", "w-clubs", "w-people", "w-predict", "w-tally", "w-chat", "w-debt", "w-supreme", "w-about", "w-bin"].forEach((id) => {
       const w = this.byId(id); if (!w) return;
       const b = document.createElement("button");
       b.className = "dicon"; b.type = "button";
@@ -532,6 +533,8 @@ const WM = {
                 act: () => { if (typeof Clubs === "object") Clubs.open(null); } });
     rows.push({ label: "SUPREME.EXE", icon: "&#128176;",
                 act: () => { if (typeof Supreme === "object") Supreme.open(); } });
+    rows.push({ label: "The Cheeto Exchange", icon: "&#127974;",
+                act: () => { if (typeof Exchange === "object") Exchange.open(); } });
 
     rows.push({ head: "Settings" });
     rows.push({ label: "Display properties…", icon: "&#128421;",
